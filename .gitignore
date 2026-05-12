@@ -1,0 +1,13 @@
+# Claude Code local settings
+.claude/settings.local.json
+
+# Python
+__pycache__/
+*.py[cod]
+*.gz
+
+# Tauri build output
+apps/desktop/target/
+
+# Node
+node_modules/
