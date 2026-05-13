@@ -1,5 +1,5 @@
-# Claude Code local settings
-.claude/settings.local.json
+# Claude Code
+.claude/
 
 # Python
 __pycache__/
@@ -11,3 +11,25 @@ apps/desktop/target/
 
 # Node
 node_modules/
+
+# OS
+.DS_Store
+Thumbs.db
+Desktop.ini
+
+# Editors
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Local environment
+.env
+.env.local
+.env*.local
+
+# Logs
+*.log
+
+# JSX source (compiled into apps/web/index.html — not needed for deployment)
+apps/web/*.jsx
