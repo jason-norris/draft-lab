@@ -308,6 +308,15 @@ npx cap sync
 
 ---
 
+## Polish Queue
+
+Small items confirmed during testing, to be addressed before or alongside the next phase:
+
+- [ ] **D+ missing from grade dropdown** — `GRADES` array only has `D`, missing the `D+` half-grade. `D+` is defined in `GRADE_NUMERIC` and the grade guide but not selectable. Add `"D+"` between `"C-"` and `"D"` in the `GRADES` constant in `DraftLab.jsx`.
+- [ ] **Δ column label verbosity** — "≈ Agree" appears once per indicator row; could be condensed to a dot + direction symbol only to reduce visual noise.
+
+---
+
 ## Known Issues
 
 | Issue | Status | Notes |
