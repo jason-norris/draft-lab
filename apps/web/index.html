@@ -1221,9 +1221,9 @@ function DraftLab({ user }) {
     onClick: () => {
       if (window.confirm(`Clear all 17Lands ratings for ${selectedSet.name}?`)) flush17L();
     }
-  }, "Flush 17L"), syncStatus && /*#__PURE__*/React.createElement("span", {
+  }, "Flush 17L"), user && syncStatus && /*#__PURE__*/React.createElement("span", {
     className: "sync-dot"
-  }, syncStatus === "syncing" ? "↑ Syncing…" : "✓ Synced"), /*#__PURE__*/React.createElement("button", {
+  }, syncStatus === "syncing" ? "↑ Syncing…" : "✓ Synced"), user && /*#__PURE__*/React.createElement("button", {
     className: "btn",
     style: {
       fontSize: 9,
