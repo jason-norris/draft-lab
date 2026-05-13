@@ -1,0 +1,1767 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Draft Lab — MTG Card Evaluation</title>
+  <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+  <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com"/>
+  <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700&family=IBM+Plex+Mono:wght@300;400;500&display=swap" rel="stylesheet"/>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    /* ══ DARK THEME (default) ══ */
+    :root {
+      --bg: #06060f; --s1: #0e0e1c; --s2: #131324; --s3: #18182e;
+      --b1: #22223a; --b2: #2e2e4a;
+      --gold: #d4aa50; --gold2: #8a6e28;
+      --txt: #e8e6f8; --dim: #9090b8; --dimmer: #5a5a7a;
+      --option-bg: #0e0e1c;
+    }
+
+    /* ══ LIGHT THEME (parchment) — via system OR manual toggle ══ */
+    @media (prefers-color-scheme: light) {
+      :root:not([data-theme="dark"]) {
+        --bg: #f4f1e4; --s1: #edeadb; --s2: #e6e3d3; --s3: #dedad0;
+        --b1: #cbc7b2; --b2: #b8b4a0;
+        --gold: #8a6010; --gold2: #6a4a08;
+        --txt: #1c1a10; --dim: #5a5438; --dimmer: #9a9480;
+        --option-bg: #edeadb;
+      }
+    }
+    :root[data-theme="light"] {
+      --bg: #f4f1e4; --s1: #edeadb; --s2: #e6e3d3; --s3: #dedad0;
+      --b1: #cbc7b2; --b2: #b8b4a0;
+      --gold: #8a6010; --gold2: #6a4a08;
+      --txt: #1c1a10; --dim: #5a5438; --dimmer: #9a9480;
+      --option-bg: #edeadb;
+    }
+    :root[data-theme="dark"] {
+      --bg: #06060f; --s1: #0e0e1c; --s2: #131324; --s3: #18182e;
+      --b1: #22223a; --b2: #2e2e4a;
+      --gold: #d4aa50; --gold2: #8a6e28;
+      --txt: #e8e6f8; --dim: #9090b8; --dimmer: #5a5a7a;
+      --option-bg: #0e0e1c;
+    }
+
+    /* ══ MTG COLOR TAGS ══ */
+    .ctag { font-size:9px; padding:2px 8px; white-space:nowrap; letter-spacing:.04em; display:inline-block; }
+    /* dark */
+    .ctag[data-c="W"] { background:#1e1c0e; color:#e8dba0; border:1px solid #8a7840; }
+    .ctag[data-c="U"] { background:#08142a; color:#7ab4f0; border:1px solid #1a3e78; }
+    .ctag[data-c="B"] { background:#120a18; color:#c090e0; border:1px solid #3e1860; }
+    .ctag[data-c="R"] { background:#1e0a0a; color:#f09090; border:1px solid #7a1818; }
+    .ctag[data-c="G"] { background:#081808; color:#80cc80; border:1px solid #1e5a1e; }
+    .ctag[data-c="M"] { background:#18140a; color:#d4aa50; border:1px solid #6e5018; }
+    .ctag[data-c="C"] { background:#141420; color:#a0a0c4; border:1px solid #303050; }
+    .ctag[data-c="L"] { background:#14100a; color:#c0a878; border:1px solid #503e20; }
+    /* light */
+    @media (prefers-color-scheme: light) { :root:not([data-theme="dark"]) ~ * .ctag[data-c="W"],
+      :root:not([data-theme="dark"]) .ctag[data-c="W"] { background:#f8f4e0; color:#6a5000; border-color:#c8a030; }
+    }
+    /* Simpler: use a wrapper class approach for ctags */
+    .light .ctag[data-c="W"], [data-theme="light"] .ctag[data-c="W"] { background:#f8f4e0; color:#6a5000; border-color:#c8a030; }
+    .light .ctag[data-c="U"], [data-theme="light"] .ctag[data-c="U"] { background:#ddeeff; color:#0a2660; border-color:#3a6aaa; }
+    .light .ctag[data-c="B"], [data-theme="light"] .ctag[data-c="B"] { background:#f0e0ff; color:#40005a; border-color:#9050c0; }
+    .light .ctag[data-c="R"], [data-theme="light"] .ctag[data-c="R"] { background:#ffe0e0; color:#7a0010; border-color:#d05050; }
+    .light .ctag[data-c="G"], [data-theme="light"] .ctag[data-c="G"] { background:#ddffd0; color:#0a4010; border-color:#409040; }
+    .light .ctag[data-c="M"], [data-theme="light"] .ctag[data-c="M"] { background:#fff8d0; color:#5a3a00; border-color:#c09020; }
+    .light .ctag[data-c="C"], [data-theme="light"] .ctag[data-c="C"] { background:#eeeef8; color:#2a2a5a; border-color:#7070a0; }
+    .light .ctag[data-c="L"], [data-theme="light"] .ctag[data-c="L"] { background:#f8f0dc; color:#4a3010; border-color:#a07840; }
+    @media (prefers-color-scheme: light) {
+      :root:not([data-theme="dark"]) .ctag[data-c="W"] { background:#f8f4e0; color:#6a5000; border-color:#c8a030; }
+      :root:not([data-theme="dark"]) .ctag[data-c="U"] { background:#ddeeff; color:#0a2660; border-color:#3a6aaa; }
+      :root:not([data-theme="dark"]) .ctag[data-c="B"] { background:#f0e0ff; color:#40005a; border-color:#9050c0; }
+      :root:not([data-theme="dark"]) .ctag[data-c="R"] { background:#ffe0e0; color:#7a0010; border-color:#d05050; }
+      :root:not([data-theme="dark"]) .ctag[data-c="G"] { background:#ddffd0; color:#0a4010; border-color:#409040; }
+      :root:not([data-theme="dark"]) .ctag[data-c="M"] { background:#fff8d0; color:#5a3a00; border-color:#c09020; }
+      :root:not([data-theme="dark"]) .ctag[data-c="C"] { background:#eeeef8; color:#2a2a5a; border-color:#7070a0; }
+      :root:not([data-theme="dark"]) .ctag[data-c="L"] { background:#f8f0dc; color:#4a3010; border-color:#a07840; }
+    }
+
+    /* ══ COLOR STRIPES ══ */
+    .cW { --stripe: #8a7840; } .cU { --stripe: #1a4a8c; }
+    .cB { --stripe: #5a2080; } .cR { --stripe: #8c2020; }
+    .cG { --stripe: #207020; } .cM { --stripe: #806010; }
+    .cC { --stripe: #404060; } .cL { --stripe: #604820; }
+    @media (prefers-color-scheme: light) {
+      :root:not([data-theme="dark"]) .cW { --stripe: #c8a030; }
+      :root:not([data-theme="dark"]) .cU { --stripe: #3060aa; }
+      :root:not([data-theme="dark"]) .cB { --stripe: #8030b0; }
+      :root:not([data-theme="dark"]) .cR { --stripe: #c83030; }
+      :root:not([data-theme="dark"]) .cG { --stripe: #309030; }
+      :root:not([data-theme="dark"]) .cM { --stripe: #b08020; }
+      :root:not([data-theme="dark"]) .cC { --stripe: #6060a0; }
+      :root:not([data-theme="dark"]) .cL { --stripe: #907040; }
+    }
+    [data-theme="light"] .cW { --stripe: #c8a030; } [data-theme="light"] .cU { --stripe: #3060aa; }
+    [data-theme="light"] .cB { --stripe: #8030b0; } [data-theme="light"] .cR { --stripe: #c83030; }
+    [data-theme="light"] .cG { --stripe: #309030; } [data-theme="light"] .cM { --stripe: #b08020; }
+    [data-theme="light"] .cC { --stripe: #6060a0; } [data-theme="light"] .cL { --stripe: #907040; }
+    tr.cW td:first-child, tr.cU td:first-child, tr.cB td:first-child,
+    tr.cR td:first-child, tr.cG td:first-child, tr.cM td:first-child,
+    tr.cC td:first-child, tr.cL td:first-child { border-left: 3px solid var(--stripe); }
+    .mc-stripe { background: var(--stripe) !important; }
+
+    html,body { background:var(--bg); color:var(--txt); font-family:'IBM Plex Mono',monospace; height:100%; -webkit-text-size-adjust:100%; }
+    #root { height:100%; }
+    .app  { display:flex; flex-direction:column; height:100vh; overflow:hidden; }
+
+    .hdr { display:flex; align-items:center; justify-content:space-between; gap:10px; padding:12px 16px; background:var(--s1); border-bottom:1px solid var(--b2); flex-shrink:0; flex-wrap:wrap; }
+    .hdr-left { display:flex; align-items:center; gap:12px; }
+    .hdr-right { display:flex; align-items:center; gap:8px; }
+    .logo     { font-family:'Cinzel',serif; font-size:17px; color:var(--gold); letter-spacing:.18em; white-space:nowrap; }
+    .logo-sub { font-size:8px; color:var(--dimmer); letter-spacing:.25em; text-transform:uppercase; margin-top:1px; }
+
+    .set-wrap { position:relative; }
+    .set-btn  { display:flex; align-items:center; gap:8px; background:var(--s2); border:1px solid var(--b2); color:var(--txt); font-family:'IBM Plex Mono',monospace; font-size:12px; padding:7px 11px; cursor:pointer; transition:border-color .2s; min-width:150px; max-width:230px; }
+    .set-btn:hover { border-color:var(--gold2); }
+    .set-btn-label { flex:1; text-align:left; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+    .set-dropdown { position:absolute; top:calc(100% + 4px); left:0; width:320px; max-width:calc(100vw - 24px); background:var(--s1); border:1px solid var(--b2); z-index:300; box-shadow:0 12px 40px rgba(0,0,0,.25); display:flex; flex-direction:column; max-height:55vh; }
+    .set-search { padding:8px 12px; background:transparent; border:none; border-bottom:1px solid var(--b1); color:var(--txt); font-family:'IBM Plex Mono',monospace; font-size:12px; outline:none; }
+    .set-search::placeholder { color:var(--dimmer); }
+    .set-list { overflow-y:auto; }
+    .set-item { display:flex; align-items:center; gap:10px; padding:8px 12px; cursor:pointer; border-bottom:1px solid var(--b1); transition:background .1s; -webkit-tap-highlight-color:transparent; }
+    .set-item:hover,.set-item:active { background:var(--s2); }
+    .set-item.current { background:rgba(200,168,75,.12); }
+    .si-name { font-size:12px; flex:1; color:var(--txt); }
+    .si-code { font-size:9px; color:var(--dimmer); text-transform:uppercase; letter-spacing:.1em; }
+    .si-date { font-size:9px; color:var(--dimmer); }
+
+    .btn { background:transparent; border:1px solid var(--b2); color:var(--dim); font-family:'IBM Plex Mono',monospace; font-size:10px; padding:7px 12px; cursor:pointer; letter-spacing:.06em; text-transform:uppercase; transition:all .2s; white-space:nowrap; -webkit-tap-highlight-color:transparent; }
+    .btn:hover,.btn:active,.btn.active { border-color:var(--gold2); color:var(--gold); }
+    .icon-btn { background:transparent; border:1px solid var(--b2); color:var(--dim); font-size:15px; padding:6px 11px; cursor:pointer; transition:all .2s; -webkit-tap-highlight-color:transparent; display:flex; align-items:center; line-height:1; }
+    .icon-btn:active,.icon-btn.active { border-color:var(--gold2); color:var(--gold); }
+
+    .stats  { display:flex; align-items:center; gap:12px; flex-wrap:wrap; padding:7px 16px; background:var(--s2); border-bottom:1px solid var(--b1); flex-shrink:0; overflow-x:auto; }
+    .stat   { font-size:11px; color:var(--dim); white-space:nowrap; }
+    .stat-v { color:var(--gold); font-weight:500; }
+    .gp { display:inline-flex; align-items:center; gap:3px; padding:2px 6px; font-size:10px; font-weight:700; font-family:'IBM Plex Mono',monospace; border-radius:2px; white-space:nowrap; }
+    .prog-bar  { height:2px; background:var(--b1); flex-shrink:0; }
+    .prog-fill { height:100%; background:var(--gold); transition:width .4s; }
+
+    .filters-desktop { display:flex; align-items:center; gap:7px; flex-wrap:wrap; padding:8px 16px; background:var(--s3); border-bottom:1px solid var(--b1); flex-shrink:0; }
+    .fl { font-size:9px; color:var(--dimmer); text-transform:uppercase; letter-spacing:.12em; white-space:nowrap; }
+    .fb { background:transparent; border:1px solid var(--b1); color:var(--dim); font-family:'IBM Plex Mono',monospace; font-size:10px; padding:3px 9px; cursor:pointer; transition:all .15s; white-space:nowrap; }
+    .fb:hover { border-color:var(--b2); color:var(--txt); }
+    .fb.active { border-color:var(--gold2); color:var(--gold); background:rgba(200,168,75,.1); }
+    .divv { width:1px; height:14px; background:var(--b2); flex-shrink:0; }
+    .srch { background:var(--s2); border:1px solid var(--b1); color:var(--txt); font-family:'IBM Plex Mono',monospace; font-size:11px; padding:3px 9px; outline:none; width:150px; }
+    .srch::placeholder { color:var(--dimmer); }
+    .srch:focus { border-color:var(--gold2); }
+
+    .filters-mobile { background:var(--s3); border-bottom:1px solid var(--b2); overflow:hidden; transition:max-height .25s ease; flex-shrink:0; }
+    .fm-inner { padding:12px 14px; display:flex; flex-direction:column; gap:10px; }
+    .fm-row   { display:flex; align-items:center; gap:6px; flex-wrap:wrap; }
+    .fm-srch  { background:var(--s2); border:1px solid var(--b1); color:var(--txt); font-family:'IBM Plex Mono',monospace; font-size:14px; padding:8px 10px; outline:none; flex:1; min-width:120px; border-radius:4px; }
+    .fm-srch::placeholder { color:var(--dimmer); }
+    .fm-srch:focus { border-color:var(--gold2); }
+    .fm-sort  { background:var(--s2); border:1px solid var(--b1); color:var(--txt); font-family:'IBM Plex Mono',monospace; font-size:13px; padding:8px 8px; outline:none; flex:1; -webkit-appearance:none; border-radius:4px; }
+
+    .tbl-wrap { flex:1; overflow:auto; }
+    table { width:100%; border-collapse:collapse; font-size:12px; }
+    thead { position:sticky; top:0; z-index:10; background:var(--s1); }
+    th { padding:9px 10px; text-align:left; font-size:9px; font-weight:500; color:var(--dimmer); text-transform:uppercase; letter-spacing:.12em; border-bottom:2px solid var(--b2); cursor:pointer; user-select:none; white-space:nowrap; transition:color .15s; }
+    th:hover { color:var(--txt); }
+    th.sorted { color:var(--gold); }
+    td { padding:6px 10px; border-bottom:1px solid var(--b1); vertical-align:middle; }
+    tr:hover td { background:rgba(128,128,128,.06); }
+    .card-name { font-size:12px; color:var(--txt); white-space:nowrap; max-width:200px; overflow:hidden; text-overflow:ellipsis; }
+    .mana { font-size:10px; color:var(--dim); white-space:nowrap; }
+    .typ  { font-size:10px; color:var(--dim); white-space:nowrap; }
+    .rar-dot { width:7px; height:7px; border-radius:50%; display:inline-block; }
+
+    .gsel { background:transparent; border:1px solid transparent; font-family:'IBM Plex Mono',monospace; font-size:11px; font-weight:700; padding:2px 4px; cursor:pointer; outline:none; width:56px; transition:border-color .15s,background .15s; }
+    .gsel:hover,.gsel:focus { border-color:var(--b2); background:var(--s2); }
+    option { background:var(--option-bg); color:var(--txt); }
+
+    .lsv-in { background:transparent; border:1px solid transparent; font-family:'IBM Plex Mono',monospace; font-size:11px; padding:2px 4px; outline:none; width:50px; color:var(--txt); transition:border-color .15s,background .15s; }
+    .lsv-in:hover,.lsv-in:focus { border-color:var(--b2); background:var(--s2); }
+    .lsv-in::-webkit-inner-spin-button { -webkit-appearance:none; }
+    .note-in { background:transparent; border:1px solid transparent; color:var(--dim); font-family:'IBM Plex Mono',monospace; font-size:10px; padding:2px 4px; outline:none; width:180px; transition:border-color .15s,background .15s; }
+    .note-in:hover,.note-in:focus { border-color:var(--b2); background:var(--s2); color:var(--txt); }
+    .delta { font-size:11px; font-weight:600; }
+
+    .preview { position:fixed; pointer-events:none; z-index:1000; border-radius:10px; overflow:hidden; box-shadow:0 20px 60px rgba(0,0,0,.5); width:200px; }
+    .preview img { width:100%; display:block; }
+
+    .card-list { flex:1; overflow-y:auto; -webkit-overflow-scrolling:touch; display:flex; flex-direction:column; }
+    .mc        { display:flex; border-bottom:1px solid var(--b1); background:var(--s1); flex-direction:column; }
+    .mc-stripe { width:4px; flex-shrink:0; }
+    .mc-body   { flex:1; min-width:0; }
+    .mc-top    { display:flex; align-items:center; gap:10px; padding:12px 14px 12px 12px; cursor:pointer; -webkit-tap-highlight-color:transparent; }
+    .mc-info   { flex:1; min-width:0; }
+    .mc-name   { font-size:14px; color:var(--txt); font-weight:500; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+    .mc-meta   { font-size:11px; color:var(--dim); margin-top:3px; }
+    .mc-right  { display:flex; align-items:center; gap:8px; flex-shrink:0; }
+    .mc-gsel   { background:var(--s2); border:1px solid var(--b2); font-family:'IBM Plex Mono',monospace; font-size:14px; font-weight:700; padding:7px 8px; cursor:pointer; outline:none; width:70px; border-radius:4px; -webkit-appearance:none; text-align:center; -webkit-tap-highlight-color:transparent; color:var(--txt); }
+    .mc-chevron { color:var(--dimmer); font-size:11px; flex-shrink:0; width:14px; text-align:center; }
+    .mc-expanded  { padding:0 14px 16px 12px; display:flex; flex-direction:column; gap:12px; }
+    .mc-exp-inner { display:flex; gap:12px; align-items:flex-start; }
+    .mc-img-wrap  { flex-shrink:0; }
+    .mc-img       { width:100px; border-radius:6px; box-shadow:0 4px 16px rgba(0,0,0,.3); display:block; cursor:pointer; }
+    .mc-img-full  { width:100%; max-width:260px; margin:0 auto; display:block; border-radius:8px; box-shadow:0 8px 32px rgba(0,0,0,.3); }
+    .mc-controls  { flex:1; display:flex; flex-direction:column; gap:10px; }
+    .mc-field       { display:flex; flex-direction:column; gap:4px; }
+    .mc-field label { font-size:10px; color:var(--dimmer); text-transform:uppercase; letter-spacing:.1em; font-weight:500; }
+    .mc-sel  { background:var(--s2); border:1px solid var(--b2); color:var(--txt); font-family:'IBM Plex Mono',monospace; font-size:14px; font-weight:700; padding:8px 10px; cursor:pointer; outline:none; border-radius:4px; -webkit-appearance:none; width:100%; }
+    .mc-num  { background:var(--s2); border:1px solid var(--b2); color:var(--txt); font-family:'IBM Plex Mono',monospace; font-size:14px; padding:8px 10px; outline:none; border-radius:4px; width:100%; }
+    .mc-num::-webkit-inner-spin-button { -webkit-appearance:none; }
+    .mc-note { background:var(--s2); border:1px solid var(--b2); color:var(--txt); font-family:'IBM Plex Mono',monospace; font-size:13px; padding:8px 10px; outline:none; border-radius:4px; width:100%; }
+    .mc-note::placeholder { color:var(--dimmer); }
+    .mc-sel:focus,.mc-num:focus,.mc-note:focus { border-color:var(--gold2); }
+    .mc-delta { font-size:12px; font-weight:600; padding:2px 0; }
+
+    .center { flex:1; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:14px; color:var(--dim); padding:40px; text-align:center; }
+    .spin { width:22px; height:22px; border-radius:50%; border:2px solid var(--b2); border-top-color:var(--gold); animation:spin .7s linear infinite; }
+    @keyframes spin { to { transform:rotate(360deg); } }
+    .empty-title { font-family:'Cinzel',serif; font-size:20px; color:var(--gold2); letter-spacing:.12em; }
+    .empty-sub   { font-size:11px; line-height:1.6; }
+
+    .overlay { position:fixed; inset:0; z-index:400; background:rgba(0,0,0,.6); display:flex; align-items:flex-end; justify-content:center; }
+    .modal   { background:var(--s1); border:1px solid var(--b2); padding:24px; width:100%; max-width:540px; box-shadow:0 -8px 40px rgba(0,0,0,.2); border-radius:10px 10px 0 0; max-height:80vh; overflow-y:auto; }
+    .modal-title { font-family:'Cinzel',serif; font-size:15px; color:var(--gold); margin-bottom:12px; letter-spacing:.1em; }
+    .modal-desc  { font-size:11px; color:var(--dim); line-height:1.7; margin-bottom:12px; }
+    .modal-desc code { color:var(--gold); font-size:10px; }
+    .modal-ta    { width:100%; height:180px; resize:vertical; background:var(--bg); border:1px solid var(--b2); color:var(--txt); font-family:'IBM Plex Mono',monospace; font-size:11px; padding:10px; outline:none; margin-bottom:12px; border-radius:4px; }
+    .modal-ta:focus { border-color:var(--gold2); }
+    .modal-footer { display:flex; gap:10px; justify-content:flex-end; align-items:center; }
+    .modal-msg { font-size:11px; color:var(--gold); flex:1; }
+
+    /* ── 17Lands panel ── */
+    .l17-wrap { position:relative; }
+    .l17-panel {
+      position:absolute; top:calc(100% + 6px); right:0;
+      background:var(--s1); border:1px solid var(--b2);
+      padding:14px 16px; width:280px; z-index:300;
+      box-shadow:0 12px 40px rgba(0,0,0,.3);
+      display:flex; flex-direction:column; gap:10px;
+    }
+    .l17-title { font-size:10px; color:var(--dimmer); text-transform:uppercase; letter-spacing:.12em; }
+    .l17-fmt { display:flex; gap:6px; }
+    .l17-fmt button {
+      flex:1; background:transparent; border:1px solid var(--b1);
+      color:var(--dim); font-family:'IBM Plex Mono',monospace; font-size:10px;
+      padding:5px 0; cursor:pointer; transition:all .15s; border-radius:3px;
+    }
+    .l17-fmt button.active { border-color:var(--gold2); color:var(--gold); background:rgba(200,168,75,.08); }
+    .l17-fetch {
+      background:rgba(200,168,75,.1); border:1px solid var(--gold2);
+      color:var(--gold); font-family:'IBM Plex Mono',monospace; font-size:10px;
+      padding:8px; cursor:pointer; letter-spacing:.06em; text-transform:uppercase;
+      transition:all .2s; border-radius:3px;
+    }
+    .l17-fetch:disabled { opacity:.4; cursor:default; }
+    .l17-fetch:not(:disabled):hover { background:rgba(200,168,75,.2); }
+    .l17-msg { font-size:10px; color:var(--dim); min-height:14px; line-height:1.5; }
+    .l17-meta { font-size:10px; color:var(--dim); border-top:1px solid var(--b1); padding-top:8px; line-height:1.6; }
+    /* badge on auto-populated LSV cells */
+    .src-badge {
+      font-size:8px; font-weight:600; letter-spacing:.05em;
+      padding:1px 4px; border-radius:2px; margin-left:5px;
+      background:rgba(200,168,75,.15); color:var(--gold2);
+      border:1px solid rgba(200,168,75,.3); vertical-align:middle;
+    }
+    @media (prefers-color-scheme: light) {
+      .src-badge { background:rgba(100,70,0,.1); color:#7a5000; border-color:rgba(100,70,0,.25); }
+    }
+
+    /* ── Grade Guide modal ── */
+    .guide-overlay { position:fixed; inset:0; z-index:500; background:rgba(0,0,0,.65); display:flex; align-items:flex-end; justify-content:center; }
+    @media (min-width:768px) {
+      .guide-overlay { align-items:center; }
+    }
+    .guide-modal {
+      background:var(--s1); border:1px solid var(--b2);
+      width:100%; max-width:620px; max-height:88vh;
+      overflow-y:auto; -webkit-overflow-scrolling:touch;
+      border-radius:10px 10px 0 0; padding:20px 20px 32px;
+      box-shadow:0 -8px 40px rgba(0,0,0,.3);
+    }
+    @media (min-width:768px) {
+      .guide-modal { border-radius:6px; padding:28px 32px; }
+    }
+    .guide-close {
+      float:right; background:transparent; border:1px solid var(--b2);
+      color:var(--dim); font-family:'IBM Plex Mono',monospace; font-size:10px;
+      padding:4px 10px; cursor:pointer; margin-top:2px;
+    }
+    .guide-close:hover { border-color:var(--gold2); color:var(--gold); }
+    .guide-h1 { font-family:'Cinzel',serif; font-size:15px; color:var(--gold); letter-spacing:.12em; margin-bottom:4px; }
+    .guide-sub { font-size:10px; color:var(--dimmer); margin-bottom:18px; }
+    .guide-tier { margin-bottom:18px; }
+    .guide-tier-hdr {
+      font-size:9px; font-weight:600; text-transform:uppercase; letter-spacing:.14em;
+      color:var(--dimmer); border-bottom:1px solid var(--b1);
+      padding-bottom:5px; margin-bottom:8px;
+    }
+    .guide-row { display:flex; gap:10px; margin-bottom:7px; align-items:flex-start; }
+    .guide-badge {
+      flex-shrink:0; width:36px; text-align:center;
+      font-family:'IBM Plex Mono',monospace; font-size:12px; font-weight:700;
+      padding:2px 0; border-radius:2px;
+    }
+    .guide-text { flex:1; }
+    .guide-pick { font-size:9px; color:var(--dimmer); white-space:nowrap; }
+    .guide-desc { font-size:11px; color:var(--txt); line-height:1.5; margin-top:1px; }
+    .guide-anchors {
+      background:var(--s2); border:1px solid var(--b1);
+      padding:12px 14px; margin-top:18px; border-radius:3px;
+    }
+    .guide-anchors-hdr { font-size:9px; color:var(--dimmer); text-transform:uppercase; letter-spacing:.14em; margin-bottom:8px; }
+    .guide-q { font-size:11px; color:var(--txt); margin-bottom:5px; line-height:1.5; }
+    .guide-q strong { color:var(--gold); }
+
+    @media (max-width:767px) {
+      .desktop-only { display:none !important; }
+      .hdr { padding:10px 12px; }
+      .logo { font-size:15px; }
+      .set-btn { font-size:11px; padding:6px 10px; min-width:0; max-width:160px; }
+      .stats { padding:6px 12px; gap:8px; }
+    }
+    @media (min-width:768px) {
+      .mobile-only { display:none !important; }
+      .filters-mobile { display:none !important; }
+    }
+
+    /* ── Auth screen ── */
+    .auth-wrap { min-height:100vh; display:flex; align-items:center; justify-content:center; background:var(--bg); }
+    .auth-card { background:var(--s1); border:1px solid var(--b2); padding:40px 32px; width:100%; max-width:340px; display:flex; flex-direction:column; align-items:center; }
+    .auth-card .logo { font-family:'Cinzel',serif; font-size:22px; color:var(--gold); letter-spacing:.18em; }
+    .auth-card .logo-sub { font-size:9px; color:var(--dimmer); letter-spacing:.25em; text-transform:uppercase; margin-top:2px; margin-bottom:32px; }
+    .auth-label { font-size:10px; color:var(--dimmer); text-transform:uppercase; letter-spacing:.12em; align-self:flex-start; margin-bottom:6px; }
+    .auth-input { width:100%; background:var(--s2); border:1px solid var(--b2); color:var(--txt); font-family:'IBM Plex Mono',monospace; font-size:13px; padding:10px 12px; outline:none; margin-bottom:12px; }
+    .auth-input:focus { border-color:var(--gold2); }
+    .auth-btn { width:100%; background:rgba(200,168,75,.12); border:1px solid var(--gold2); color:var(--gold); font-family:'IBM Plex Mono',monospace; font-size:11px; padding:10px; cursor:pointer; letter-spacing:.08em; text-transform:uppercase; transition:all .2s; }
+    .auth-btn:hover:not(:disabled) { background:rgba(200,168,75,.22); }
+    .auth-btn:disabled { opacity:.4; cursor:default; }
+    .auth-sent { font-size:12px; color:var(--gold); text-align:center; line-height:1.7; }
+    .sync-dot { font-size:10px; color:var(--dim); white-space:nowrap; }
+  </style>
+</head>
+<body>
+<div id="root"></div>
+<script>
+const SUPABASE_URL = '%%SUPABASE_URL%%';
+const SUPABASE_ANON_KEY = '%%SUPABASE_ANON_KEY%%';
+const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+async function syncGrades(code, data, userId) {
+  try {
+    await sb.from('draft_grades').upsert(
+      { user_id: userId, set_code: code, data, updated_at: new Date().toISOString() },
+      { onConflict: 'user_id,set_code' }
+    );
+  } catch(_e) {}
+}
+async function fetchGrades(code) {
+  try {
+    const { data } = await sb.from('draft_grades').select('data').eq('set_code', code).single();
+    return (data && data.data) ? data.data : null;
+  } catch(_e) { return null; }
+}
+
+const _excluded = ["lsv", "lsvSource", "lsvFormat", "lsvSamples", "lsvGIHWR"];
+function _objectWithoutProperties(e, t) { if (null == e) return {}; var o, r, i = _objectWithoutPropertiesLoose(e, t); if (Object.getOwnPropertySymbols) { var n = Object.getOwnPropertySymbols(e); for (r = 0; r < n.length; r++) o = n[r], -1 === t.indexOf(o) && {}.propertyIsEnumerable.call(e, o) && (i[o] = e[o]); } return i; }
+function _objectWithoutPropertiesLoose(r, e) { if (null == r) return {}; var t = {}; for (var n in r) if ({}.hasOwnProperty.call(r, n)) { if (-1 !== e.indexOf(n)) continue; t[n] = r[n]; } return t; }
+function _slicedToArray(r, e) { return _arrayWithHoles(r) || _iterableToArrayLimit(r, e) || _unsupportedIterableToArray(r, e) || _nonIterableRest(); }
+function _nonIterableRest() { throw new TypeError("Invalid attempt to destructure non-iterable instance.\nIn order to be iterable, non-array objects must have a [Symbol.iterator]() method."); }
+function _unsupportedIterableToArray(r, a) { if (r) { if ("string" == typeof r) return _arrayLikeToArray(r, a); var t = {}.toString.call(r).slice(8, -1); return "Object" === t && r.constructor && (t = r.constructor.name), "Map" === t || "Set" === t ? Array.from(r) : "Arguments" === t || /^(?:Ui|I)nt(?:8|16|32)(?:Clamped)?Array$/.test(t) ? _arrayLikeToArray(r, a) : void 0; } }
+function _arrayLikeToArray(r, a) { (null == a || a > r.length) && (a = r.length); for (var e = 0, n = Array(a); e < a; e++) n[e] = r[e]; return n; }
+function _iterableToArrayLimit(r, l) { var t = null == r ? null : "undefined" != typeof Symbol && r[Symbol.iterator] || r["@@iterator"]; if (null != t) { var e, n, i, u, a = [], f = !0, o = !1; try { if (i = (t = t.call(r)).next, 0 === l) { if (Object(t) !== t) return; f = !1; } else for (; !(f = (e = i.call(t)).done) && (a.push(e.value), a.length !== l); f = !0); } catch (r) { o = !0, n = r; } finally { try { if (!f && null != t.return && (u = t.return(), Object(u) !== u)) return; } finally { if (o) throw n; } } return a; } }
+function _arrayWithHoles(r) { if (Array.isArray(r)) return r; }
+const _React = React,
+  useState = _React.useState,
+  useEffect = _React.useEffect,
+  useCallback = _React.useCallback;
+const store = {
+  get: k => {
+    try {
+      const v = localStorage.getItem(k);
+      return v ? {
+        value: v
+      } : null;
+    } catch {
+      return null;
+    }
+  },
+  set: (k, v) => {
+    try {
+      localStorage.setItem(k, v);
+    } catch {}
+  }
+};
+const MTG_LABELS = {
+  W: "White",
+  U: "Blue",
+  B: "Black",
+  R: "Red",
+  G: "Green",
+  M: "Multicolor",
+  C: "Colorless",
+  L: "Land"
+};
+const RARITY_COLORS = {
+  common: "#888",
+  uncommon: "#5599cc",
+  rare: "#e8c020",
+  mythic: "#e06020"
+};
+const COLOR_ORDER = {
+  W: 0,
+  U: 1,
+  B: 2,
+  R: 3,
+  G: 4,
+  M: 5,
+  C: 6,
+  L: 7
+};
+const RARITIES = ["common", "uncommon", "rare", "mythic"];
+const GRADES = ["A+", "A", "A-", "B+", "B", "B-", "C+", "C", "C-", "D", "F", ""];
+const GRADE_COLOR = {
+  "A+": "#00c853",
+  "A": "#43a047",
+  "A-": "#7cb342",
+  "B+": "#c6d825",
+  "B": "#e6c800",
+  "B-": "#ffb300",
+  "C+": "#fb8c00",
+  "C": "#f4511e",
+  "C-": "#e53935",
+  "D": "#b71c1c",
+  "F": "#6a0000",
+  "": ""
+};
+function getColorKey(card) {
+  var _card$card_faces, _card$type_line;
+  const c = card.colors ?? ((_card$card_faces = card.card_faces) === null || _card$card_faces === void 0 || (_card$card_faces = _card$card_faces[0]) === null || _card$card_faces === void 0 ? void 0 : _card$card_faces.colors) ?? [];
+  if (!c.length) return (_card$type_line = card.type_line) !== null && _card$type_line !== void 0 && _card$type_line.toLowerCase().includes("land") ? "L" : "C";
+  return c.length > 1 ? "M" : c[0];
+}
+function getImageUrl(card) {
+  var _card$image_uris, _card$card_faces2;
+  return ((_card$image_uris = card.image_uris) === null || _card$image_uris === void 0 ? void 0 : _card$image_uris.normal) ?? ((_card$card_faces2 = card.card_faces) === null || _card$card_faces2 === void 0 || (_card$card_faces2 = _card$card_faces2[0]) === null || _card$card_faces2 === void 0 || (_card$card_faces2 = _card$card_faces2.image_uris) === null || _card$card_faces2 === void 0 ? void 0 : _card$card_faces2.normal) ?? null;
+}
+function lsvColor(v) {
+  if (v >= 4.5) return "#00c853";
+  if (v >= 4.0) return "#43a047";
+  if (v >= 3.5) return "#7cb342";
+  if (v >= 3.0) return "#c6d825";
+  if (v >= 2.5) return "#e6c800";
+  if (v >= 2.0) return "#ffb300";
+  if (v >= 1.5) return "#fb8c00";
+  if (v >= 1.0) return "#f4511e";
+  return "#e53935";
+}
+function calcDelta(myGrade, lsv) {
+  if (!myGrade || lsv == null || lsv === "") return null;
+  const delta = GRADES.indexOf(myGrade) - (1 - lsv / 5) * 10;
+  return {
+    label: delta < -0.5 ? "▲ Higher" : delta > 0.5 ? "▼ Lower" : "≈ Agree",
+    color: delta < -0.5 ? "#32a050" : delta > 0.5 ? "#e05030" : "var(--dim)"
+  };
+}
+function sleep(ms) {
+  return new Promise(r => setTimeout(r, ms));
+}
+function useIsMobile() {
+  const _useState = useState(window.innerWidth < 768),
+    _useState2 = _slicedToArray(_useState, 2),
+    m = _useState2[0],
+    setM = _useState2[1];
+  useEffect(() => {
+    const h = () => setM(window.innerWidth < 768);
+    window.addEventListener("resize", h);
+    return () => window.removeEventListener("resize", h);
+  }, []);
+  return m;
+}
+function GradeSelect(_ref) {
+  let cls = _ref.cls,
+    value = _ref.value,
+    onChange = _ref.onChange;
+  return /*#__PURE__*/React.createElement("select", {
+    className: cls,
+    value: value,
+    onChange: onChange,
+    style: {
+      color: GRADE_COLOR[value] || "var(--dimmer)"
+    }
+  }, GRADES.map(g => /*#__PURE__*/React.createElement("option", {
+    key: g,
+    value: g,
+    style: {
+      color: GRADE_COLOR[g] || "var(--txt)"
+    }
+  }, g || "—")));
+}
+function MobileCardItem(_ref2) {
+  var _card$type_line2;
+  let card = _ref2.card,
+    grade = _ref2.grade,
+    onUpdate = _ref2.onUpdate;
+  const _useState3 = useState(false),
+    _useState4 = _slicedToArray(_useState3, 2),
+    expanded = _useState4[0],
+    setExpanded = _useState4[1];
+  const _useState5 = useState(false),
+    _useState6 = _slicedToArray(_useState5, 2),
+    bigImg = _useState6[0],
+    setBigImg = _useState6[1];
+  const ck = getColorKey(card);
+  const img = getImageUrl(card);
+  const d = calcDelta(grade.myGrade, grade.lsv);
+  return /*#__PURE__*/React.createElement("div", {
+    className: `mc mobile-only c${ck}`
+  }, /*#__PURE__*/React.createElement("div", {
+    style: {
+      display: "flex"
+    }
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "mc-stripe"
+  }), /*#__PURE__*/React.createElement("div", {
+    className: "mc-body"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "mc-top",
+    onClick: () => {
+      setExpanded(v => !v);
+      setBigImg(false);
+    }
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "mc-info"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "mc-name"
+  }, card.name), /*#__PURE__*/React.createElement("div", {
+    className: "mc-meta"
+  }, (_card$type_line2 = card.type_line) === null || _card$type_line2 === void 0 || (_card$type_line2 = _card$type_line2.split("—")[0]) === null || _card$type_line2 === void 0 ? void 0 : _card$type_line2.trim(), " ", " · ", /*#__PURE__*/React.createElement("span", {
+    style: {
+      color: RARITY_COLORS[card.rarity],
+      fontWeight: 600
+    }
+  }, card.rarity.charAt(0).toUpperCase()), card.mana_cost ? ` · ${card.mana_cost}` : "")), /*#__PURE__*/React.createElement("div", {
+    className: "mc-right"
+  }, /*#__PURE__*/React.createElement(GradeSelect, {
+    cls: "mc-gsel",
+    value: grade.myGrade || "",
+    onChange: e => {
+      e.stopPropagation();
+      onUpdate("myGrade", e.target.value);
+    }
+  }), /*#__PURE__*/React.createElement("span", {
+    className: "mc-chevron"
+  }, expanded ? "▲" : "▼"))), expanded && /*#__PURE__*/React.createElement("div", {
+    className: "mc-expanded"
+  }, bigImg && img && /*#__PURE__*/React.createElement("img", {
+    src: img,
+    className: "mc-img-full",
+    alt: card.name,
+    onClick: () => setBigImg(false)
+  }), /*#__PURE__*/React.createElement("div", {
+    className: "mc-exp-inner"
+  }, img && !bigImg && /*#__PURE__*/React.createElement("div", {
+    className: "mc-img-wrap"
+  }, /*#__PURE__*/React.createElement("img", {
+    src: img,
+    className: "mc-img",
+    alt: card.name,
+    onClick: () => setBigImg(true),
+    title: "Tap to enlarge"
+  })), /*#__PURE__*/React.createElement("div", {
+    className: "mc-controls"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "mc-field"
+  }, /*#__PURE__*/React.createElement("label", null, grade.lsvSource === "17lands" ? /*#__PURE__*/React.createElement(React.Fragment, null, "Community Rating ", /*#__PURE__*/React.createElement("span", {
+    className: "src-badge",
+    style: {
+      marginLeft: 4
+    }
+  }, "17L")) : "Community Rating"), /*#__PURE__*/React.createElement("input", {
+    className: "mc-num",
+    type: "number",
+    min: "0",
+    max: "5",
+    step: "0.5",
+    placeholder: "0.0 \u2013 5.0",
+    value: grade.lsv ?? "",
+    title: grade.lsvSource === "17lands" && grade.lsvGIHWR != null ? `GIH WR: ${(grade.lsvGIHWR * 100).toFixed(1)}%` : undefined,
+    style: {
+      color: grade.lsv != null && grade.lsv !== "" ? lsvColor(+grade.lsv) : "var(--dim)"
+    },
+    onChange: e => onUpdate("lsv", e.target.value === "" ? "" : parseFloat(e.target.value))
+  })), /*#__PURE__*/React.createElement("div", {
+    className: "mc-field"
+  }, /*#__PURE__*/React.createElement("label", null, "Sunset Grade"), /*#__PURE__*/React.createElement(GradeSelect, {
+    cls: "mc-sel",
+    value: grade.sunsetGrade || "",
+    onChange: e => onUpdate("sunsetGrade", e.target.value)
+  })), d && /*#__PURE__*/React.createElement("div", {
+    className: "mc-delta",
+    style: {
+      color: d.color
+    }
+  }, d.label))), /*#__PURE__*/React.createElement("div", {
+    className: "mc-field"
+  }, /*#__PURE__*/React.createElement("label", null, "Notes"), /*#__PURE__*/React.createElement("input", {
+    className: "mc-note",
+    type: "text",
+    placeholder: "Notes\u2026",
+    value: grade.notes || "",
+    onChange: e => onUpdate("notes", e.target.value)
+  }))))));
+}
+
+/* ── 17Lands helpers ── */
+function calc17lScore(gihWR, mean, std) {
+  if (std === 0) return 2.5;
+  const z = (gihWR - mean) / std;
+  const raw = 2.5 + z * 1.25; // z=+2→5, z=0→2.5, z=-2→0
+  const clamped = Math.max(0, Math.min(5, raw));
+  return Math.round(clamped * 2) / 2; // round to nearest 0.5
+}
+function timeAgo(iso) {
+  const secs = Math.floor((Date.now() - new Date(iso)) / 1000);
+  if (secs < 60) return "just now";
+  if (secs < 3600) return `${Math.floor(secs / 60)}m ago`;
+  if (secs < 86400) return `${Math.floor(secs / 3600)}h ago`;
+  return `${Math.floor(secs / 86400)}d ago`;
+}
+function DraftLab({ user }) {
+  const isMobile = useIsMobile();
+
+  // Theme: "auto" defers to prefers-color-scheme; "dark" or "light" overrides
+  const getInitialTheme = () => localStorage.getItem("draft-lab-theme") || "auto";
+  const _useState7 = useState(getInitialTheme),
+    _useState8 = _slicedToArray(_useState7, 2),
+    theme = _useState8[0],
+    setTheme = _useState8[1];
+  const toggleTheme = () => {
+    setTheme(prev => {
+      // auto → figure out what system currently is, then flip to opposite forced value
+      const sysDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
+      const currentlyDark = prev === "dark" || prev === "auto" && sysDark;
+      const next = currentlyDark ? "light" : "dark";
+      localStorage.setItem("draft-lab-theme", next);
+      document.documentElement.setAttribute("data-theme", next);
+      return next;
+    });
+  };
+  // Apply theme attribute on mount and change
+  useEffect(() => {
+    if (theme === "auto") document.documentElement.removeAttribute("data-theme");else document.documentElement.setAttribute("data-theme", theme);
+  }, [theme]);
+
+  // Pull grades from Supabase when a set loads (merges into localStorage)
+  useEffect(() => {
+    if (!selectedSet || !user) return;
+    fetchGrades(selectedSet.code).then(remote => {
+      if (!remote) return;
+      setGrades(prev => {
+        const merged = Object.assign({}, prev, remote);
+        store.set(`draft-grades-${selectedSet.code}`, JSON.stringify(merged));
+        return merged;
+      });
+    });
+  }, [selectedSet && selectedSet.code, user && user.id]);
+
+  // 17Lands state
+  const _useState9 = useState(false),
+    _useState0 = _slicedToArray(_useState9, 2),
+    show17l = _useState0[0],
+    setShow17l = _useState0[1];
+  const _useState1 = useState("PremierDraft"),
+    _useState10 = _slicedToArray(_useState1, 2),
+    fmt17l = _useState10[0],
+    setFmt17l = _useState10[1];
+  const _useState11 = useState(""),
+    _useState12 = _slicedToArray(_useState11, 2),
+    msg17l = _useState12[0],
+    setMsg17l = _useState12[1];
+  const _useState13 = useState(null),
+    _useState14 = _slicedToArray(_useState13, 2),
+    meta17l = _useState14[0],
+    setMeta17l = _useState14[1]; // {format,count,importedAt}
+
+  const _useState15 = useState([]),
+    _useState16 = _slicedToArray(_useState15, 2),
+    sets = _useState16[0],
+    setSets = _useState16[1];
+  const _useState17 = useState(null),
+    _useState18 = _slicedToArray(_useState17, 2),
+    selectedSet = _useState18[0],
+    setSelectedSet = _useState18[1];
+  const _useState19 = useState([]),
+    _useState20 = _slicedToArray(_useState19, 2),
+    cards = _useState20[0],
+    setCards = _useState20[1];
+  const _useState21 = useState({}),
+    _useState22 = _slicedToArray(_useState21, 2),
+    grades = _useState22[0],
+    setGrades = _useState22[1];
+  const _useState23 = useState(false),
+    _useState24 = _slicedToArray(_useState23, 2),
+    loading = _useState24[0],
+    setLoading = _useState24[1];
+  const _useState25 = useState(""),
+    _useState26 = _slicedToArray(_useState25, 2),
+    loadMsg = _useState26[0],
+    setLoadMsg = _useState26[1];
+  const _useState27 = useState(null),
+    _useState28 = _slicedToArray(_useState27, 2),
+    error = _useState28[0],
+    setError = _useState28[1];
+  const _useState29 = useState("color"),
+    _useState30 = _slicedToArray(_useState29, 2),
+    sortCol = _useState30[0],
+    setSortCol = _useState30[1];
+  const _useState31 = useState("asc"),
+    _useState32 = _slicedToArray(_useState31, 2),
+    sortDir = _useState32[0],
+    setSortDir = _useState32[1];
+  const _useState33 = useState("color"),
+    _useState34 = _slicedToArray(_useState33, 2),
+    mobileSort = _useState34[0],
+    setMobileSort = _useState34[1];
+  const _useState35 = useState("all"),
+    _useState36 = _slicedToArray(_useState35, 2),
+    filterColor = _useState36[0],
+    setFilterColor = _useState36[1];
+  const _useState37 = useState("all"),
+    _useState38 = _slicedToArray(_useState37, 2),
+    filterRarity = _useState38[0],
+    setFilterRarity = _useState38[1];
+  const _useState39 = useState(""),
+    _useState40 = _slicedToArray(_useState39, 2),
+    filterSearch = _useState40[0],
+    setFilterSearch = _useState40[1];
+  const _useState41 = useState("all"),
+    _useState42 = _slicedToArray(_useState41, 2),
+    filterGraded = _useState42[0],
+    setFilterGraded = _useState42[1];
+  const _useState43 = useState(false),
+    _useState44 = _slicedToArray(_useState43, 2),
+    showMobF = _useState44[0],
+    setShowMobF = _useState44[1];
+  const _useState44b = useState(false),
+    _useState44c = _slicedToArray(_useState44b, 2),
+    showGuide = _useState44c[0],
+    setShowGuide = _useState44c[1];
+  const _useState44d = useState(""),
+    _useState44e = _slicedToArray(_useState44d, 2),
+    syncStatus = _useState44e[0],
+    setSyncStatus = _useState44e[1];
+  const _useState45 = useState(null),
+    _useState46 = _slicedToArray(_useState45, 2),
+    hovered = _useState46[0],
+    setHovered = _useState46[1];
+  const _useState47 = useState({
+      x: 0,
+      y: 0
+    }),
+    _useState48 = _slicedToArray(_useState47, 2),
+    hoverPos = _useState48[0],
+    setHoverPos = _useState48[1];
+  const _useState49 = useState(null),
+    _useState50 = _slicedToArray(_useState49, 2),
+    editingNote = _useState50[0],
+    setEditingNote = _useState50[1];
+  const _useState51 = useState(""),
+    _useState52 = _slicedToArray(_useState51, 2),
+    setSearch = _useState52[0],
+    setSetSearch = _useState52[1];
+  const _useState53 = useState(false),
+    _useState54 = _slicedToArray(_useState53, 2),
+    showSetDD = _useState54[0],
+    setShowSetDD = _useState54[1];
+  useEffect(() => {
+    fetch("https://api.scryfall.com/sets").then(r => r.json()).then(d => {
+      const valid = d.data.filter(s => ["expansion", "core", "draft_innovation", "masters", "commander", "duel_deck"].includes(s.set_type) && s.card_count > 0).sort((a, b) => {
+        var _b$released_at;
+        return (_b$released_at = b.released_at) === null || _b$released_at === void 0 ? void 0 : _b$released_at.localeCompare(a.released_at);
+      });
+      setSets(valid);
+    }).catch(() => setError("Could not reach Scryfall. Check your internet connection."));
+  }, []);
+  const loadGrades = code => {
+    const r = store.get(`draft-grades-${code}`);
+    setGrades(r ? JSON.parse(r.value) : {});
+  };
+  const persistGrades = useCallback((g, code) => {
+    store.set(`draft-grades-${code}`, JSON.stringify(g));
+    if (user) {
+      setSyncStatus("syncing");
+      syncGrades(code, g, user.id)
+        .then(() => setSyncStatus("synced"))
+        .catch(() => setSyncStatus(""));
+    }
+  }, [user]);
+  const load17lMeta = useCallback(code => {
+    const r = store.get(`draft-17l-meta-${code}`);
+    setMeta17l(r ? JSON.parse(r.value) : null);
+  }, []);
+  const import17LFromCSV = text => {
+    // Parse CSV: expects "Card Name, Rating" (columns 1 & 2, header row skipped)
+    const lines = text.trim().split("\n").filter(l => l.trim());
+    if (lines.length < 2) {
+      setMsg17l("\u2717 File appears empty");
+      return;
+    }
+
+    // Detect header
+    const firstCols = lines[0].split(",").map(s => s.replace(/^"|"$/g, "").trim().toLowerCase());
+    const startRow = firstCols[0] === "card name" || firstCols[0] === "name" ? 1 : 0;
+    const nameIdx = firstCols.indexOf("card name") !== -1 ? firstCols.indexOf("card name") : firstCols.indexOf("name") !== -1 ? firstCols.indexOf("name") : 0;
+    const ratingIdx = firstCols.indexOf("rating") !== -1 ? firstCols.indexOf("rating") : 1;
+    const next = {
+      ...grades
+    };
+    let matched = 0,
+      skipped = 0;
+    for (let i = startRow; i < lines.length; i++) {
+      const cols = lines[i].split(",").map(s => s.replace(/^"|"$/g, "").trim());
+      const name = cols[nameIdx];
+      const rating = parseFloat(cols[ratingIdx]);
+      if (!name || isNaN(rating) || rating < 0 || rating > 5) {
+        skipped++;
+        continue;
+      }
+      const card = cards.find(c => c.name.toLowerCase() === name.toLowerCase());
+      if (!card) {
+        skipped++;
+        continue;
+      }
+      next[card.id] = {
+        ...(next[card.id] ?? {}),
+        lsv: Math.round(Math.max(0, Math.min(5, rating)) * 2) / 2,
+        lsvSource: "17lands"
+      };
+      matched++;
+    }
+    if (matched === 0) {
+      setMsg17l("\u2717 No cards matched — check the set is loaded");
+      return;
+    }
+    setGrades(next);
+    persistGrades(next, selectedSet.code);
+    const meta = {
+      format: fmt17l,
+      count: matched,
+      importedAt: new Date().toISOString()
+    };
+    setMeta17l(meta);
+    store.set(`draft-17l-meta-${selectedSet.code}`, JSON.stringify(meta));
+    setMsg17l(`\u2713 ${matched} cards imported${skipped ? ` \u00b7 ${skipped} unmatched` : ""}`);
+  };
+  const handle17LFile = e => {
+    const file = e.target.files[0];
+    if (!file) return;
+    setMsg17l("Reading file\u2026");
+    const reader = new FileReader();
+    reader.onload = ev => import17LFromCSV(ev.target.result);
+    reader.onerror = () => setMsg17l("\u2717 Could not read file");
+    reader.readAsText(file);
+    // Reset input so same file can be re-selected
+    e.target.value = "";
+  };
+  const flush17L = () => {
+    const next = {};
+    for (const _ref3 of Object.entries(grades)) {
+      var _ref4 = _slicedToArray(_ref3, 2);
+      const id = _ref4[0];
+      const g = _ref4[1];
+      if (g.lsvSource === "17lands") {
+        const lsv = g.lsv,
+          lsvSource = g.lsvSource,
+          lsvFormat = g.lsvFormat,
+          lsvSamples = g.lsvSamples,
+          lsvGIHWR = g.lsvGIHWR,
+          rest = _objectWithoutProperties(g, _excluded);
+        next[id] = rest;
+      } else {
+        next[id] = g;
+      }
+    }
+    setGrades(next);
+    persistGrades(next, selectedSet.code);
+    try {
+      localStorage.removeItem(`draft-17l-meta-${selectedSet.code}`);
+    } catch {}
+    setMeta17l(null);
+    setMsg17l("");
+  };
+  const loadSet = async set => {
+    setSelectedSet(set);
+    setCards([]);
+    setLoading(true);
+    setError(null);
+    setFilterColor("all");
+    setFilterRarity("all");
+    setFilterSearch("");
+    setFilterGraded("all");
+    loadGrades(set.code);
+    load17lMeta(set.code);
+    let url = `https://api.scryfall.com/cards/search?q=set:${set.code}+game:paper&order=color&unique=cards`,
+      all = [];
+    try {
+      while (url) {
+        setLoadMsg(`Fetching cards… (${all.length})`);
+        const res = await fetch(url),
+          data = await res.json();
+        if (data.object === "error") throw new Error(data.details);
+        all = [...all, ...data.data];
+        url = data.has_more ? data.next_page : null;
+        if (url) await sleep(80);
+      }
+      setCards(all);
+    } catch (e) {
+      setError(`Failed: ${e.message}`);
+    } finally {
+      setLoading(false);
+      setLoadMsg("");
+    }
+  };
+  const updateGrade = (cardId, field, value) => {
+    setGrades(prev => {
+      const next = {
+        ...prev,
+        [cardId]: {
+          ...(prev[cardId] ?? {}),
+          [field]: value
+        }
+      };
+      if (selectedSet) persistGrades(next, selectedSet.code);
+      return next;
+    });
+  };
+  const activeSort = isMobile ? mobileSort : sortCol;
+  const filtered = cards.filter(c => {
+    var _grades$c$id, _grades$c$id2;
+    const ck = getColorKey(c);
+    if (filterColor !== "all" && ck !== filterColor) return false;
+    if (filterRarity !== "all" && c.rarity !== filterRarity) return false;
+    if (filterSearch && !c.name.toLowerCase().includes(filterSearch.toLowerCase())) return false;
+    if (filterGraded === "graded" && !((_grades$c$id = grades[c.id]) !== null && _grades$c$id !== void 0 && _grades$c$id.myGrade)) return false;
+    if (filterGraded === "ungraded" && (_grades$c$id2 = grades[c.id]) !== null && _grades$c$id2 !== void 0 && _grades$c$id2.myGrade) return false;
+    return true;
+  });
+  const sorted = [...filtered].sort((a, b) => {
+    let av, bv;
+    const ga = grades[a.id] ?? {},
+      gb = grades[b.id] ?? {};
+    switch (activeSort) {
+      case "color":
+        av = COLOR_ORDER[getColorKey(a)] * 100 + (a.cmc ?? 0);
+        bv = COLOR_ORDER[getColorKey(b)] * 100 + (b.cmc ?? 0);
+        break;
+      case "name":
+        av = a.name;
+        bv = b.name;
+        break;
+      case "cmc":
+        av = a.cmc ?? 0;
+        bv = b.cmc ?? 0;
+        break;
+      case "rarity":
+        av = RARITIES.indexOf(a.rarity);
+        bv = RARITIES.indexOf(b.rarity);
+        break;
+      case "myGrade":
+        av = GRADES.indexOf(ga.myGrade || "");
+        bv = GRADES.indexOf(gb.myGrade || "");
+        break;
+      case "lsv":
+        av = ga.lsv ?? 99;
+        bv = gb.lsv ?? 99;
+        break;
+      default:
+        return 0;
+    }
+    const dir = isMobile ? "asc" : sortDir;
+    if (av < bv) return dir === "asc" ? -1 : 1;
+    if (av > bv) return dir === "asc" ? 1 : -1;
+    return 0;
+  });
+  const handleSort = col => {
+    if (sortCol === col) setSortDir(d => d === "asc" ? "desc" : "asc");else {
+      setSortCol(col);
+      setSortDir("asc");
+    }
+  };
+  const exportCSV = () => {
+    const hdr = ["Name", "Color", "Mana Cost", "Type", "Rarity", "My Grade", "LSV", "Sunset", "Notes"];
+    const rows = sorted.map(c => {
+      const g = grades[c.id] ?? {};
+      return [`"${c.name}"`, getColorKey(c), `"${c.mana_cost ?? ""}"`, `"${c.type_line ?? ""}"`, c.rarity, g.myGrade ?? "", g.lsv ?? "", g.sunsetGrade ?? "", `"${(g.notes ?? "").replace(/"/g, '""')}"`].join(",");
+    });
+    const blob = new Blob([[hdr.join(","), ...rows].join("\n")], {
+      type: "text/csv"
+    });
+    Object.assign(document.createElement("a"), {
+      href: URL.createObjectURL(blob),
+      download: `${(selectedSet === null || selectedSet === void 0 ? void 0 : selectedSet.code) ?? "mtg"}-grades.csv`
+    }).click();
+  };
+  const exportBackup = () => {
+    const backup = {};
+    for (let i = 0; i < localStorage.length; i++) {
+      const key = localStorage.key(i);
+      if (key.startsWith("draft-grades-") || key.startsWith("draft-17l-meta-") || key === "draft-lab-theme") {
+        backup[key] = localStorage.getItem(key);
+      }
+    }
+    const meta = {
+      exportedAt: new Date().toISOString(),
+      version: 1,
+      keys: Object.keys(backup).length
+    };
+    const blob = new Blob([JSON.stringify({
+      meta,
+      data: backup
+    }, null, 2)], {
+      type: "application/json"
+    });
+    const d = new Date();
+    const stamp = `${d.getFullYear()}${String(d.getMonth() + 1).padStart(2, "0")}${String(d.getDate()).padStart(2, "0")}`;
+    Object.assign(document.createElement("a"), {
+      href: URL.createObjectURL(blob),
+      download: `draft-lab-backup-${stamp}.json`
+    }).click();
+  };
+  const importBackup = file => {
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = ev => {
+      try {
+        const parsed = JSON.parse(ev.target.result);
+        const data = parsed.data ?? parsed;
+        let count = 0;
+        for (const _ref5 of Object.entries(data)) {
+          var _ref6 = _slicedToArray(_ref5, 2);
+          const key = _ref6[0];
+          const value = _ref6[1];
+          if ((key.startsWith("draft-grades-") || key.startsWith("draft-17l-meta-") || key === "draft-lab-theme") && typeof value === "string") {
+            localStorage.setItem(key, value);
+            count++;
+          }
+        }
+        if (count === 0) {
+          alert("No Draft Lab data found in that file.");
+          return;
+        }
+        if (selectedSet) {
+          loadGrades(selectedSet.code);
+          load17lMeta(selectedSet.code);
+        }
+        const savedTheme = localStorage.getItem("draft-lab-theme");
+        if (savedTheme) {
+          setTheme(savedTheme);
+          document.documentElement.setAttribute("data-theme", savedTheme);
+        }
+        alert(`Restored ${count} item${count !== 1 ? "s" : ""} from backup.`);
+      } catch (e) {
+        alert(`Could not read backup file: ${e.message}`);
+      }
+    };
+    reader.readAsText(file);
+  };
+  const gradedCount = cards.filter(c => {
+    var _grades$c$id3;
+    return (_grades$c$id3 = grades[c.id]) === null || _grades$c$id3 === void 0 ? void 0 : _grades$c$id3.myGrade;
+  }).length;
+  const gradeCounts = {};
+  for (const g of Object.values(grades)) {
+    if (g.myGrade) gradeCounts[g.myGrade] = (gradeCounts[g.myGrade] ?? 0) + 1;
+  }
+  const pct = cards.length ? Math.round(gradedCount / cards.length * 100) : 0;
+  const filteredSets = sets.filter(s => s.name.toLowerCase().includes(setSearch.toLowerCase()) || s.code.toLowerCase().includes(setSearch.toLowerCase()));
+  const clearFilters = () => {
+    setFilterColor("all");
+    setFilterRarity("all");
+    setFilterSearch("");
+    setFilterGraded("all");
+  };
+  const hasFilters = filterColor !== "all" || filterRarity !== "all" || filterSearch || filterGraded !== "all";
+  return /*#__PURE__*/React.createElement("div", {
+    className: "app",
+    onClick: () => {
+      setShowSetDD(false);
+      setShow17l(false);
+    }
+  }, /*#__PURE__*/React.createElement("header", {
+    className: "hdr",
+    onClick: e => e.stopPropagation()
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "hdr-left"
+  }, /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("div", {
+    className: "logo"
+  }, "DRAFT LAB"), /*#__PURE__*/React.createElement("div", {
+    className: "logo-sub"
+  }, "MTG")), /*#__PURE__*/React.createElement("div", {
+    className: "set-wrap"
+  }, /*#__PURE__*/React.createElement("button", {
+    className: "set-btn",
+    onClick: () => setShowSetDD(v => !v)
+  }, /*#__PURE__*/React.createElement("span", {
+    className: "set-btn-label"
+  }, selectedSet ? /*#__PURE__*/React.createElement(React.Fragment, null, selectedSet.name, " ", /*#__PURE__*/React.createElement("span", {
+    style: {
+      color: "var(--dimmer)",
+      fontSize: 9
+    }
+  }, "\xB7 ", selectedSet.code.toUpperCase())) : "Select a Set"), /*#__PURE__*/React.createElement("span", {
+    style: {
+      color: "var(--dim)",
+      fontSize: 10,
+      flexShrink: 0
+    }
+  }, "\u25BE")), showSetDD && /*#__PURE__*/React.createElement("div", {
+    className: "set-dropdown"
+  }, /*#__PURE__*/React.createElement("input", {
+    autoFocus: true,
+    className: "set-search",
+    placeholder: "Search sets\u2026",
+    value: setSearch,
+    onChange: e => setSetSearch(e.target.value)
+  }), /*#__PURE__*/React.createElement("div", {
+    className: "set-list"
+  }, filteredSets.slice(0, 80).map(s => {
+    var _s$released_at;
+    return /*#__PURE__*/React.createElement("div", {
+      key: s.code,
+      className: `set-item${(selectedSet === null || selectedSet === void 0 ? void 0 : selectedSet.code) === s.code ? " current" : ""}`,
+      onClick: () => {
+        loadSet(s);
+        setShowSetDD(false);
+        setSetSearch("");
+      }
+    }, /*#__PURE__*/React.createElement("span", {
+      className: "si-name"
+    }, s.name), /*#__PURE__*/React.createElement("span", {
+      className: "si-code"
+    }, s.code), /*#__PURE__*/React.createElement("span", {
+      className: "si-date"
+    }, (_s$released_at = s.released_at) === null || _s$released_at === void 0 ? void 0 : _s$released_at.slice(0, 7)));
+  }))))), /*#__PURE__*/React.createElement("div", {
+    className: "hdr-right"
+  }, selectedSet && isMobile && /*#__PURE__*/React.createElement("button", {
+    className: `icon-btn${showMobF ? " active" : ""}`,
+    onClick: () => setShowMobF(v => !v)
+  }, "\u2699"), selectedSet && !isMobile && /*#__PURE__*/React.createElement("div", {
+    className: "l17-wrap",
+    onClick: e => e.stopPropagation()
+  }, /*#__PURE__*/React.createElement("button", {
+    className: `btn${show17l ? " active" : ""}`,
+    onClick: () => {
+      setShow17l(v => !v);
+      setMsg17l("");
+    }
+  }, "17L \u25BE"), show17l && /*#__PURE__*/React.createElement("div", {
+    className: "l17-panel"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "l17-title"
+  }, "17Lands \xB7 GIH Win Rate \u2192 0\u20135"), /*#__PURE__*/React.createElement("div", {
+    className: "l17-fmt"
+  }, [["PremierDraft", "Premier"], ["QuickDraft", "Quick"], ["TradDraft", "Trad"]].map(_ref7 => {
+    let _ref8 = _slicedToArray(_ref7, 2),
+      val = _ref8[0],
+      lbl = _ref8[1];
+    return /*#__PURE__*/React.createElement("button", {
+      key: val,
+      className: fmt17l === val ? "active" : "",
+      onClick: () => setFmt17l(val)
+    }, lbl);
+  })), /*#__PURE__*/React.createElement("label", {
+    className: "l17-fetch",
+    style: {
+      textAlign: "center",
+      cursor: "pointer"
+    }
+  }, "Import CSV", /*#__PURE__*/React.createElement("input", {
+    type: "file",
+    accept: ".csv,.txt",
+    style: {
+      display: "none"
+    },
+    onChange: handle17LFile
+  })), msg17l && /*#__PURE__*/React.createElement("div", {
+    className: "l17-msg"
+  }, msg17l), meta17l && /*#__PURE__*/React.createElement("div", {
+    className: "l17-meta"
+  }, "Last import: ", /*#__PURE__*/React.createElement("strong", null, meta17l.format === "PremierDraft" ? "Premier" : meta17l.format === "QuickDraft" ? "Quick" : "Trad"), " · ", meta17l.count, " cards", " · ", timeAgo(meta17l.importedAt)))), selectedSet && meta17l && !isMobile && /*#__PURE__*/React.createElement("button", {
+    className: "btn",
+    style: {
+      color: "var(--dimmer)",
+      fontSize: 9
+    },
+    onClick: () => {
+      if (window.confirm(`Clear all 17Lands ratings for ${selectedSet.name}?`)) flush17L();
+    }
+  }, "Flush 17L"), syncStatus && /*#__PURE__*/React.createElement("span", {
+    className: "sync-dot"
+  }, syncStatus === "syncing" ? "↑ Syncing…" : "✓ Synced"), /*#__PURE__*/React.createElement("button", {
+    className: "btn",
+    style: {
+      fontSize: 9,
+      color: "var(--dimmer)"
+    },
+    title: user.email,
+    onClick: () => sb.auth.signOut()
+  }, "Sign Out"), /*#__PURE__*/React.createElement("button", {
+    className: "icon-btn",
+    onClick: () => setShowGuide(true),
+    title: "Grade guide",
+    style: {
+      fontSize: 13,
+      fontWeight: 700
+    }
+  }, "?"), /*#__PURE__*/React.createElement("button", {
+    className: "icon-btn",
+    onClick: toggleTheme,
+    title: "Toggle light/dark mode",
+    style: {
+      fontSize: 16,
+      padding: "6px 10px"
+    }
+  }, theme === "dark" ? "☀" : "🌙"), /*#__PURE__*/React.createElement("button", {
+    className: "btn",
+    onClick: exportBackup,
+    title: "Export all grades to JSON"
+  }, "Backup"), /*#__PURE__*/React.createElement("label", {
+    className: "btn",
+    style: {
+      cursor: "pointer"
+    },
+    title: "Restore grades from JSON backup"
+  }, "Restore", /*#__PURE__*/React.createElement("input", {
+    type: "file",
+    accept: ".json",
+    style: {
+      display: "none"
+    },
+    onChange: e => {
+      importBackup(e.target.files[0]);
+      e.target.value = "";
+    }
+  })), selectedSet && /*#__PURE__*/React.createElement("button", {
+    className: "btn",
+    onClick: exportCSV
+  }, "CSV"))), /*#__PURE__*/React.createElement("div", {
+    className: "filters-mobile mobile-only",
+    style: {
+      maxHeight: showMobF ? "380px" : "0"
+    }
+  }, showMobF && /*#__PURE__*/React.createElement("div", {
+    className: "fm-inner"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "fm-row"
+  }, /*#__PURE__*/React.createElement("input", {
+    className: "fm-srch",
+    placeholder: "Search cards\u2026",
+    value: filterSearch,
+    onChange: e => setFilterSearch(e.target.value)
+  }), /*#__PURE__*/React.createElement("select", {
+    className: "fm-sort",
+    value: mobileSort,
+    onChange: e => setMobileSort(e.target.value)
+  }, /*#__PURE__*/React.createElement("option", {
+    value: "color"
+  }, "Color \u2192 CMC"), /*#__PURE__*/React.createElement("option", {
+    value: "name"
+  }, "Name A\u2013Z"), /*#__PURE__*/React.createElement("option", {
+    value: "cmc"
+  }, "Mana Cost"), /*#__PURE__*/React.createElement("option", {
+    value: "rarity"
+  }, "Rarity"), /*#__PURE__*/React.createElement("option", {
+    value: "myGrade"
+  }, "My Grade"), /*#__PURE__*/React.createElement("option", {
+    value: "lsv"
+  }, "LSV Score"))), /*#__PURE__*/React.createElement("div", {
+    className: "fm-row"
+  }, /*#__PURE__*/React.createElement("span", {
+    className: "fl"
+  }, "Color:"), ["all", "W", "U", "B", "R", "G", "M", "C", "L"].map(c => /*#__PURE__*/React.createElement("button", {
+    key: c,
+    className: `fb${filterColor === c ? " active" : ""}`,
+    onClick: () => setFilterColor(c)
+  }, c === "all" ? "All" : c))), /*#__PURE__*/React.createElement("div", {
+    className: "fm-row"
+  }, /*#__PURE__*/React.createElement("span", {
+    className: "fl"
+  }, "Rarity:"), [["all", "All"], ["common", "C"], ["uncommon", "U"], ["rare", "R"], ["mythic", "M"]].map(_ref9 => {
+    let _ref0 = _slicedToArray(_ref9, 2),
+      full = _ref0[0],
+      abbr = _ref0[1];
+    return /*#__PURE__*/React.createElement("button", {
+      key: full,
+      className: `fb${filterRarity === full ? " active" : ""}`,
+      style: filterRarity === full && full !== "all" ? {
+        color: RARITY_COLORS[full],
+        borderColor: RARITY_COLORS[full] + "88"
+      } : {},
+      onClick: () => setFilterRarity(full)
+    }, abbr);
+  })), /*#__PURE__*/React.createElement("div", {
+    className: "fm-row"
+  }, /*#__PURE__*/React.createElement("span", {
+    className: "fl"
+  }, "Show:"), ["all", "graded", "ungraded"].map(g => /*#__PURE__*/React.createElement("button", {
+    key: g,
+    className: `fb${filterGraded === g ? " active" : ""}`,
+    onClick: () => setFilterGraded(g)
+  }, g.charAt(0).toUpperCase() + g.slice(1))), hasFilters && /*#__PURE__*/React.createElement("button", {
+    className: "btn",
+    style: {
+      padding: "3px 10px"
+    },
+    onClick: clearFilters
+  }, "Clear")), selectedSet && /*#__PURE__*/React.createElement("div", {
+    style: {
+      borderTop: "1px solid var(--b1)",
+      paddingTop: 10,
+      display: "flex",
+      flexDirection: "column",
+      gap: 8
+    }
+  }, /*#__PURE__*/React.createElement("div", {
+    style: {
+      display: "flex",
+      alignItems: "center",
+      justifyContent: "space-between"
+    }
+  }, /*#__PURE__*/React.createElement("span", {
+    className: "fl"
+  }, "17Lands GIH \u2192 0\u20135"), meta17l && /*#__PURE__*/React.createElement("span", {
+    style: {
+      fontSize: 10,
+      color: "var(--gold2)"
+    }
+  }, meta17l.format === "PremierDraft" ? "Premier" : meta17l.format === "QuickDraft" ? "Quick" : "Trad", " \xB7 ", meta17l.count, " cards \xB7 ", timeAgo(meta17l.importedAt))), /*#__PURE__*/React.createElement("div", {
+    className: "l17-fmt"
+  }, [["PremierDraft", "Premier"], ["QuickDraft", "Quick"], ["TradDraft", "Trad"]].map(_ref1 => {
+    let _ref10 = _slicedToArray(_ref1, 2),
+      val = _ref10[0],
+      lbl = _ref10[1];
+    return /*#__PURE__*/React.createElement("button", {
+      key: val,
+      className: fmt17l === val ? "active" : "",
+      onClick: () => setFmt17l(val)
+    }, lbl);
+  })), /*#__PURE__*/React.createElement("div", {
+    style: {
+      display: "flex",
+      gap: 8
+    }
+  }, /*#__PURE__*/React.createElement("label", {
+    className: "l17-fetch",
+    style: {
+      flex: 1,
+      textAlign: "center",
+      cursor: "pointer"
+    }
+  }, "Import CSV", /*#__PURE__*/React.createElement("input", {
+    type: "file",
+    accept: ".csv,.txt",
+    style: {
+      display: "none"
+    },
+    onChange: handle17LFile
+  })), meta17l && /*#__PURE__*/React.createElement("button", {
+    className: "btn",
+    style: {
+      color: "var(--dimmer)",
+      fontSize: 9
+    },
+    onClick: () => {
+      if (window.confirm("Clear 17Lands ratings for this set?")) flush17L();
+    }
+  }, "Flush")), msg17l && /*#__PURE__*/React.createElement("div", {
+    className: "l17-msg"
+  }, msg17l)), /*#__PURE__*/React.createElement("div", {
+    style: {
+      borderTop: "1px solid var(--b1)",
+      paddingTop: 10,
+      display: "flex",
+      gap: 8
+    }
+  }, /*#__PURE__*/React.createElement("button", {
+    className: "l17-fetch",
+    style: {
+      flex: 1
+    },
+    onClick: exportBackup
+  }, "Export Backup"), /*#__PURE__*/React.createElement("label", {
+    className: "l17-fetch",
+    style: {
+      flex: 1,
+      textAlign: "center",
+      cursor: "pointer"
+    }
+  }, "Import Backup", /*#__PURE__*/React.createElement("input", {
+    type: "file",
+    accept: ".json",
+    style: {
+      display: "none"
+    },
+    onChange: e => {
+      importBackup(e.target.files[0]);
+      e.target.value = "";
+      setShowMobF(false);
+    }
+  }))))), cards.length > 0 && /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("div", {
+    className: "stats"
+  }, /*#__PURE__*/React.createElement("span", {
+    className: "stat"
+  }, /*#__PURE__*/React.createElement("span", {
+    className: "stat-v"
+  }, cards.length), " cards"), /*#__PURE__*/React.createElement("span", {
+    className: "stat"
+  }, /*#__PURE__*/React.createElement("span", {
+    className: "stat-v"
+  }, gradedCount), " graded"), /*#__PURE__*/React.createElement("span", {
+    className: "stat"
+  }, /*#__PURE__*/React.createElement("span", {
+    className: "stat-v"
+  }, pct, "%")), /*#__PURE__*/React.createElement("span", {
+    className: "stat",
+    style: {
+      color: "var(--b2)"
+    }
+  }, "|"), GRADES.filter(g => g).map(g => gradeCounts[g] ? /*#__PURE__*/React.createElement("span", {
+    key: g,
+    className: "gp",
+    style: {
+      background: GRADE_COLOR[g] + "22",
+      color: GRADE_COLOR[g],
+      border: `1px solid ${GRADE_COLOR[g]}55`
+    }
+  }, g, " ", /*#__PURE__*/React.createElement("span", {
+    style: {
+      opacity: .75
+    }
+  }, gradeCounts[g])) : null)), /*#__PURE__*/React.createElement("div", {
+    className: "prog-bar"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "prog-fill",
+    style: {
+      width: `${pct}%`
+    }
+  }))), cards.length > 0 && /*#__PURE__*/React.createElement("div", {
+    className: "filters-desktop desktop-only"
+  }, /*#__PURE__*/React.createElement("span", {
+    className: "fl"
+  }, "Color"), ["all", "W", "U", "B", "R", "G", "M", "C", "L"].map(c => /*#__PURE__*/React.createElement("button", {
+    key: c,
+    className: `fb${filterColor === c ? " active" : ""}`,
+    onClick: () => setFilterColor(c)
+  }, c === "all" ? "All" : MTG_LABELS[c])), /*#__PURE__*/React.createElement("div", {
+    className: "divv"
+  }), /*#__PURE__*/React.createElement("span", {
+    className: "fl"
+  }, "Rarity"), ["all", ...RARITIES].map(r => /*#__PURE__*/React.createElement("button", {
+    key: r,
+    className: `fb${filterRarity === r ? " active" : ""}`,
+    style: filterRarity === r && r !== "all" ? {
+      color: RARITY_COLORS[r],
+      borderColor: RARITY_COLORS[r] + "88"
+    } : {},
+    onClick: () => setFilterRarity(r)
+  }, r === "all" ? "All" : r.charAt(0).toUpperCase() + r.slice(1))), /*#__PURE__*/React.createElement("div", {
+    className: "divv"
+  }), /*#__PURE__*/React.createElement("span", {
+    className: "fl"
+  }, "Show"), ["all", "graded", "ungraded"].map(g => /*#__PURE__*/React.createElement("button", {
+    key: g,
+    className: `fb${filterGraded === g ? " active" : ""}`,
+    onClick: () => setFilterGraded(g)
+  }, g.charAt(0).toUpperCase() + g.slice(1))), /*#__PURE__*/React.createElement("div", {
+    className: "divv"
+  }), /*#__PURE__*/React.createElement("input", {
+    className: "srch",
+    placeholder: "Search cards\u2026",
+    value: filterSearch,
+    onChange: e => setFilterSearch(e.target.value)
+  }), hasFilters && /*#__PURE__*/React.createElement("button", {
+    className: "btn",
+    onClick: clearFilters
+  }, "Clear"), /*#__PURE__*/React.createElement("span", {
+    className: "fl",
+    style: {
+      marginLeft: "auto"
+    }
+  }, sorted.length, " shown")), (loading || error || cards.length === 0) && /*#__PURE__*/React.createElement("div", {
+    className: "center"
+  }, loading ? /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("div", {
+    className: "spin"
+  }), /*#__PURE__*/React.createElement("span", null, loadMsg)) : error ? /*#__PURE__*/React.createElement("span", {
+    style: {
+      color: "#e05030"
+    }
+  }, error) : /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("div", {
+    className: "empty-title"
+  }, "Draft Lab"), /*#__PURE__*/React.createElement("div", {
+    className: "empty-sub"
+  }, "Choose a set above to start evaluating cards"))), !loading && !error && cards.length > 0 && /*#__PURE__*/React.createElement("div", {
+    className: "tbl-wrap desktop-only"
+  }, /*#__PURE__*/React.createElement("table", null, /*#__PURE__*/React.createElement("thead", null, /*#__PURE__*/React.createElement("tr", null, [["name", "Card Name"], ["cmc", "Cost"], [null, "Type"], ["rarity", "Rarity"], ["color", "Color"], ["myGrade", "My Grade"], ["lsv", "Community"], [null, "Sunset"], [null, "Δ"], [null, "Notes"]].map(_ref11 => {
+    let _ref12 = _slicedToArray(_ref11, 2),
+      col = _ref12[0],
+      lbl = _ref12[1];
+    return /*#__PURE__*/React.createElement("th", {
+      key: lbl,
+      className: col && sortCol === col ? "sorted" : "",
+      onClick: () => col && handleSort(col),
+      style: !col ? {
+        cursor: "default"
+      } : {}
+    }, lbl, col && sortCol === col ? sortDir === "asc" ? " ↑" : " ↓" : "");
+  }))), /*#__PURE__*/React.createElement("tbody", null, sorted.map(card => {
+    var _card$type_line3, _g$lsvSamples;
+    const ck = getColorKey(card),
+      g = grades[card.id] ?? {},
+      d = calcDelta(g.myGrade, g.lsv);
+    return /*#__PURE__*/React.createElement("tr", {
+      key: card.id,
+      className: `c${ck}`,
+      onMouseMove: e => {
+        setHovered(card);
+        setHoverPos({
+          x: e.clientX + 18,
+          y: e.clientY - 140
+        });
+      },
+      onMouseLeave: () => setHovered(null)
+    }, /*#__PURE__*/React.createElement("td", null, /*#__PURE__*/React.createElement("div", {
+      className: "card-name"
+    }, card.name)), /*#__PURE__*/React.createElement("td", null, /*#__PURE__*/React.createElement("span", {
+      className: "mana"
+    }, card.mana_cost || "—")), /*#__PURE__*/React.createElement("td", null, /*#__PURE__*/React.createElement("span", {
+      className: "typ"
+    }, (_card$type_line3 = card.type_line) === null || _card$type_line3 === void 0 || (_card$type_line3 = _card$type_line3.split("—")[0]) === null || _card$type_line3 === void 0 ? void 0 : _card$type_line3.trim())), /*#__PURE__*/React.createElement("td", null, /*#__PURE__*/React.createElement("span", {
+      className: "rar-dot",
+      style: {
+        background: RARITY_COLORS[card.rarity],
+        marginRight: 5
+      }
+    }), /*#__PURE__*/React.createElement("span", {
+      style: {
+        fontSize: 9,
+        color: "var(--dim)"
+      }
+    }, card.rarity.charAt(0).toUpperCase())), /*#__PURE__*/React.createElement("td", null, /*#__PURE__*/React.createElement("span", {
+      className: "ctag",
+      "data-c": ck
+    }, MTG_LABELS[ck])), /*#__PURE__*/React.createElement("td", null, /*#__PURE__*/React.createElement(GradeSelect, {
+      cls: "gsel",
+      value: g.myGrade || "",
+      onChange: e => updateGrade(card.id, "myGrade", e.target.value)
+    })), /*#__PURE__*/React.createElement("td", null, /*#__PURE__*/React.createElement("div", {
+      style: {
+        display: "flex",
+        alignItems: "center",
+        gap: 0
+      }
+    }, /*#__PURE__*/React.createElement("input", {
+      className: "lsv-in",
+      type: "number",
+      min: "0",
+      max: "5",
+      step: "0.5",
+      placeholder: "\u2014",
+      value: g.lsv ?? "",
+      style: {
+        color: g.lsv != null && g.lsv !== "" ? lsvColor(+g.lsv) : "var(--dimmer)"
+      },
+      title: g.lsvSource === "17lands" && g.lsvGIHWR != null ? `GIH WR: ${(g.lsvGIHWR * 100).toFixed(1)}% · ${(_g$lsvSamples = g.lsvSamples) === null || _g$lsvSamples === void 0 ? void 0 : _g$lsvSamples.toLocaleString()} samples` : undefined,
+      onChange: e => updateGrade(card.id, "lsv", e.target.value === "" ? "" : parseFloat(e.target.value))
+    }), g.lsvSource === "17lands" && /*#__PURE__*/React.createElement("span", {
+      className: "src-badge"
+    }, "17L"))), /*#__PURE__*/React.createElement("td", null, /*#__PURE__*/React.createElement(GradeSelect, {
+      cls: "gsel",
+      value: g.sunsetGrade || "",
+      onChange: e => updateGrade(card.id, "sunsetGrade", e.target.value)
+    })), /*#__PURE__*/React.createElement("td", null, d ? /*#__PURE__*/React.createElement("span", {
+      className: "delta",
+      style: {
+        color: d.color
+      }
+    }, d.label) : /*#__PURE__*/React.createElement("span", {
+      style: {
+        color: "var(--dimmer)"
+      }
+    }, "\u2014")), /*#__PURE__*/React.createElement("td", null, /*#__PURE__*/React.createElement("input", {
+      className: "note-in",
+      placeholder: "Notes\u2026",
+      value: g.notes || "",
+      onChange: e => updateGrade(card.id, "notes", e.target.value),
+      onFocus: () => setEditingNote(card.id),
+      onBlur: () => setEditingNote(null)
+    })));
+  })))), !loading && !error && cards.length > 0 && /*#__PURE__*/React.createElement("div", {
+    className: "card-list mobile-only"
+  }, sorted.map(card => /*#__PURE__*/React.createElement(MobileCardItem, {
+    key: card.id,
+    card: card,
+    grade: grades[card.id] ?? {},
+    onUpdate: (f, v) => updateGrade(card.id, f, v)
+  })), sorted.length === 0 && /*#__PURE__*/React.createElement("div", {
+    className: "center"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "empty-sub"
+  }, "No cards match the current filters."))), !isMobile && hovered && getImageUrl(hovered) && editingNote === null && /*#__PURE__*/React.createElement("div", {
+    className: "preview",
+    style: {
+      left: Math.min(hoverPos.x, window.innerWidth - 220),
+      top: Math.max(8, Math.min(hoverPos.y, window.innerHeight - 300))
+    }
+  }, /*#__PURE__*/React.createElement("img", {
+    src: getImageUrl(hovered),
+    alt: hovered.name
+  })), showGuide && /*#__PURE__*/React.createElement("div", {
+    className: "guide-overlay",
+    onClick: e => e.target === e.currentTarget && setShowGuide(false)
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "guide-modal"
+  }, /*#__PURE__*/React.createElement("button", {
+    className: "guide-close",
+    onClick: () => setShowGuide(false)
+  }, "Close"), /*#__PURE__*/React.createElement("div", {
+    className: "guide-h1"
+  }, "Grade Reference"), /*#__PURE__*/React.createElement("div", {
+    className: "guide-sub"
+  }, "Half-grade anchors for Limited evaluation"), [{
+    tier: "A Range — The Bombs",
+    rows: [["A+", "#00c853", "#000", "P1P1 always", "Wins the game alone. Changes match outcomes regardless of your other cards. You build around it."], ["A", "#43a047", "#000", "P1P1 usually", "Generates so much value or ends games that passing feels wrong. Doesn't need support to dominate."], ["A-", "#7cb342", "#000", "Pick 1–2", "Powerful and almost always impactful, but has a small catch — narrow color requirement, needs a board state, or slightly slow. Still first-pick most of the time."]]
+  }, {
+    tier: "B Range — The Backbone",
+    rows: [["B+", "#c6d825", "#000", "Pick 1–3", "A clear reason to be in a color. Wins games but not quite by itself. You're excited to get it."], ["B", "#e6c800", "#000", "Pick 2–5", "Reliable, efficient, does what it says. Your deck is better for having it. Decides close games."], ["B-", "#ffb300", "#000", "Pick 4–7", "Good but needs something — the right archetype, a reasonable curve, or a board state where its mode matters."]]
+  }, {
+    tier: "C Range — The Filler",
+    rows: [["C+", "#fb8c00", "#fff", "Pick 5–9", "Slightly above-average filler. Pleased to have it, occasionally overperforms, fits most decks."], ["C", "#f4511e", "#fff", "Pick 7–12", "Baseline playable. Does its job, won't embarrass you. Key question: would I be unhappy playing this? No."], ["C-", "#e53935", "#fff", "Pick 10–14", "You'll play it if you have to. Too slow, too narrow, or slightly overcosted for what it does."]]
+  }, {
+    tier: "D Range — The Desperate Plays",
+    rows: [["D+", "#b71c1c", "#fff", "Archetype only", "Only maindeck in a specific shell. Actively bad outside that context."], ["D", "#8b0000", "#fff", "Sideboard", "Rarely maindeck. Maybe sideboard. You know when you put it in that you're in trouble."]]
+  }, {
+    tier: "F — Don't",
+    rows: [["F", "#3a0000", "#888", "Never", "Actively costs you games. So slow, narrow, or overcosted you'd rather run a land. Should be a rare call."]]
+  }].map(_ref13 => {
+    let tier = _ref13.tier,
+      rows = _ref13.rows;
+    return /*#__PURE__*/React.createElement("div", {
+      key: tier,
+      className: "guide-tier"
+    }, /*#__PURE__*/React.createElement("div", {
+      className: "guide-tier-hdr"
+    }, tier), rows.map(_ref14 => {
+      let _ref15 = _slicedToArray(_ref14, 5),
+        grade = _ref15[0],
+        bg = _ref15[1],
+        fg = _ref15[2],
+        pick = _ref15[3],
+        desc = _ref15[4];
+      return /*#__PURE__*/React.createElement("div", {
+        key: grade,
+        className: "guide-row"
+      }, /*#__PURE__*/React.createElement("div", {
+        className: "guide-badge",
+        style: {
+          background: bg,
+          color: fg
+        }
+      }, grade), /*#__PURE__*/React.createElement("div", {
+        className: "guide-text"
+      }, /*#__PURE__*/React.createElement("div", {
+        className: "guide-pick"
+      }, pick), /*#__PURE__*/React.createElement("div", {
+        className: "guide-desc"
+      }, desc)));
+    }));
+  }), /*#__PURE__*/React.createElement("div", {
+    className: "guide-anchors"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "guide-anchors-hdr"
+  }, "Tiebreaker Questions"), /*#__PURE__*/React.createElement("div", {
+    className: "guide-q"
+  }, /*#__PURE__*/React.createElement("strong", null, "A- vs B+:"), " Does this card win me the game by itself, or does it need help to close?"), /*#__PURE__*/React.createElement("div", {
+    className: "guide-q"
+  }, /*#__PURE__*/React.createElement("strong", null, "B- vs C+:"), " Am I glad I have this, or am I just fine with it?"), /*#__PURE__*/React.createElement("div", {
+    className: "guide-q"
+  }, /*#__PURE__*/React.createElement("strong", null, "C vs C-:"), " Would I actively try to avoid playing this if I had another option?"), /*#__PURE__*/React.createElement("div", {
+    className: "guide-q",
+    style: {
+      marginBottom: 0
+    }
+  }, /*#__PURE__*/React.createElement("strong", null, "D+ vs D:"), " Is there a real archetype this belongs in, or am I theorycrafting?")))));
+}
+function LoginScreen({ email, setEmail, sent, sending, onSend }) {
+  return React.createElement("div", { className: "auth-wrap" },
+    React.createElement("div", { className: "auth-card" },
+      React.createElement("div", { className: "logo" }, "DRAFT LAB"),
+      React.createElement("div", { className: "logo-sub" }, "MTG"),
+      sent
+        ? React.createElement("div", { className: "auth-sent" }, "✓ Check your email for a login link.")
+        : React.createElement(React.Fragment, null,
+            React.createElement("div", { className: "auth-label" }, "Email"),
+            React.createElement("input", {
+              className: "auth-input",
+              type: "email",
+              placeholder: "you@example.com",
+              value: email,
+              autoFocus: true,
+              onChange: e => setEmail(e.target.value),
+              onKeyDown: e => { if (e.key === "Enter" && email && !sending) onSend(); }
+            }),
+            React.createElement("button", {
+              className: "auth-btn",
+              disabled: !email || sending,
+              onClick: onSend
+            }, sending ? "Sending…" : "Send Magic Link")
+          )
+    )
+  );
+}
+function AuthGate() {
+  const _uA = useState(null), _uB = _slicedToArray(_uA, 2),
+    user = _uB[0], setUser = _uB[1];
+  const _uC = useState(true), _uD = _slicedToArray(_uC, 2),
+    authLoading = _uD[0], setAuthLoading = _uD[1];
+  const _uE = useState(""), _uF = _slicedToArray(_uE, 2),
+    email = _uF[0], setEmail = _uF[1];
+  const _uG = useState(false), _uH = _slicedToArray(_uG, 2),
+    sent = _uH[0], setSent = _uH[1];
+  const _uI = useState(false), _uJ = _slicedToArray(_uI, 2),
+    sending = _uJ[0], setSending = _uJ[1];
+
+  useEffect(() => {
+    sb.auth.getSession().then(function(res) {
+      var session = res.data && res.data.session;
+      setUser(session ? session.user : null);
+      setAuthLoading(false);
+    });
+    var sub = sb.auth.onAuthStateChange(function(_event, session) {
+      setUser(session ? session.user : null);
+    });
+    return function() { sub.data && sub.data.subscription && sub.data.subscription.unsubscribe(); };
+  }, []);
+
+  const sendMagicLink = async () => {
+    setSending(true);
+    const { error } = await sb.auth.signInWithOtp({
+      email,
+      options: { emailRedirectTo: window.location.origin + window.location.pathname }
+    });
+    setSending(false);
+    if (!error) setSent(true);
+  };
+
+  if (authLoading) return React.createElement("div", { className: "center" },
+    React.createElement("div", { className: "spin" })
+  );
+  if (!user) return React.createElement(LoginScreen, { email, setEmail, sent, sending, onSend: sendMagicLink });
+  return React.createElement(DraftLab, { user });
+}
+ReactDOM.createRoot(document.getElementById("root")).render(/*#__PURE__*/React.createElement(AuthGate, null));
+</script>
+</body>
+</html>
