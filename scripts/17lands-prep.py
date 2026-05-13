@@ -202,7 +202,7 @@ results = [
 ]
 n_dropped = len(gih_count) - len(results)
 
-print(f"\n  {len(results)} cards with ≥{MIN_SAMPLES} samples")
+print(f"\n  {len(results)} cards with >={MIN_SAMPLES} samples")
 if n_dropped:
     print(f"  {n_dropped} cards dropped (insufficient data)")
 
@@ -238,13 +238,13 @@ scores = [to_score(r[1]) for r in results]
 dist   = {s: scores.count(s) for s in sorted(set(scores), reverse=True)}
 print(f"\n  Score distribution:")
 for score, count in dist.items():
-    bar = "█" * min(count, 40)
+    bar = "#" * min(count, 40)
     print(f"    {score:.1f}  {bar} {count}")
 
 print(f"\n{'='*58}")
 print(f"  Output: {OUT_CSV}  ({len(results)} cards)")
 print(f"{'='*58}")
 print(f"\n  Next step:")
-print(f"    Open Draft Lab → ⚙ (mobile) or 17L (desktop)")
-print(f"    → Import CSV → select  {OUT_CSV}")
+print(f"    Open Draft Lab -> Settings (mobile) or Import (desktop)")
+print(f"    -> Import CSV -> select  {OUT_CSV}")
 print()
