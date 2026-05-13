@@ -46,6 +46,26 @@ const GRADE_TIERS = [
   ]},
 ];
 
+// ── Tag vocabulary ───────────────────────────────────────────────────────────
+const TAGS = [
+  { id:"sleeper",        label:"Sleeper",       group:"eval" },
+  { id:"overrated",      label:"Overrated",     group:"eval" },
+  { id:"uncertain",      label:"Uncertain",     group:"eval" },
+  { id:"removal",        label:"Removal",       group:"role" },
+  { id:"finisher",       label:"Finisher",      group:"role" },
+  { id:"tempo",          label:"Tempo",         group:"role" },
+  { id:"card-draw",      label:"Card Draw",     group:"role" },
+  { id:"enabler",        label:"Enabler",       group:"role" },
+  { id:"build-around",   label:"Build-Around",  group:"role" },
+  { id:"archetype-only", label:"Arch Only",     group:"context" },
+  { id:"filler",         label:"Filler",        group:"context" },
+];
+const TAG_GROUPS = [
+  { label:"Evaluation", ids:["sleeper","overrated","uncertain"] },
+  { label:"Card Role",  ids:["removal","finisher","tempo","card-draw","enabler","build-around"] },
+  { label:"Context",    ids:["archetype-only","filler"] },
+];
+
 // Source labels and colors for badges
 const SOURCE_LABEL = { "17lands":"17L", "aetherhub":"AH", "manual":"MAN" };
 const SOURCE_COLOR = { "17lands":"var(--gold2)", "aetherhub":"#5599cc", "manual":"var(--dimmer)" };
@@ -242,6 +262,73 @@ function RatingInput({ value, source, onChange }) {
   );
 }
 
+// ── TagCell (desktop table — compact chips + inline picker) ──────────────────
+function TagCell({ tags = [], onToggle }) {
+  const [open, setOpen] = useState(false);
+  return (
+    <div style={{ display:"flex", flexDirection:"column", gap:3 }}>
+      <div style={{ display:"flex", flexWrap:"wrap", gap:3, alignItems:"center" }}>
+        {tags.map(id => {
+          const tag = TAGS.find(t => t.id === id);
+          return tag
+            ? <span key={id} className="tag-chip active" style={{ fontSize:8, padding:"1px 6px" }}
+                onClick={() => onToggle(id)}>{tag.label}</span>
+            : null;
+        })}
+        <button className="tag-add-btn" onClick={() => setOpen(v => !v)}>
+          {open ? "✕" : tags.length ? "+ more" : "+ tag"}
+        </button>
+      </div>
+      {open && (
+        <div style={{ borderTop:"1px solid var(--b1)", paddingTop:4 }}>
+          {TAG_GROUPS.map(({ label, ids }) => (
+            <div key={label} style={{ marginBottom:4 }}>
+              <div style={{ fontSize:8, color:"var(--dimmer)", marginBottom:3, textTransform:"uppercase", letterSpacing:".1em" }}>{label}</div>
+              <div className="tag-chips">
+                {ids.map(id => {
+                  const tag = TAGS.find(t => t.id === id);
+                  return tag
+                    ? <button key={id} className={`tag-chip${tags.includes(id) ? " active" : ""}`}
+                        style={{ fontSize:8, padding:"1px 6px" }} onClick={() => onToggle(id)}>
+                        {tag.label}
+                      </button>
+                    : null;
+                })}
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ── TagFilterPanel (desktop filter bar dropdown) ──────────────────────────────
+function TagFilterPanel({ filterTags, onToggle, onClear }) {
+  return (
+    <div className="tag-filter-panel">
+      <div className="tag-filter-hdr">Filter by tag — any of</div>
+      {TAG_GROUPS.map(({ label, ids }) => (
+        <div key={label}>
+          <div style={{ fontSize:8, color:"var(--dimmer)", marginBottom:4, textTransform:"uppercase", letterSpacing:".1em" }}>{label}</div>
+          <div className="tag-chips">
+            {ids.map(id => {
+              const tag = TAGS.find(t => t.id === id);
+              return tag
+                ? <button key={id} className={`tag-chip${filterTags.includes(id) ? " active" : ""}`}
+                    onClick={() => onToggle(id)}>{tag.label}</button>
+                : null;
+            })}
+          </div>
+        </div>
+      ))}
+      {filterTags.length > 0 && (
+        <button className="btn" style={{ fontSize:9, alignSelf:"flex-start" }} onClick={onClear}>Clear</button>
+      )}
+    </div>
+  );
+}
+
 // ── GradeSelect ───────────────────────────────────────────────────────────────
 function GradeSelect({ cls, value, onChange }) {
   return (
@@ -325,6 +412,19 @@ function MobileCardItem({ card, grade, onUpdate }) {
                         <textarea className="mc-note" placeholder="Notes…"
                           value={grade.notes || ""}
                           onChange={e => onUpdate("notes", e.target.value)} />
+                      </div>
+                      <div className="mc-field">
+                        <label>Tags</label>
+                        <div className="tag-chips">
+                          {TAGS.map(tag => (
+                            <button key={tag.id}
+                              className={`tag-chip${(grade.tags ?? []).includes(tag.id) ? " active" : ""}`}
+                              onClick={() => {
+                                const cur = grade.tags ?? [];
+                                onUpdate("tags", cur.includes(tag.id) ? cur.filter(t => t !== tag.id) : [...cur, tag.id]);
+                              }}>{tag.label}</button>
+                          ))}
+                        </div>
                       </div>
                     </div>
                   </div>
@@ -492,6 +592,8 @@ function DraftLab({ user }) {
   const [filterSearch, setFilterSearch]   = useState("");
   const [filterGraded, setFilterGraded]   = useState("all");
   const [filterQuadrant, setFilterQuadrant] = useState("all");
+  const [filterTags, setFilterTags]         = useState([]);
+  const [showTagFilter, setShowTagFilter]   = useState(false);
   const [showMobF, setShowMobF]     = useState(false);
   const [showGuide, setShowGuide]   = useState(false);
   const [syncStatus, setSyncStatus] = useState("");
@@ -570,7 +672,7 @@ function DraftLab({ user }) {
     setCards([]);
     setLoading(true);
     setError(null);
-    setFilterColor("all"); setFilterRarity("all"); setFilterSearch(""); setFilterGraded("all"); setFilterQuadrant("all");
+    setFilterColor("all"); setFilterRarity("all"); setFilterSearch(""); setFilterGraded("all"); setFilterQuadrant("all"); setFilterTags([]);
     loadGrades(set.code);
     let url = `https://api.scryfall.com/cards/search?q=set:${set.code}+game:paper&order=color&unique=cards`, all = [];
     try {
@@ -605,7 +707,7 @@ function DraftLab({ user }) {
   };
 
   const exportCSV = () => {
-    const hdr  = ["Name","Color","Mana Cost","Type","Rarity","My Grade","Expert","Expert Source","Performance","Perf Source","Sunset","Quadrant","Notes"];
+    const hdr  = ["Name","Color","Mana Cost","Type","Rarity","My Grade","Expert","Expert Source","Performance","Perf Source","Sunset","Quadrant","Tags","Notes"];
     const rows = sorted.map(c => {
       const g = grades[c.id] ?? {};
       const q = calcQuadrant(g);
@@ -614,6 +716,7 @@ function DraftLab({ user }) {
         g.myGrade ?? "", g.expert_rating ?? "", g.expert_source ?? "",
         g.performance_rating ?? "", g.performance_source ?? "",
         g.sunsetGrade ?? "", q?.label ?? "",
+        `"${(g.tags ?? []).join("|")}"`,
         `"${(g.notes ?? "").replace(/"/g, '""')}"`,
       ].join(",");
     });
@@ -661,8 +764,9 @@ function DraftLab({ user }) {
   // ── Derived ──
   const activeSort   = isMobile ? mobileSort : sortCol;
   const filteredSets = sets.filter(s => s.name.toLowerCase().includes(setSearch.toLowerCase()) || s.code.toLowerCase().includes(setSearch.toLowerCase()));
-  const clearFilters = () => { setFilterColor("all"); setFilterRarity("all"); setFilterSearch(""); setFilterGraded("all"); setFilterQuadrant("all"); };
-  const hasFilters   = filterColor !== "all" || filterRarity !== "all" || filterSearch || filterGraded !== "all" || filterQuadrant !== "all";
+  const clearFilters = () => { setFilterColor("all"); setFilterRarity("all"); setFilterSearch(""); setFilterGraded("all"); setFilterQuadrant("all"); setFilterTags([]); };
+  const toggleFilterTag = id => setFilterTags(prev => prev.includes(id) ? prev.filter(t => t !== id) : [...prev, id]);
+  const hasFilters   = filterColor !== "all" || filterRarity !== "all" || filterSearch || filterGraded !== "all" || filterQuadrant !== "all" || filterTags.length > 0;
   const gradedCount  = cards.filter(c => grades[c.id]?.myGrade).length;
   const gradeCounts  = {};
   for (const g of Object.values(grades)) { if (g.myGrade) gradeCounts[g.myGrade] = (gradeCounts[g.myGrade] ?? 0) + 1; }
@@ -680,6 +784,10 @@ function DraftLab({ user }) {
       const q = calcQuadrant(g);
       const label = q?.label ?? "none";
       if (filterQuadrant === "none" ? label !== "none" : label !== filterQuadrant) return false;
+    }
+    if (filterTags.length > 0) {
+      const cardTags = g.tags ?? [];
+      if (!filterTags.some(t => cardTags.includes(t))) return false;
     }
     return true;
   });
@@ -708,7 +816,7 @@ function DraftLab({ user }) {
 
   // ── Render ──
   return (
-    <div className="app" onClick={() => { setShowSetDD(false); setShowImport(false); }}>
+    <div className="app" onClick={() => { setShowSetDD(false); setShowImport(false); setShowTagFilter(false); }}>
 
       {/* ── Header ── */}
       <header className="hdr" onClick={e => e.stopPropagation()}>
@@ -835,6 +943,15 @@ function DraftLab({ user }) {
                 </button>
               ))}
             </div>
+            <div className="fm-row" style={{ flexDirection:"column", alignItems:"flex-start", gap:6 }}>
+              <span className="fl">Tags:</span>
+              <div className="tag-chips">
+                {TAGS.map(tag => (
+                  <button key={tag.id} className={`tag-chip${filterTags.includes(tag.id) ? " active" : ""}`}
+                    onClick={() => toggleFilterTag(tag.id)}>{tag.label}</button>
+                ))}
+              </div>
+            </div>
             {hasFilters && <div className="fm-row"><button className="btn" style={{ padding:"3px 10px" }} onClick={clearFilters}>Clear Filters</button></div>}
             {selectedSet && (
               <div style={{ borderTop:"1px solid var(--b1)", paddingTop:10 }}>
@@ -911,6 +1028,16 @@ function DraftLab({ user }) {
               </button>
             ))}
           </>}
+          <div className="divv" />
+          <div className="tag-filter-wrap" onClick={e => e.stopPropagation()}>
+            <button className={`fb${filterTags.length > 0 ? " active" : ""}`}
+              onClick={() => setShowTagFilter(v => !v)}>
+              Tags{filterTags.length > 0 ? ` (${filterTags.length})` : ""}
+            </button>
+            {showTagFilter && (
+              <TagFilterPanel filterTags={filterTags} onToggle={toggleFilterTag} onClear={() => setFilterTags([])} />
+            )}
+          </div>
           <div className="divv" />
           <input className="srch" placeholder="Search cards…"
             value={filterSearch} onChange={e => setFilterSearch(e.target.value)} />
@@ -993,6 +1120,10 @@ function DraftLab({ user }) {
                       <input type="text" className="note-in" placeholder="Notes…"
                         value={g.notes ?? ""}
                         onChange={e => updateGrade(card.id, "notes", e.target.value)} />
+                      <TagCell tags={g.tags ?? []} onToggle={id => {
+                        const cur = g.tags ?? [];
+                        updateGrade(card.id, "tags", cur.includes(id) ? cur.filter(t => t !== id) : [...cur, id]);
+                      }} />
                     </td>
                   </tr>
                 );
