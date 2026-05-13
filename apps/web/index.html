@@ -349,9 +349,11 @@
 <script>
 const SUPABASE_URL = '%%SUPABASE_URL%%';
 const SUPABASE_ANON_KEY = '%%SUPABASE_ANON_KEY%%';
-const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+const SUPABASE_CONFIGURED = SUPABASE_URL !== '%%SUPABASE_URL%%';
+const sb = SUPABASE_CONFIGURED ? supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY) : null;
 
 async function syncGrades(code, data, userId) {
+  if (!sb) return;
   try {
     await sb.from('draft_grades').upsert(
       { user_id: userId, set_code: code, data, updated_at: new Date().toISOString() },
@@ -360,6 +362,7 @@ async function syncGrades(code, data, userId) {
   } catch(_e) {}
 }
 async function fetchGrades(code) {
+  if (!sb) return null;
   try {
     const { data } = await sb.from('draft_grades').select('data').eq('set_code', code).single();
     return (data && data.data) ? data.data : null;
@@ -1754,11 +1757,12 @@ function AuthGate() {
     sending = _uJ[0], setSending = _uJ[1];
 
   useEffect(() => {
+    if (!SUPABASE_CONFIGURED) { setAuthLoading(false); return; }
     sb.auth.getSession().then(function(res) {
       var session = res.data && res.data.session;
       setUser(session ? session.user : null);
       setAuthLoading(false);
-    });
+    }).catch(function() { setAuthLoading(false); });
     var sub = sb.auth.onAuthStateChange(function(_event, session) {
       setUser(session ? session.user : null);
     });
@@ -1778,7 +1782,10 @@ function AuthGate() {
   if (authLoading) return React.createElement("div", { className: "center" },
     React.createElement("div", { className: "spin" })
   );
-  if (!user) return React.createElement(LoginScreen, { email, setEmail, sent, sending, onSend: sendMagicLink });
+  if (!SUPABASE_CONFIGURED || !user) {
+    if (SUPABASE_CONFIGURED) return React.createElement(LoginScreen, { email, setEmail, sent, sending, onSend: sendMagicLink });
+    return React.createElement(DraftLab, { user: null });
+  }
   return React.createElement(DraftLab, { user });
 }
 ReactDOM.createRoot(document.getElementById("root")).render(/*#__PURE__*/React.createElement(AuthGate, null));
