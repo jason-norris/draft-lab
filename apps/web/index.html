@@ -676,19 +676,6 @@ function DraftLab({ user }) {
     if (theme === "auto") document.documentElement.removeAttribute("data-theme");else document.documentElement.setAttribute("data-theme", theme);
   }, [theme]);
 
-  // Pull grades from Supabase when a set loads (merges into localStorage)
-  useEffect(() => {
-    if (!selectedSet || !user) return;
-    fetchGrades(selectedSet.code).then(remote => {
-      if (!remote) return;
-      setGrades(prev => {
-        const merged = Object.assign({}, prev, remote);
-        store.set(`draft-grades-${selectedSet.code}`, JSON.stringify(merged));
-        return merged;
-      });
-    });
-  }, [selectedSet && selectedSet.code, user && user.id]);
-
   // 17Lands state
   const _useState9 = useState(false),
     _useState0 = _slicedToArray(_useState9, 2),
@@ -798,6 +785,18 @@ function DraftLab({ user }) {
     _useState54 = _slicedToArray(_useState53, 2),
     showSetDD = _useState54[0],
     setShowSetDD = _useState54[1];
+  // Pull grades from Supabase when a set loads (merges into localStorage)
+  useEffect(() => {
+    if (!selectedSet || !user) return;
+    fetchGrades(selectedSet.code).then(remote => {
+      if (!remote) return;
+      setGrades(prev => {
+        const merged = Object.assign({}, prev, remote);
+        store.set(`draft-grades-${selectedSet.code}`, JSON.stringify(merged));
+        return merged;
+      });
+    });
+  }, [selectedSet && selectedSet.code, user && user.id]);
   useEffect(() => {
     fetch("https://api.scryfall.com/sets").then(r => r.json()).then(d => {
       const valid = d.data.filter(s => ["expansion", "core", "draft_innovation", "masters", "commander", "duel_deck"].includes(s.set_type) && s.card_count > 0).sort((a, b) => {
