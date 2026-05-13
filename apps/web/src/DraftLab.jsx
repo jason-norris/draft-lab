@@ -6,12 +6,12 @@ const MTG_LABELS   = { W:"White", U:"Blue", B:"Black", R:"Red", G:"Green", M:"Mu
 const RARITY_COLORS = { common:"#888", uncommon:"#5599cc", rare:"#e8c020", mythic:"#e06020" };
 const COLOR_ORDER  = { W:0, U:1, B:2, R:3, G:4, M:5, C:6, L:7 };
 const RARITIES     = ["common","uncommon","rare","mythic"];
-const GRADES       = ["A+","A","A-","B+","B","B-","C+","C","C-","D","F",""];
+const GRADES       = ["A+","A","A-","B+","B","B-","C+","C","C-","D+","D","F",""];
 const GRADE_COLOR  = {
   "A+":"#00c853","A":"#43a047","A-":"#7cb342",
   "B+":"#c6d825","B":"#e6c800","B-":"#ffb300",
   "C+":"#fb8c00","C":"#f4511e","C-":"#e53935",
-  "D":"#b71c1c","F":"#6a0000","":""
+  "D+":"#c62828","D":"#b71c1c","F":"#6a0000","":""
 };
 // Numeric value for a letter grade (A+=5.0 … F=0.0), used for delta math
 const GRADE_NUMERIC = {
