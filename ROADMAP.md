@@ -312,8 +312,9 @@ npx cap sync
 
 Small items confirmed during testing, to be addressed before or alongside the next phase:
 
-- [ ] **D+ missing from grade dropdown** — `GRADES` array only has `D`, missing the `D+` half-grade. `D+` is defined in `GRADE_NUMERIC` and the grade guide but not selectable. Add `"D+"` between `"C-"` and `"D"` in the `GRADES` constant in `DraftLab.jsx`.
-- [ ] **Δ column label verbosity** — "≈ Agree" appears once per indicator row; could be condensed to a dot + direction symbol only to reduce visual noise.
+- [x] **D+ missing from grade dropdown** — `GRADES` array only has `D`, missing the `D+` half-grade. Fixed in polish round 1.
+- [x] **Δ column label verbosity** — replaced verbose text labels with compact 2-char row IDs (ME/MP/EP) and a single colored directional symbol (≈/▲/▼). Hover tooltip shows full label + delta value. Fixed in polish round 1.
+- [ ] **Double-faced card (DFC) image flip** — DFCs (e.g. transform cards, modal DFCs) have two faces in Scryfall's `card_faces` array. Currently only the front face image is shown. Need a flip control to view the back face. Complexity: the mobile "tap to enlarge" and desktop hover preview both need separate flip affordances without conflicting with existing tap/click behavior. Suggested approach: a small ↻ button overlaid on the card image in both the mobile expanded view and the desktop lightbox (Phase 3.2). Low priority until lightbox is built since desktop hover is passive.
 
 ---
 
