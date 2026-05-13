@@ -762,6 +762,10 @@ function DraftLab({ user }) {
     _useState44e = _slicedToArray(_useState44d, 2),
     syncStatus = _useState44e[0],
     setSyncStatus = _useState44e[1];
+  const _useState44f = useState(false),
+    _useState44g = _slicedToArray(_useState44f, 2),
+    showLegal = _useState44g[0],
+    setShowLegal = _useState44g[1];
   const _useState45 = useState(null),
     _useState46 = _slicedToArray(_useState45, 2),
     hovered = _useState46[0],
@@ -1240,6 +1244,11 @@ function DraftLab({ user }) {
     }
   }, "?"), /*#__PURE__*/React.createElement("button", {
     className: "icon-btn",
+    onClick: () => setShowLegal(true),
+    title: "Legal & Attribution",
+    style: { fontSize: 11 }
+  }, "©"), /*#__PURE__*/React.createElement("button", {
+    className: "icon-btn",
     onClick: toggleTheme,
     title: "Toggle light/dark mode",
     style: {
@@ -1714,7 +1723,28 @@ function DraftLab({ user }) {
     style: {
       marginBottom: 0
     }
-  }, /*#__PURE__*/React.createElement("strong", null, "D+ vs D:"), " Is there a real archetype this belongs in, or am I theorycrafting?")))));
+  }, /*#__PURE__*/React.createElement("strong", null, "D+ vs D:"), " Is there a real archetype this belongs in, or am I theorycrafting?")))), showLegal && /*#__PURE__*/React.createElement("div", {
+    className: "guide-overlay",
+    onClick: e => e.target === e.currentTarget && setShowLegal(false)
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "guide-modal"
+  }, /*#__PURE__*/React.createElement("button", {
+    className: "guide-close",
+    onClick: () => setShowLegal(false)
+  }, "Close"), /*#__PURE__*/React.createElement("div", {
+    className: "guide-h1"
+  }, "Legal & Attribution"), /*#__PURE__*/React.createElement("div", {
+    className: "guide-desc",
+    style: { marginBottom: 16 }
+  }, "Draft Lab is unofficial Fan Content permitted under the Wizards of the Coast Fan Content Policy. Not approved or endorsed by Wizards of the Coast. Portions of the materials used are property of Wizards of the Coast. ©Wizards of the Coast LLC."), /*#__PURE__*/React.createElement("div", {
+    className: "guide-desc",
+    style: { marginBottom: 16 }
+  }, "Card data and images provided by Scryfall (scryfall.com). Game performance data from 17Lands public datasets (17lands.com), used for personal non-commercial purposes per their usage guidelines. Pre-release ratings sourced from AetherHub and Nizzahon Magic for personal use."), /*#__PURE__*/React.createElement("div", {
+    className: "guide-desc"
+  }, "This project is not affiliated with or endorsed by any of the above."), /*#__PURE__*/React.createElement("div", {
+    className: "guide-desc",
+    style: { marginTop: 16, color: "var(--dimmer)", fontSize: 10 }
+  }, "Draft Lab source code is released under the MIT License."))));
 }
 function LoginScreen({ email, setEmail, sent, sending, onSend }) {
   return React.createElement("div", { className: "auth-wrap" },
