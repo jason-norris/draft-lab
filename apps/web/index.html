@@ -6,6 +6,7 @@
   <title>Draft Lab — MTG Card Evaluation</title>
   <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
   <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
   <link rel="preconnect" href="https://fonts.googleapis.com"/>
   <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700&family=IBM+Plex+Mono:wght@300;400;500&display=swap" rel="stylesheet"/>
   <style>
@@ -324,11 +325,44 @@
       .mobile-only { display:none !important; }
       .filters-mobile { display:none !important; }
     }
+
+    /* ── Auth screen ── */
+    .auth-wrap { min-height:100vh; display:flex; align-items:center; justify-content:center; background:var(--bg); }
+    .auth-card { background:var(--s1); border:1px solid var(--b2); padding:40px 32px; width:100%; max-width:340px; display:flex; flex-direction:column; align-items:center; }
+    .auth-card .logo { font-family:'Cinzel',serif; font-size:22px; color:var(--gold); letter-spacing:.18em; }
+    .auth-card .logo-sub { font-size:9px; color:var(--dimmer); letter-spacing:.25em; text-transform:uppercase; margin-top:2px; margin-bottom:32px; }
+    .auth-label { font-size:10px; color:var(--dimmer); text-transform:uppercase; letter-spacing:.12em; align-self:flex-start; margin-bottom:6px; }
+    .auth-input { width:100%; background:var(--s2); border:1px solid var(--b2); color:var(--txt); font-family:'IBM Plex Mono',monospace; font-size:13px; padding:10px 12px; outline:none; margin-bottom:12px; }
+    .auth-input:focus { border-color:var(--gold2); }
+    .auth-btn { width:100%; background:rgba(200,168,75,.12); border:1px solid var(--gold2); color:var(--gold); font-family:'IBM Plex Mono',monospace; font-size:11px; padding:10px; cursor:pointer; letter-spacing:.08em; text-transform:uppercase; transition:all .2s; }
+    .auth-btn:hover:not(:disabled) { background:rgba(200,168,75,.22); }
+    .auth-btn:disabled { opacity:.4; cursor:default; }
+    .auth-sent { font-size:12px; color:var(--gold); text-align:center; line-height:1.7; }
+    .sync-dot { font-size:10px; color:var(--dim); white-space:nowrap; }
   </style>
 </head>
 <body>
 <div id="root"></div>
 <script>
+const SUPABASE_URL = '%%SUPABASE_URL%%';
+const SUPABASE_ANON_KEY = '%%SUPABASE_ANON_KEY%%';
+const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+async function syncGrades(code, data, userId) {
+  try {
+    await sb.from('draft_grades').upsert(
+      { user_id: userId, set_code: code, data, updated_at: new Date().toISOString() },
+      { onConflict: 'user_id,set_code' }
+    );
+  } catch(_e) {}
+}
+async function fetchGrades(code) {
+  try {
+    const { data } = await sb.from('draft_grades').select('data').eq('set_code', code).single();
+    return (data && data.data) ? data.data : null;
+  } catch(_e) { return null; }
+}
+
 const _excluded = ["lsv", "lsvSource", "lsvFormat", "lsvSamples", "lsvGIHWR"];
 function _objectWithoutProperties(e, t) { if (null == e) return {}; var o, r, i = _objectWithoutPropertiesLoose(e, t); if (Object.getOwnPropertySymbols) { var n = Object.getOwnPropertySymbols(e); for (r = 0; r < n.length; r++) o = n[r], -1 === t.indexOf(o) && {}.propertyIsEnumerable.call(e, o) && (i[o] = e[o]); } return i; }
 function _objectWithoutPropertiesLoose(r, e) { if (null == r) return {}; var t = {}; for (var n in r) if ({}.hasOwnProperty.call(r, n)) { if (-1 !== e.indexOf(n)) continue; t[n] = r[n]; } return t; }
@@ -594,7 +628,7 @@ function timeAgo(iso) {
   if (secs < 86400) return `${Math.floor(secs / 3600)}h ago`;
   return `${Math.floor(secs / 86400)}d ago`;
 }
-function DraftLab() {
+function DraftLab({ user }) {
   const isMobile = useIsMobile();
 
   // Theme: "auto" defers to prefers-color-scheme; "dark" or "light" overrides
@@ -618,6 +652,19 @@ function DraftLab() {
   useEffect(() => {
     if (theme === "auto") document.documentElement.removeAttribute("data-theme");else document.documentElement.setAttribute("data-theme", theme);
   }, [theme]);
+
+  // Pull grades from Supabase when a set loads (merges into localStorage)
+  useEffect(() => {
+    if (!selectedSet || !user) return;
+    fetchGrades(selectedSet.code).then(remote => {
+      if (!remote) return;
+      setGrades(prev => {
+        const merged = Object.assign({}, prev, remote);
+        store.set(`draft-grades-${selectedSet.code}`, JSON.stringify(merged));
+        return merged;
+      });
+    });
+  }, [selectedSet && selectedSet.code, user && user.id]);
 
   // 17Lands state
   const _useState9 = useState(false),
@@ -701,6 +748,10 @@ function DraftLab() {
     _useState44c = _slicedToArray(_useState44b, 2),
     showGuide = _useState44c[0],
     setShowGuide = _useState44c[1];
+  const _useState44d = useState(""),
+    _useState44e = _slicedToArray(_useState44d, 2),
+    syncStatus = _useState44e[0],
+    setSyncStatus = _useState44e[1];
   const _useState45 = useState(null),
     _useState46 = _slicedToArray(_useState45, 2),
     hovered = _useState46[0],
@@ -739,7 +790,13 @@ function DraftLab() {
   };
   const persistGrades = useCallback((g, code) => {
     store.set(`draft-grades-${code}`, JSON.stringify(g));
-  }, []);
+    if (user) {
+      setSyncStatus("syncing");
+      syncGrades(code, g, user.id)
+        .then(() => setSyncStatus("synced"))
+        .catch(() => setSyncStatus(""));
+    }
+  }, [user]);
   const load17lMeta = useCallback(code => {
     const r = store.get(`draft-17l-meta-${code}`);
     setMeta17l(r ? JSON.parse(r.value) : null);
@@ -1141,7 +1198,17 @@ function DraftLab() {
     onClick: () => {
       if (window.confirm(`Clear all 17Lands ratings for ${selectedSet.name}?`)) flush17L();
     }
-  }, "Flush 17L"), /*#__PURE__*/React.createElement("button", {
+  }, "Flush 17L"), syncStatus && /*#__PURE__*/React.createElement("span", {
+    className: "sync-dot"
+  }, syncStatus === "syncing" ? "↑ Syncing…" : "✓ Synced"), /*#__PURE__*/React.createElement("button", {
+    className: "btn",
+    style: {
+      fontSize: 9,
+      color: "var(--dimmer)"
+    },
+    title: user.email,
+    onClick: () => sb.auth.signOut()
+  }, "Sign Out"), /*#__PURE__*/React.createElement("button", {
     className: "icon-btn",
     onClick: () => setShowGuide(true),
     title: "Grade guide",
@@ -1627,7 +1694,74 @@ function DraftLab() {
     }
   }, /*#__PURE__*/React.createElement("strong", null, "D+ vs D:"), " Is there a real archetype this belongs in, or am I theorycrafting?")))));
 }
-ReactDOM.createRoot(document.getElementById("root")).render(/*#__PURE__*/React.createElement(DraftLab, null));
+function LoginScreen({ email, setEmail, sent, sending, onSend }) {
+  return React.createElement("div", { className: "auth-wrap" },
+    React.createElement("div", { className: "auth-card" },
+      React.createElement("div", { className: "logo" }, "DRAFT LAB"),
+      React.createElement("div", { className: "logo-sub" }, "MTG"),
+      sent
+        ? React.createElement("div", { className: "auth-sent" }, "✓ Check your email for a login link.")
+        : React.createElement(React.Fragment, null,
+            React.createElement("div", { className: "auth-label" }, "Email"),
+            React.createElement("input", {
+              className: "auth-input",
+              type: "email",
+              placeholder: "you@example.com",
+              value: email,
+              autoFocus: true,
+              onChange: e => setEmail(e.target.value),
+              onKeyDown: e => { if (e.key === "Enter" && email && !sending) onSend(); }
+            }),
+            React.createElement("button", {
+              className: "auth-btn",
+              disabled: !email || sending,
+              onClick: onSend
+            }, sending ? "Sending…" : "Send Magic Link")
+          )
+    )
+  );
+}
+function AuthGate() {
+  const _uA = useState(null), _uB = _slicedToArray(_uA, 2),
+    user = _uB[0], setUser = _uB[1];
+  const _uC = useState(true), _uD = _slicedToArray(_uC, 2),
+    authLoading = _uD[0], setAuthLoading = _uD[1];
+  const _uE = useState(""), _uF = _slicedToArray(_uE, 2),
+    email = _uF[0], setEmail = _uF[1];
+  const _uG = useState(false), _uH = _slicedToArray(_uG, 2),
+    sent = _uH[0], setSent = _uH[1];
+  const _uI = useState(false), _uJ = _slicedToArray(_uI, 2),
+    sending = _uJ[0], setSending = _uJ[1];
+
+  useEffect(() => {
+    sb.auth.getSession().then(function(res) {
+      var session = res.data && res.data.session;
+      setUser(session ? session.user : null);
+      setAuthLoading(false);
+    });
+    var sub = sb.auth.onAuthStateChange(function(_event, session) {
+      setUser(session ? session.user : null);
+    });
+    return function() { sub.data && sub.data.subscription && sub.data.subscription.unsubscribe(); };
+  }, []);
+
+  const sendMagicLink = async () => {
+    setSending(true);
+    const { error } = await sb.auth.signInWithOtp({
+      email,
+      options: { emailRedirectTo: window.location.origin + window.location.pathname }
+    });
+    setSending(false);
+    if (!error) setSent(true);
+  };
+
+  if (authLoading) return React.createElement("div", { className: "center" },
+    React.createElement("div", { className: "spin" })
+  );
+  if (!user) return React.createElement(LoginScreen, { email, setEmail, sent, sending, onSend: sendMagicLink });
+  return React.createElement(DraftLab, { user });
+}
+ReactDOM.createRoot(document.getElementById("root")).render(/*#__PURE__*/React.createElement(AuthGate, null));
 </script>
 </body>
 </html>
