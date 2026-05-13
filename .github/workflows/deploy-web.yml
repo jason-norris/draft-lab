@@ -24,13 +24,15 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Inject Supabase config
+      - name: Inject Supabase config and access control
         env:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
+          ALLOWED_EMAIL: ${{ secrets.ALLOWED_EMAIL }}
         run: |
           sed -i "s|%%SUPABASE_URL%%|${SUPABASE_URL}|g" apps/web/index.html
           sed -i "s|%%SUPABASE_ANON_KEY%%|${SUPABASE_ANON_KEY}|g" apps/web/index.html
+          sed -i "s|%%ALLOWED_EMAIL%%|${ALLOWED_EMAIL}|g" apps/web/index.html
 
       - uses: actions/configure-pages@v4
       - uses: actions/upload-pages-artifact@v3

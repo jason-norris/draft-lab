@@ -349,6 +349,7 @@
 <script>
 const SUPABASE_URL = '%%SUPABASE_URL%%';
 const SUPABASE_ANON_KEY = '%%SUPABASE_ANON_KEY%%';
+const ALLOWED_EMAIL = '%%ALLOWED_EMAIL%%';
 const SUPABASE_CONFIGURED = SUPABASE_URL !== '%%SUPABASE_URL%%';
 const sb = SUPABASE_CONFIGURED ? supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY) : null;
 
@@ -1793,7 +1794,12 @@ function AuthGate() {
       setAuthLoading(false);
     }).catch(function() { setAuthLoading(false); });
     var sub = sb.auth.onAuthStateChange(function(_event, session) {
-      setUser(session ? session.user : null);
+      var u = session ? session.user : null;
+      if (u && ALLOWED_EMAIL !== '%%ALLOWED_EMAIL%%' && u.email !== ALLOWED_EMAIL) {
+        sb.auth.signOut();
+        return;
+      }
+      setUser(u);
     });
     return function() { sub.data && sub.data.subscription && sub.data.subscription.unsubscribe(); };
   }, []);
