@@ -494,20 +494,22 @@ function gradeToNum(grade) {
 function compareRatings(a, b) {
   if (a == null || b == null) return null;
   const diff = Math.abs(a - b);
+  const sym = diff === 0 ? "≈" : a > b ? "▲" : "▼";
+  const detail = `${sym === "≈" ? "Agree" : sym === "▲" ? "Higher" : "Lower"} (Δ ${diff.toFixed(1)})`;
   if (diff <= 0.5) return {
-    dot: "●",
+    symbol: "≈",
     color: "#32a050",
-    label: "≈ Agree"
+    detail
   };
   if (diff <= 1.0) return {
-    dot: "●",
+    symbol: sym,
     color: "#e6c800",
-    label: a > b ? "▲ Higher" : "▼ Lower"
+    detail
   };
   return {
-    dot: "●",
+    symbol: sym,
     color: "#e05030",
-    label: a > b ? "▲ Higher" : "▼ Lower"
+    detail
   };
 }
 function calcThreeWayDelta(g) {
@@ -612,13 +614,16 @@ function ThreeWayDelta(_ref4) {
     meVsPerf = _calcThreeWayDelta.meVsPerf,
     expVsPerf = _calcThreeWayDelta.expVsPerf;
   const rows = [meVsExp && {
-    label: "Me/Exp",
+    key: "ME",
+    title: "Me vs Expert",
     ...meVsExp
   }, meVsPerf && {
-    label: "Me/Perf",
+    key: "MP",
+    title: "Me vs Performance",
     ...meVsPerf
   }, expVsPerf && {
-    label: "Ex/Pf",
+    key: "EP",
+    title: "Expert vs Perf",
     ...expVsPerf
   }].filter(Boolean);
   if (!rows.length) return null;
@@ -629,30 +634,28 @@ function ThreeWayDelta(_ref4) {
       gap: 2
     }
   }, rows.map(r => React.createElement("div", {
-    key: r.label,
-    title: `${r.label}: ${r.label}`,
+    key: r.key,
+    title: `${r.title}: ${r.detail}`,
     style: {
       display: "flex",
       alignItems: "center",
-      gap: 3,
-      fontSize: 9,
-      color: r.color,
+      gap: 4,
       whiteSpace: "nowrap"
     }
   }, React.createElement("span", {
     style: {
-      fontSize: 7
-    }
-  }, r.dot), React.createElement("span", {
-    style: {
+      fontSize: 8,
       color: "var(--dimmer)",
-      minWidth: 32
+      minWidth: 16,
+      letterSpacing: ".02em"
     }
-  }, r.label), React.createElement("span", {
+  }, r.key), React.createElement("span", {
     style: {
-      fontWeight: 600
+      fontSize: 11,
+      fontWeight: 700,
+      color: r.color
     }
-  }, r.label === "Me/Exp" ? meVsExp === null || meVsExp === void 0 ? void 0 : meVsExp.label : r.label === "Me/Perf" ? meVsPerf === null || meVsPerf === void 0 ? void 0 : meVsPerf.label : expVsPerf === null || expVsPerf === void 0 ? void 0 : expVsPerf.label))));
+  }, r.symbol))));
 }
 function QuadrantBadge(_ref5) {
   let g = _ref5.g,

@@ -108,9 +108,11 @@ function gradeToNum(grade) { return GRADE_NUMERIC[grade] ?? null; }
 function compareRatings(a, b) {
   if (a == null || b == null) return null;
   const diff = Math.abs(a - b);
-  if (diff <= 0.5)  return { dot:"●", color:"#32a050", label:"≈ Agree" };
-  if (diff <= 1.0)  return { dot:"●", color:"#e6c800", label: a > b ? "▲ Higher" : "▼ Lower" };
-  return              { dot:"●", color:"#e05030", label: a > b ? "▲ Higher" : "▼ Lower" };
+  const sym  = diff === 0 ? "≈" : a > b ? "▲" : "▼";
+  const detail = `${sym === "≈" ? "Agree" : sym === "▲" ? "Higher" : "Lower"} (Δ ${diff.toFixed(1)})`;
+  if (diff <= 0.5) return { symbol:"≈", color:"#32a050", detail };
+  if (diff <= 1.0) return { symbol: sym, color:"#e6c800", detail };
+  return             { symbol: sym, color:"#e05030", detail };
 }
 
 // Three-way delta for a grade object
@@ -195,19 +197,18 @@ function SourceBadge({ source }) {
 function ThreeWayDelta({ g }) {
   const { meVsExp, meVsPerf, expVsPerf } = calcThreeWayDelta(g);
   const rows = [
-    meVsExp   && { label:"Me/Exp",  ...meVsExp },
-    meVsPerf  && { label:"Me/Perf", ...meVsPerf },
-    expVsPerf && { label:"Ex/Pf",   ...expVsPerf },
+    meVsExp   && { key:"ME", title:"Me vs Expert",      ...meVsExp },
+    meVsPerf  && { key:"MP", title:"Me vs Performance", ...meVsPerf },
+    expVsPerf && { key:"EP", title:"Expert vs Perf",    ...expVsPerf },
   ].filter(Boolean);
   if (!rows.length) return null;
   return (
     <div style={{ display:"flex", flexDirection:"column", gap:2 }}>
       {rows.map(r => (
-        <div key={r.label} title={`${r.label}: ${r.label}`}
-          style={{ display:"flex", alignItems:"center", gap:3, fontSize:9, color: r.color, whiteSpace:"nowrap" }}>
-          <span style={{ fontSize:7 }}>{r.dot}</span>
-          <span style={{ color:"var(--dimmer)", minWidth:32 }}>{r.label}</span>
-          <span style={{ fontWeight:600 }}>{r.label === "Me/Exp" ? (meVsExp?.label) : r.label === "Me/Perf" ? (meVsPerf?.label) : (expVsPerf?.label)}</span>
+        <div key={r.key} title={`${r.title}: ${r.detail}`}
+          style={{ display:"flex", alignItems:"center", gap:4, whiteSpace:"nowrap" }}>
+          <span style={{ fontSize:8, color:"var(--dimmer)", minWidth:16, letterSpacing:".02em" }}>{r.key}</span>
+          <span style={{ fontSize:11, fontWeight:700, color: r.color }}>{r.symbol}</span>
         </div>
       ))}
     </div>
