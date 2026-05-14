@@ -2399,12 +2399,7 @@ function AuthGate() {
       setAuthLoading(false);
     }).catch(() => setAuthLoading(false));
     const _sb$auth$onAuthStateC = sb.auth.onAuthStateChange((_event, session) => {
-        const u = (session === null || session === void 0 ? void 0 : session.user) ?? null;
-        if (u && ALLOWED_EMAIL !== "%%ALLOWED_EMAIL%%" && u.email !== ALLOWED_EMAIL) {
-          sb.auth.signOut();
-          return;
-        }
-        setUser(u);
+        setUser((session === null || session === void 0 ? void 0 : session.user) ?? null);
       }),
       subscription = _sb$auth$onAuthStateC.data.subscription;
     return () => subscription.unsubscribe();

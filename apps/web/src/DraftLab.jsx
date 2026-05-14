@@ -1322,11 +1322,7 @@ function AuthGate() {
       .then(({ data: { session } }) => { setUser(session?.user ?? null); setAuthLoading(false); })
       .catch(() => setAuthLoading(false));
     const { data: { subscription } } = sb.auth.onAuthStateChange((_event, session) => {
-      const u = session?.user ?? null;
-      if (u && ALLOWED_EMAIL !== "%%ALLOWED_EMAIL%%" && u.email !== ALLOWED_EMAIL) {
-        sb.auth.signOut(); return;
-      }
-      setUser(u);
+      setUser(session?.user ?? null);
     });
     return () => subscription.unsubscribe();
   }, []);
