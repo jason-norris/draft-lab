@@ -353,7 +353,8 @@ function _arrayWithHoles(r) { if (Array.isArray(r)) return r; }
 const _React = React,
   useState = _React.useState,
   useEffect = _React.useEffect,
-  useCallback = _React.useCallback;
+  useCallback = _React.useCallback,
+  useRef = _React.useRef;
 const MTG_LABELS = {
   W: "White",
   U: "Blue",
@@ -1252,6 +1253,7 @@ function ImportPanel(_ref11) {
 function DraftLab(_ref20) {
   let user = _ref20.user;
   const isMobile = useIsMobile();
+  const didFirstSync = useRef(false);
   const _useState13 = useState(() => localStorage.getItem("draft-lab-theme") || "auto"),
     _useState14 = _slicedToArray(_useState13, 2),
     theme = _useState14[0],
@@ -1397,6 +1399,25 @@ function DraftLab(_ref20) {
       });
     });
   }, [selectedSet === null || selectedSet === void 0 ? void 0 : selectedSet.code, user === null || user === void 0 ? void 0 : user.id]);
+  useEffect(() => {
+    if (!user || didFirstSync.current) return;
+    didFirstSync.current = true;
+    const localSetCodes = [];
+    for (let i = 0; i < localStorage.length; i++) {
+      const key = localStorage.key(i);
+      if (key && key.startsWith('draft-grades-')) {
+        localSetCodes.push(key.replace('draft-grades-', ''));
+      }
+    }
+    if (!localSetCodes.length) return;
+    Promise.all(localSetCodes.map(async code => {
+      const remote = await fetchGrades(code);
+      if (!remote) {
+        const raw = localStorage.getItem(`draft-grades-${code}`);
+        if (raw) await syncGrades(code, JSON.parse(raw), user.id);
+      }
+    })).catch(() => {});
+  }, [user === null || user === void 0 ? void 0 : user.id]);
   const toggleTheme = () => {
     setTheme(prev => {
       const sysDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
@@ -1522,6 +1543,7 @@ function DraftLab(_ref20) {
         const parsed = JSON.parse(ev.target.result);
         const data = parsed.data ?? parsed;
         let count = 0;
+        const restoredGrades = {};
         for (const _ref21 of Object.entries(data)) {
           var _ref22 = _slicedToArray(_ref21, 2);
           const key = _ref22[0];
@@ -1529,6 +1551,9 @@ function DraftLab(_ref20) {
           if ((key.startsWith("draft-grades-") || key.startsWith("draft-import-meta-") || key === "draft-lab-theme") && typeof value === "string") {
             localStorage.setItem(key, value);
             count++;
+            if (key.startsWith("draft-grades-")) {
+              restoredGrades[key.replace("draft-grades-", "")] = JSON.parse(value);
+            }
           }
         }
         if (count === 0) {
@@ -1541,7 +1566,12 @@ function DraftLab(_ref20) {
           setTheme(savedTheme);
           document.documentElement.setAttribute("data-theme", savedTheme);
         }
-        alert(`Restored ${count} item${count !== 1 ? "s" : ""} from backup.`);
+        if (user) {
+          const setCodes = Object.keys(restoredGrades);
+          Promise.all(setCodes.map(code => syncGrades(code, restoredGrades[code], user.id))).then(() => alert(`Restored ${count} item${count !== 1 ? "s" : ""} from backup and synced ${setCodes.length} set${setCodes.length !== 1 ? "s" : ""} to cloud.`)).catch(() => alert(`Restored ${count} item${count !== 1 ? "s" : ""} from backup. Cloud sync failed — grades saved locally.`));
+        } else {
+          alert(`Restored ${count} item${count !== 1 ? "s" : ""} from backup.`);
+        }
       } catch (e) {
         alert(`Could not read backup file: ${e.message}`);
       }

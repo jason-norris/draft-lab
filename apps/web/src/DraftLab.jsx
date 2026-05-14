@@ -1,5 +1,5 @@
 // Globals provided by template.html: SUPABASE_CONFIGURED, ALLOWED_EMAIL, sb, syncGrades, fetchGrades
-const { useState, useEffect, useCallback } = React;
+const { useState, useEffect, useCallback, useRef } = React;
 
 // ── Constants ────────────────────────────────────────────────────────────────
 const MTG_LABELS   = { W:"White", U:"Blue", B:"Black", R:"Red", G:"Green", M:"Multicolor", C:"Colorless", L:"Land" };
@@ -571,6 +571,7 @@ function ImportPanel({ cards, grades, selectedSet, fmt17l, setFmt17l, meta, setM
 // ── DraftLab ──────────────────────────────────────────────────────────────────
 function DraftLab({ user }) {
   const isMobile = useIsMobile();
+  const didFirstSync = useRef(false);
 
   // ── State ──
   const [theme, setTheme]           = useState(() => localStorage.getItem("draft-lab-theme") || "auto");
@@ -632,6 +633,27 @@ function DraftLab({ user }) {
       });
     });
   }, [selectedSet?.code, user?.id]);
+
+  // On first login in a session: push any local sets to Supabase that Supabase doesn't have yet
+  useEffect(() => {
+    if (!user || didFirstSync.current) return;
+    didFirstSync.current = true;
+    const localSetCodes = [];
+    for (let i = 0; i < localStorage.length; i++) {
+      const key = localStorage.key(i);
+      if (key && key.startsWith('draft-grades-')) {
+        localSetCodes.push(key.replace('draft-grades-', ''));
+      }
+    }
+    if (!localSetCodes.length) return;
+    Promise.all(localSetCodes.map(async code => {
+      const remote = await fetchGrades(code);
+      if (!remote) {
+        const raw = localStorage.getItem(`draft-grades-${code}`);
+        if (raw) await syncGrades(code, JSON.parse(raw), user.id);
+      }
+    })).catch(() => {});
+  }, [user?.id]);
 
   // ── Helpers ──
   const toggleTheme = () => {
@@ -746,16 +768,28 @@ function DraftLab({ user }) {
         const parsed = JSON.parse(ev.target.result);
         const data   = parsed.data ?? parsed;
         let count = 0;
+        const restoredGrades = {};
         for (const [key, value] of Object.entries(data)) {
           if ((key.startsWith("draft-grades-") || key.startsWith("draft-import-meta-") || key === "draft-lab-theme") && typeof value === "string") {
             localStorage.setItem(key, value); count++;
+            if (key.startsWith("draft-grades-")) {
+              restoredGrades[key.replace("draft-grades-", "")] = JSON.parse(value);
+            }
           }
         }
         if (count === 0) { alert("No Draft Lab data found in that file."); return; }
         if (selectedSet) loadGrades(selectedSet.code);
         const savedTheme = localStorage.getItem("draft-lab-theme");
         if (savedTheme) { setTheme(savedTheme); document.documentElement.setAttribute("data-theme", savedTheme); }
-        alert(`Restored ${count} item${count !== 1 ? "s" : ""} from backup.`);
+        // Push all restored sets to Supabase (backup restore = authoritative source of truth)
+        if (user) {
+          const setCodes = Object.keys(restoredGrades);
+          Promise.all(setCodes.map(code => syncGrades(code, restoredGrades[code], user.id)))
+            .then(() => alert(`Restored ${count} item${count !== 1 ? "s" : ""} from backup and synced ${setCodes.length} set${setCodes.length !== 1 ? "s" : ""} to cloud.`))
+            .catch(() => alert(`Restored ${count} item${count !== 1 ? "s" : ""} from backup. Cloud sync failed — grades saved locally.`));
+        } else {
+          alert(`Restored ${count} item${count !== 1 ? "s" : ""} from backup.`);
+        }
       } catch (e) { alert(`Could not read backup file: ${e.message}`); }
     };
     reader.readAsText(file);
