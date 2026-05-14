@@ -1,5 +1,8 @@
-# Claude Code
+# Claude Code / MCP tooling
 .claude/
+.agents/
+.mcp.json
+skills-lock.json
 
 # Python
 __pycache__/
