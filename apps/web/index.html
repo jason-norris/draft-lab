@@ -1743,7 +1743,10 @@ function DraftLab(_ref20) {
     onClick: e => e.stopPropagation()
   }, React.createElement("button", {
     className: `btn${showImport ? " active" : ""}`,
-    onClick: () => setShowImport(v => !v)
+    onClick: () => {
+      setShowExport(false);
+      setShowImport(v => !v);
+    }
   }, "Import \u25BE"), showImport && React.createElement("div", {
     className: "l17-panel",
     style: {
@@ -1764,7 +1767,10 @@ function DraftLab(_ref20) {
     onClick: e => e.stopPropagation()
   }, React.createElement("button", {
     className: `btn${showExport ? " active" : ""}`,
-    onClick: () => setShowExport(v => !v)
+    onClick: () => {
+      setShowImport(false);
+      setShowExport(v => !v);
+    }
   }, "Export \u25BE"), showExport && React.createElement("div", {
     className: "l17-panel",
     style: {

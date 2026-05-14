@@ -896,7 +896,7 @@ function DraftLab({ user }) {
           {selectedSet && !isMobile && (
             <div className="l17-wrap" onClick={e => e.stopPropagation()}>
               <button className={`btn${showImport ? " active" : ""}`}
-                onClick={() => setShowImport(v => !v)}>Import ▾</button>
+                onClick={() => { setShowExport(false); setShowImport(v => !v); }}>Import ▾</button>
               {showImport && (
                 <div className="l17-panel" style={{ width:300 }}>
                   <ImportPanel
@@ -910,7 +910,7 @@ function DraftLab({ user }) {
           )}
           <div className="l17-wrap desktop-only" onClick={e => e.stopPropagation()}>
             <button className={`btn${showExport ? " active" : ""}`}
-              onClick={() => setShowExport(v => !v)}>Export ▾</button>
+              onClick={() => { setShowImport(false); setShowExport(v => !v); }}>Export ▾</button>
             {showExport && (
               <div className="l17-panel" style={{ width:220 }}>
                 <div className="l17-title">Export / Restore</div>
