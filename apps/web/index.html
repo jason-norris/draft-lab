@@ -778,7 +778,17 @@ function TagCell(_ref7) {
     _useState4 = _slicedToArray(_useState3, 2),
     open = _useState4[0],
     setOpen = _useState4[1];
+  const ref = useRef(null);
+  useEffect(() => {
+    if (!open) return;
+    const handler = e => {
+      if (ref.current && !ref.current.contains(e.target)) setOpen(false);
+    };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, [open]);
   return React.createElement("div", {
+    ref: ref,
     style: {
       position: "relative"
     }

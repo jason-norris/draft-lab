@@ -265,8 +265,15 @@ function RatingInput({ value, source, onChange }) {
 // ── TagCell (desktop table — compact chips + floating picker) ────────────────
 function TagCell({ tags = [], onToggle }) {
   const [open, setOpen] = useState(false);
+  const ref = useRef(null);
+  useEffect(() => {
+    if (!open) return;
+    const handler = e => { if (ref.current && !ref.current.contains(e.target)) setOpen(false); };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, [open]);
   return (
-    <div style={{ position:"relative" }}>
+    <div ref={ref} style={{ position:"relative" }}>
       <div style={{ display:"flex", flexWrap:"wrap", gap:3, alignItems:"center" }}>
         {tags.map(id => {
           const tag = TAGS.find(t => t.id === id);
