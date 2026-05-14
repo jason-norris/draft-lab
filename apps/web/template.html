@@ -312,7 +312,7 @@
 const SUPABASE_URL = '%%SUPABASE_URL%%';
 const SUPABASE_ANON_KEY = '%%SUPABASE_ANON_KEY%%';
 const ALLOWED_EMAIL = '%%ALLOWED_EMAIL%%';
-const SUPABASE_CONFIGURED = SUPABASE_URL !== '%%SUPABASE_URL%%';
+const SUPABASE_CONFIGURED = SUPABASE_URL.startsWith('http');
 const sb = SUPABASE_CONFIGURED ? supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY) : null;
 
 async function syncGrades(code, data, userId) {
