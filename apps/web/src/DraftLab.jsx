@@ -1284,25 +1284,27 @@ function DraftLab({ user }) {
 }
 
 // ── LoginScreen ───────────────────────────────────────────────────────────────
-function LoginScreen({ email, setEmail, sent, sending, onSend }) {
+function LoginScreen({ onSignIn, loading }) {
   return (
     <div className="auth-wrap">
       <div className="auth-card">
         <div className="logo">DRAFT LAB</div>
         <div className="logo-sub">MTG</div>
-        {sent
-          ? <div className="auth-sent">✓ Check your email for a login link.</div>
-          : <>
-              <div className="auth-label">Email</div>
-              <input className="auth-input" type="email" placeholder="you@example.com"
-                value={email} autoFocus
-                onChange={e => setEmail(e.target.value)}
-                onKeyDown={e => { if (e.key === "Enter" && email && !sending) onSend(); }} />
-              <button className="auth-btn" disabled={!email || sending} onClick={onSend}>
-                {sending ? "Sending…" : "Send Magic Link"}
-              </button>
-            </>
-        }
+        <button className="auth-btn" disabled={loading} onClick={onSignIn}
+          style={{ display:"flex", alignItems:"center", justifyContent:"center", gap:10 }}>
+          {loading
+            ? "Signing in…"
+            : <>
+                <svg width="18" height="18" viewBox="0 0 48 48">
+                  <path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/>
+                  <path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/>
+                  <path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/>
+                  <path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.18 1.48-4.97 2.31-8.16 2.31-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/>
+                </svg>
+                Sign in with Google
+              </>
+          }
+        </button>
       </div>
     </div>
   );
@@ -1312,9 +1314,7 @@ function LoginScreen({ email, setEmail, sent, sending, onSend }) {
 function AuthGate() {
   const [user, setUser]               = useState(null);
   const [authLoading, setAuthLoading] = useState(true);
-  const [email, setEmail]             = useState("");
-  const [sent, setSent]               = useState(false);
-  const [sending, setSending]         = useState(false);
+  const [signing, setSigning]         = useState(false);
 
   useEffect(() => {
     if (!SUPABASE_CONFIGURED) { setAuthLoading(false); return; }
@@ -1327,19 +1327,18 @@ function AuthGate() {
     return () => subscription.unsubscribe();
   }, []);
 
-  const sendMagicLink = async () => {
-    setSending(true);
-    const { error } = await sb.auth.signInWithOtp({
-      email,
-      options: { emailRedirectTo: window.location.origin + window.location.pathname },
+  const signInWithGoogle = async () => {
+    setSigning(true);
+    await sb.auth.signInWithOAuth({
+      provider: "google",
+      options: { redirectTo: window.location.origin + window.location.pathname },
     });
-    setSending(false);
-    if (!error) setSent(true);
+    // Page redirects to Google — no need to reset state
   };
 
   if (authLoading) return <div className="center"><div className="spin" /></div>;
   if (!SUPABASE_CONFIGURED) return <DraftLab user={null} />;
-  if (!user) return <LoginScreen email={email} setEmail={setEmail} sent={sent} sending={sending} onSend={sendMagicLink} />;
+  if (!user) return <LoginScreen onSignIn={signInWithGoogle} loading={signing} />;
   return <DraftLab user={user} />;
 }
 
