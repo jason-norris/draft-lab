@@ -787,6 +787,9 @@ function TagCell(_ref7) {
     document.addEventListener("mousedown", handler);
     return () => document.removeEventListener("mousedown", handler);
   }, [open]);
+  const MAX_VISIBLE = 2;
+  const visible = tags.slice(0, MAX_VISIBLE);
+  const overflow = tags.length - MAX_VISIBLE;
   return React.createElement("div", {
     ref: ref,
     style: {
@@ -795,11 +798,11 @@ function TagCell(_ref7) {
   }, React.createElement("div", {
     style: {
       display: "flex",
-      flexWrap: "wrap",
+      flexWrap: "nowrap",
       gap: 3,
       alignItems: "center"
     }
-  }, tags.map(id => {
+  }, visible.map(id => {
     const tag = TAGS.find(t => t.id === id);
     return tag ? React.createElement("span", {
       key: id,
@@ -810,10 +813,16 @@ function TagCell(_ref7) {
       },
       onClick: () => onToggle(id)
     }, tag.label, " \u2715") : null;
-  }), React.createElement("button", {
+  }), overflow > 0 && React.createElement("span", {
+    style: {
+      fontSize: 8,
+      color: "var(--dimmer)",
+      whiteSpace: "nowrap"
+    }
+  }, "+", overflow), React.createElement("button", {
     className: "tag-add-btn",
     onClick: () => setOpen(v => !v)
-  }, open ? "✕" : tags.length ? "+ more" : "+ tag")), open && React.createElement("div", {
+  }, open ? "✕" : tags.length ? "edit" : "+ tag")), open && React.createElement("div", {
     onClick: e => e.stopPropagation(),
     style: {
       position: "absolute",

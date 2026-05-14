@@ -272,18 +272,24 @@ function TagCell({ tags = [], onToggle }) {
     document.addEventListener("mousedown", handler);
     return () => document.removeEventListener("mousedown", handler);
   }, [open]);
+  const MAX_VISIBLE = 2;
+  const visible  = tags.slice(0, MAX_VISIBLE);
+  const overflow = tags.length - MAX_VISIBLE;
   return (
     <div ref={ref} style={{ position:"relative" }}>
-      <div style={{ display:"flex", flexWrap:"wrap", gap:3, alignItems:"center" }}>
-        {tags.map(id => {
+      <div style={{ display:"flex", flexWrap:"nowrap", gap:3, alignItems:"center" }}>
+        {visible.map(id => {
           const tag = TAGS.find(t => t.id === id);
           return tag
             ? <span key={id} className="tag-chip active" style={{ fontSize:8, padding:"1px 6px" }}
                 onClick={() => onToggle(id)}>{tag.label} ✕</span>
             : null;
         })}
+        {overflow > 0 && (
+          <span style={{ fontSize:8, color:"var(--dimmer)", whiteSpace:"nowrap" }}>+{overflow}</span>
+        )}
         <button className="tag-add-btn" onClick={() => setOpen(v => !v)}>
-          {open ? "✕" : tags.length ? "+ more" : "+ tag"}
+          {open ? "✕" : tags.length ? "edit" : "+ tag"}
         </button>
       </div>
       {open && (
