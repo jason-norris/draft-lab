@@ -353,7 +353,8 @@ function _arrayWithHoles(r) { if (Array.isArray(r)) return r; }
 const _React = React,
   useState = _React.useState,
   useEffect = _React.useEffect,
-  useCallback = _React.useCallback;
+  useCallback = _React.useCallback,
+  useRef = _React.useRef;
 const MTG_LABELS = {
   W: "White",
   U: "Blue",
@@ -777,20 +778,31 @@ function TagCell(_ref7) {
     _useState4 = _slicedToArray(_useState3, 2),
     open = _useState4[0],
     setOpen = _useState4[1];
+  const ref = useRef(null);
+  useEffect(() => {
+    if (!open) return;
+    const handler = e => {
+      if (ref.current && !ref.current.contains(e.target)) setOpen(false);
+    };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, [open]);
+  const MAX_VISIBLE = 2;
+  const visible = tags.slice(0, MAX_VISIBLE);
+  const overflow = tags.length - MAX_VISIBLE;
   return React.createElement("div", {
+    ref: ref,
     style: {
-      display: "flex",
-      flexDirection: "column",
-      gap: 3
+      position: "relative"
     }
   }, React.createElement("div", {
     style: {
       display: "flex",
-      flexWrap: "wrap",
+      flexWrap: "nowrap",
       gap: 3,
       alignItems: "center"
     }
-  }, tags.map(id => {
+  }, visible.map(id => {
     const tag = TAGS.find(t => t.id === id);
     return tag ? React.createElement("span", {
       key: id,
@@ -800,14 +812,28 @@ function TagCell(_ref7) {
         padding: "1px 6px"
       },
       onClick: () => onToggle(id)
-    }, tag.label) : null;
-  }), React.createElement("button", {
+    }, tag.label, " \u2715") : null;
+  }), overflow > 0 && React.createElement("span", {
+    style: {
+      fontSize: 8,
+      color: "var(--dimmer)",
+      whiteSpace: "nowrap"
+    }
+  }, "+", overflow), React.createElement("button", {
     className: "tag-add-btn",
     onClick: () => setOpen(v => !v)
-  }, open ? "✕" : tags.length ? "+ more" : "+ tag")), open && React.createElement("div", {
+  }, open ? "✕" : tags.length ? "edit" : "+ tag")), open && React.createElement("div", {
+    onClick: e => e.stopPropagation(),
     style: {
-      borderTop: "1px solid var(--b1)",
-      paddingTop: 4
+      position: "absolute",
+      top: "calc(100% + 4px)",
+      left: 0,
+      zIndex: 200,
+      background: "var(--s1)",
+      border: "1px solid var(--b2)",
+      padding: "10px 12px",
+      boxShadow: "0 8px 24px rgba(0,0,0,.3)",
+      minWidth: 220
     }
   }, TAG_GROUPS.map(_ref8 => {
     let label = _ref8.label,
@@ -815,13 +841,13 @@ function TagCell(_ref7) {
     return React.createElement("div", {
       key: label,
       style: {
-        marginBottom: 4
+        marginBottom: 8
       }
     }, React.createElement("div", {
       style: {
         fontSize: 8,
         color: "var(--dimmer)",
-        marginBottom: 3,
+        marginBottom: 4,
         textTransform: "uppercase",
         letterSpacing: ".1em"
       }
@@ -1252,6 +1278,7 @@ function ImportPanel(_ref11) {
 function DraftLab(_ref20) {
   let user = _ref20.user;
   const isMobile = useIsMobile();
+  const didFirstSync = useRef(false);
   const _useState13 = useState(() => localStorage.getItem("draft-lab-theme") || "auto"),
     _useState14 = _slicedToArray(_useState13, 2),
     theme = _useState14[0],
@@ -1260,117 +1287,121 @@ function DraftLab(_ref20) {
     _useState16 = _slicedToArray(_useState15, 2),
     showImport = _useState16[0],
     setShowImport = _useState16[1];
-  const _useState17 = useState("PremierDraft"),
+  const _useState17 = useState(false),
     _useState18 = _slicedToArray(_useState17, 2),
-    fmt17l = _useState18[0],
-    setFmt17l = _useState18[1];
-  const _useState19 = useState(null),
+    showExport = _useState18[0],
+    setShowExport = _useState18[1];
+  const _useState19 = useState("PremierDraft"),
     _useState20 = _slicedToArray(_useState19, 2),
-    importMeta = _useState20[0],
-    setImportMeta = _useState20[1];
-  const _useState21 = useState([]),
+    fmt17l = _useState20[0],
+    setFmt17l = _useState20[1];
+  const _useState21 = useState(null),
     _useState22 = _slicedToArray(_useState21, 2),
-    sets = _useState22[0],
-    setSets = _useState22[1];
-  const _useState23 = useState(null),
+    importMeta = _useState22[0],
+    setImportMeta = _useState22[1];
+  const _useState23 = useState([]),
     _useState24 = _slicedToArray(_useState23, 2),
-    selectedSet = _useState24[0],
-    setSelectedSet = _useState24[1];
-  const _useState25 = useState([]),
+    sets = _useState24[0],
+    setSets = _useState24[1];
+  const _useState25 = useState(null),
     _useState26 = _slicedToArray(_useState25, 2),
-    cards = _useState26[0],
-    setCards = _useState26[1];
-  const _useState27 = useState({}),
+    selectedSet = _useState26[0],
+    setSelectedSet = _useState26[1];
+  const _useState27 = useState([]),
     _useState28 = _slicedToArray(_useState27, 2),
-    grades = _useState28[0],
-    setGrades = _useState28[1];
-  const _useState29 = useState(false),
+    cards = _useState28[0],
+    setCards = _useState28[1];
+  const _useState29 = useState({}),
     _useState30 = _slicedToArray(_useState29, 2),
-    loading = _useState30[0],
-    setLoading = _useState30[1];
-  const _useState31 = useState(""),
+    grades = _useState30[0],
+    setGrades = _useState30[1];
+  const _useState31 = useState(false),
     _useState32 = _slicedToArray(_useState31, 2),
-    loadMsg = _useState32[0],
-    setLoadMsg = _useState32[1];
-  const _useState33 = useState(null),
+    loading = _useState32[0],
+    setLoading = _useState32[1];
+  const _useState33 = useState(""),
     _useState34 = _slicedToArray(_useState33, 2),
-    error = _useState34[0],
-    setError = _useState34[1];
-  const _useState35 = useState("color"),
+    loadMsg = _useState34[0],
+    setLoadMsg = _useState34[1];
+  const _useState35 = useState(null),
     _useState36 = _slicedToArray(_useState35, 2),
-    sortCol = _useState36[0],
-    setSortCol = _useState36[1];
-  const _useState37 = useState("asc"),
+    error = _useState36[0],
+    setError = _useState36[1];
+  const _useState37 = useState("color"),
     _useState38 = _slicedToArray(_useState37, 2),
-    sortDir = _useState38[0],
-    setSortDir = _useState38[1];
-  const _useState39 = useState("color"),
+    sortCol = _useState38[0],
+    setSortCol = _useState38[1];
+  const _useState39 = useState("asc"),
     _useState40 = _slicedToArray(_useState39, 2),
-    mobileSort = _useState40[0],
-    setMobileSort = _useState40[1];
-  const _useState41 = useState("all"),
+    sortDir = _useState40[0],
+    setSortDir = _useState40[1];
+  const _useState41 = useState("color"),
     _useState42 = _slicedToArray(_useState41, 2),
-    filterColor = _useState42[0],
-    setFilterColor = _useState42[1];
+    mobileSort = _useState42[0],
+    setMobileSort = _useState42[1];
   const _useState43 = useState("all"),
     _useState44 = _slicedToArray(_useState43, 2),
-    filterRarity = _useState44[0],
-    setFilterRarity = _useState44[1];
-  const _useState45 = useState(""),
+    filterColor = _useState44[0],
+    setFilterColor = _useState44[1];
+  const _useState45 = useState("all"),
     _useState46 = _slicedToArray(_useState45, 2),
-    filterSearch = _useState46[0],
-    setFilterSearch = _useState46[1];
-  const _useState47 = useState("all"),
+    filterRarity = _useState46[0],
+    setFilterRarity = _useState46[1];
+  const _useState47 = useState(""),
     _useState48 = _slicedToArray(_useState47, 2),
-    filterGraded = _useState48[0],
-    setFilterGraded = _useState48[1];
+    filterSearch = _useState48[0],
+    setFilterSearch = _useState48[1];
   const _useState49 = useState("all"),
     _useState50 = _slicedToArray(_useState49, 2),
-    filterQuadrant = _useState50[0],
-    setFilterQuadrant = _useState50[1];
-  const _useState51 = useState([]),
+    filterGraded = _useState50[0],
+    setFilterGraded = _useState50[1];
+  const _useState51 = useState("all"),
     _useState52 = _slicedToArray(_useState51, 2),
-    filterTags = _useState52[0],
-    setFilterTags = _useState52[1];
-  const _useState53 = useState(false),
+    filterQuadrant = _useState52[0],
+    setFilterQuadrant = _useState52[1];
+  const _useState53 = useState([]),
     _useState54 = _slicedToArray(_useState53, 2),
-    showTagFilter = _useState54[0],
-    setShowTagFilter = _useState54[1];
+    filterTags = _useState54[0],
+    setFilterTags = _useState54[1];
   const _useState55 = useState(false),
     _useState56 = _slicedToArray(_useState55, 2),
-    showMobF = _useState56[0],
-    setShowMobF = _useState56[1];
+    showTagFilter = _useState56[0],
+    setShowTagFilter = _useState56[1];
   const _useState57 = useState(false),
     _useState58 = _slicedToArray(_useState57, 2),
-    showGuide = _useState58[0],
-    setShowGuide = _useState58[1];
-  const _useState59 = useState(""),
+    showMobF = _useState58[0],
+    setShowMobF = _useState58[1];
+  const _useState59 = useState(false),
     _useState60 = _slicedToArray(_useState59, 2),
-    syncStatus = _useState60[0],
-    setSyncStatus = _useState60[1];
-  const _useState61 = useState(false),
+    showGuide = _useState60[0],
+    setShowGuide = _useState60[1];
+  const _useState61 = useState(""),
     _useState62 = _slicedToArray(_useState61, 2),
-    showLegal = _useState62[0],
-    setShowLegal = _useState62[1];
-  const _useState63 = useState(null),
+    syncStatus = _useState62[0],
+    setSyncStatus = _useState62[1];
+  const _useState63 = useState(false),
     _useState64 = _slicedToArray(_useState63, 2),
-    hovered = _useState64[0],
-    setHovered = _useState64[1];
-  const _useState65 = useState({
+    showLegal = _useState64[0],
+    setShowLegal = _useState64[1];
+  const _useState65 = useState(null),
+    _useState66 = _slicedToArray(_useState65, 2),
+    hovered = _useState66[0],
+    setHovered = _useState66[1];
+  const _useState67 = useState({
       x: 0,
       y: 0
     }),
-    _useState66 = _slicedToArray(_useState65, 2),
-    hoverPos = _useState66[0],
-    setHoverPos = _useState66[1];
-  const _useState67 = useState(""),
     _useState68 = _slicedToArray(_useState67, 2),
-    setSearch = _useState68[0],
-    setSetSearch = _useState68[1];
-  const _useState69 = useState(false),
+    hoverPos = _useState68[0],
+    setHoverPos = _useState68[1];
+  const _useState69 = useState(""),
     _useState70 = _slicedToArray(_useState69, 2),
-    showSetDD = _useState70[0],
-    setShowSetDD = _useState70[1];
+    setSearch = _useState70[0],
+    setSetSearch = _useState70[1];
+  const _useState71 = useState(false),
+    _useState72 = _slicedToArray(_useState71, 2),
+    showSetDD = _useState72[0],
+    setShowSetDD = _useState72[1];
   useEffect(() => {
     if (theme === "auto") document.documentElement.removeAttribute("data-theme");else document.documentElement.setAttribute("data-theme", theme);
   }, [theme]);
@@ -1397,6 +1428,25 @@ function DraftLab(_ref20) {
       });
     });
   }, [selectedSet === null || selectedSet === void 0 ? void 0 : selectedSet.code, user === null || user === void 0 ? void 0 : user.id]);
+  useEffect(() => {
+    if (!user || didFirstSync.current) return;
+    didFirstSync.current = true;
+    const localSetCodes = [];
+    for (let i = 0; i < localStorage.length; i++) {
+      const key = localStorage.key(i);
+      if (key && key.startsWith('draft-grades-')) {
+        localSetCodes.push(key.replace('draft-grades-', ''));
+      }
+    }
+    if (!localSetCodes.length) return;
+    Promise.all(localSetCodes.map(async code => {
+      const remote = await fetchGrades(code);
+      if (!remote) {
+        const raw = localStorage.getItem(`draft-grades-${code}`);
+        if (raw) await syncGrades(code, JSON.parse(raw), user.id);
+      }
+    })).catch(() => {});
+  }, [user === null || user === void 0 ? void 0 : user.id]);
   const toggleTheme = () => {
     setTheme(prev => {
       const sysDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
@@ -1522,6 +1572,7 @@ function DraftLab(_ref20) {
         const parsed = JSON.parse(ev.target.result);
         const data = parsed.data ?? parsed;
         let count = 0;
+        const restoredGrades = {};
         for (const _ref21 of Object.entries(data)) {
           var _ref22 = _slicedToArray(_ref21, 2);
           const key = _ref22[0];
@@ -1529,6 +1580,9 @@ function DraftLab(_ref20) {
           if ((key.startsWith("draft-grades-") || key.startsWith("draft-import-meta-") || key === "draft-lab-theme") && typeof value === "string") {
             localStorage.setItem(key, value);
             count++;
+            if (key.startsWith("draft-grades-")) {
+              restoredGrades[key.replace("draft-grades-", "")] = JSON.parse(value);
+            }
           }
         }
         if (count === 0) {
@@ -1541,7 +1595,12 @@ function DraftLab(_ref20) {
           setTheme(savedTheme);
           document.documentElement.setAttribute("data-theme", savedTheme);
         }
-        alert(`Restored ${count} item${count !== 1 ? "s" : ""} from backup.`);
+        if (user) {
+          const setCodes = Object.keys(restoredGrades);
+          Promise.all(setCodes.map(code => syncGrades(code, restoredGrades[code], user.id))).then(() => alert(`Restored ${count} item${count !== 1 ? "s" : ""} from backup and synced ${setCodes.length} set${setCodes.length !== 1 ? "s" : ""} to cloud.`)).catch(() => alert(`Restored ${count} item${count !== 1 ? "s" : ""} from backup. Cloud sync failed — grades saved locally.`));
+        } else {
+          alert(`Restored ${count} item${count !== 1 ? "s" : ""} from backup.`);
+        }
       } catch (e) {
         alert(`Could not read backup file: ${e.message}`);
       }
@@ -1642,6 +1701,7 @@ function DraftLab(_ref20) {
     onClick: () => {
       setShowSetDD(false);
       setShowImport(false);
+      setShowExport(false);
       setShowTagFilter(false);
     }
   }, React.createElement("header", {
@@ -1708,7 +1768,10 @@ function DraftLab(_ref20) {
     onClick: e => e.stopPropagation()
   }, React.createElement("button", {
     className: `btn${showImport ? " active" : ""}`,
-    onClick: () => setShowImport(v => !v)
+    onClick: () => {
+      setShowExport(false);
+      setShowImport(v => !v);
+    }
   }, "Import \u25BE"), showImport && React.createElement("div", {
     className: "l17-panel",
     style: {
@@ -1724,7 +1787,52 @@ function DraftLab(_ref20) {
     setMeta: setImportMeta,
     onGradesUpdate: handleGradesUpdate,
     mobile: false
-  }))), user && syncStatus && React.createElement("span", {
+  }))), React.createElement("div", {
+    className: "l17-wrap desktop-only",
+    onClick: e => e.stopPropagation()
+  }, React.createElement("button", {
+    className: `btn${showExport ? " active" : ""}`,
+    onClick: () => {
+      setShowImport(false);
+      setShowExport(v => !v);
+    }
+  }, "Export \u25BE"), showExport && React.createElement("div", {
+    className: "l17-panel",
+    style: {
+      width: 220
+    }
+  }, React.createElement("div", {
+    className: "l17-title"
+  }, "Export / Restore"), React.createElement("button", {
+    className: "l17-fetch",
+    onClick: () => {
+      exportBackup();
+      setShowExport(false);
+    }
+  }, "Export Backup (JSON)"), React.createElement("label", {
+    className: "l17-fetch",
+    style: {
+      textAlign: "center",
+      cursor: "pointer"
+    }
+  }, "Restore Backup (JSON)", React.createElement("input", {
+    type: "file",
+    accept: ".json",
+    style: {
+      display: "none"
+    },
+    onChange: e => {
+      importBackup(e.target.files[0]);
+      e.target.value = "";
+      setShowExport(false);
+    }
+  })), selectedSet && React.createElement("button", {
+    className: "l17-fetch",
+    onClick: () => {
+      exportCSV();
+      setShowExport(false);
+    }
+  }, "Export Grades (CSV)"))), user && syncStatus && React.createElement("span", {
     className: "sync-dot desktop-only"
   }, syncStatus === "syncing" ? "↑ Syncing…" : "✓ Synced"), user && React.createElement("button", {
     className: "btn desktop-only",
@@ -1757,30 +1865,7 @@ function DraftLab(_ref20) {
       fontSize: 16,
       padding: "6px 10px"
     }
-  }, theme === "dark" ? "☀" : "🌙"), React.createElement("button", {
-    className: "btn desktop-only",
-    onClick: exportBackup,
-    title: "Export all grades to JSON"
-  }, "Backup"), React.createElement("label", {
-    className: "btn desktop-only",
-    style: {
-      cursor: "pointer"
-    },
-    title: "Restore grades from JSON backup"
-  }, "Restore", React.createElement("input", {
-    type: "file",
-    accept: ".json",
-    style: {
-      display: "none"
-    },
-    onChange: e => {
-      importBackup(e.target.files[0]);
-      e.target.value = "";
-    }
-  })), selectedSet && React.createElement("button", {
-    className: "btn desktop-only",
-    onClick: exportCSV
-  }, "CSV"))), React.createElement("div", {
+  }, theme === "dark" ? "☀" : "🌙"))), React.createElement("div", {
     className: "filters-mobile mobile-only",
     style: {
       maxHeight: showMobF ? "500px" : "0"
@@ -2075,7 +2160,8 @@ function DraftLab(_ref20) {
     const q = calcQuadrant(g);
     return React.createElement("tr", {
       key: card.id,
-      className: `c${ck}`,
+      className: `c${ck}`
+    }, React.createElement("td", {
       onMouseEnter: e => {
         setHovered(card);
         setHoverPos({
@@ -2088,7 +2174,7 @@ function DraftLab(_ref20) {
         y: e.clientY
       }),
       onMouseLeave: () => setHovered(null)
-    }, React.createElement("td", null, React.createElement("div", {
+    }, React.createElement("div", {
       className: "card-name"
     }, card.name, q && React.createElement(QuadrantBadge, {
       g: g
@@ -2282,26 +2368,26 @@ function LoginScreen(_ref30) {
   }, sending ? "Sending…" : "Send Magic Link"))));
 }
 function AuthGate() {
-  const _useState71 = useState(null),
-    _useState72 = _slicedToArray(_useState71, 2),
-    user = _useState72[0],
-    setUser = _useState72[1];
-  const _useState73 = useState(true),
+  const _useState73 = useState(null),
     _useState74 = _slicedToArray(_useState73, 2),
-    authLoading = _useState74[0],
-    setAuthLoading = _useState74[1];
-  const _useState75 = useState(""),
+    user = _useState74[0],
+    setUser = _useState74[1];
+  const _useState75 = useState(true),
     _useState76 = _slicedToArray(_useState75, 2),
-    email = _useState76[0],
-    setEmail = _useState76[1];
-  const _useState77 = useState(false),
+    authLoading = _useState76[0],
+    setAuthLoading = _useState76[1];
+  const _useState77 = useState(""),
     _useState78 = _slicedToArray(_useState77, 2),
-    sent = _useState78[0],
-    setSent = _useState78[1];
+    email = _useState78[0],
+    setEmail = _useState78[1];
   const _useState79 = useState(false),
     _useState80 = _slicedToArray(_useState79, 2),
-    sending = _useState80[0],
-    setSending = _useState80[1];
+    sent = _useState80[0],
+    setSent = _useState80[1];
+  const _useState81 = useState(false),
+    _useState82 = _slicedToArray(_useState81, 2),
+    sending = _useState82[0],
+    setSending = _useState82[1];
   useEffect(() => {
     if (!SUPABASE_CONFIGURED) {
       setAuthLoading(false);

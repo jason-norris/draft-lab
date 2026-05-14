@@ -1,5 +1,5 @@
 // Globals provided by template.html: SUPABASE_CONFIGURED, ALLOWED_EMAIL, sb, syncGrades, fetchGrades
-const { useState, useEffect, useCallback } = React;
+const { useState, useEffect, useCallback, useRef } = React;
 
 // ── Constants ────────────────────────────────────────────────────────────────
 const MTG_LABELS   = { W:"White", U:"Blue", B:"Black", R:"Red", G:"Green", M:"Multicolor", C:"Colorless", L:"Land" };
@@ -262,28 +262,46 @@ function RatingInput({ value, source, onChange }) {
   );
 }
 
-// ── TagCell (desktop table — compact chips + inline picker) ──────────────────
+// ── TagCell (desktop table — compact chips + floating picker) ────────────────
 function TagCell({ tags = [], onToggle }) {
   const [open, setOpen] = useState(false);
+  const ref = useRef(null);
+  useEffect(() => {
+    if (!open) return;
+    const handler = e => { if (ref.current && !ref.current.contains(e.target)) setOpen(false); };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, [open]);
+  const MAX_VISIBLE = 2;
+  const visible  = tags.slice(0, MAX_VISIBLE);
+  const overflow = tags.length - MAX_VISIBLE;
   return (
-    <div style={{ display:"flex", flexDirection:"column", gap:3 }}>
-      <div style={{ display:"flex", flexWrap:"wrap", gap:3, alignItems:"center" }}>
-        {tags.map(id => {
+    <div ref={ref} style={{ position:"relative" }}>
+      <div style={{ display:"flex", flexWrap:"nowrap", gap:3, alignItems:"center" }}>
+        {visible.map(id => {
           const tag = TAGS.find(t => t.id === id);
           return tag
             ? <span key={id} className="tag-chip active" style={{ fontSize:8, padding:"1px 6px" }}
-                onClick={() => onToggle(id)}>{tag.label}</span>
+                onClick={() => onToggle(id)}>{tag.label} ✕</span>
             : null;
         })}
+        {overflow > 0 && (
+          <span style={{ fontSize:8, color:"var(--dimmer)", whiteSpace:"nowrap" }}>+{overflow}</span>
+        )}
         <button className="tag-add-btn" onClick={() => setOpen(v => !v)}>
-          {open ? "✕" : tags.length ? "+ more" : "+ tag"}
+          {open ? "✕" : tags.length ? "edit" : "+ tag"}
         </button>
       </div>
       {open && (
-        <div style={{ borderTop:"1px solid var(--b1)", paddingTop:4 }}>
+        <div onClick={e => e.stopPropagation()} style={{
+          position:"absolute", top:"calc(100% + 4px)", left:0, zIndex:200,
+          background:"var(--s1)", border:"1px solid var(--b2)",
+          padding:"10px 12px", boxShadow:"0 8px 24px rgba(0,0,0,.3)",
+          minWidth:220
+        }}>
           {TAG_GROUPS.map(({ label, ids }) => (
-            <div key={label} style={{ marginBottom:4 }}>
-              <div style={{ fontSize:8, color:"var(--dimmer)", marginBottom:3, textTransform:"uppercase", letterSpacing:".1em" }}>{label}</div>
+            <div key={label} style={{ marginBottom:8 }}>
+              <div style={{ fontSize:8, color:"var(--dimmer)", marginBottom:4, textTransform:"uppercase", letterSpacing:".1em" }}>{label}</div>
               <div className="tag-chips">
                 {ids.map(id => {
                   const tag = TAGS.find(t => t.id === id);
@@ -571,10 +589,12 @@ function ImportPanel({ cards, grades, selectedSet, fmt17l, setFmt17l, meta, setM
 // ── DraftLab ──────────────────────────────────────────────────────────────────
 function DraftLab({ user }) {
   const isMobile = useIsMobile();
+  const didFirstSync = useRef(false);
 
   // ── State ──
   const [theme, setTheme]           = useState(() => localStorage.getItem("draft-lab-theme") || "auto");
   const [showImport, setShowImport] = useState(false);
+  const [showExport, setShowExport] = useState(false);
   const [fmt17l, setFmt17l]         = useState("PremierDraft");
   const [importMeta, setImportMeta] = useState(null); // { expert: {...}, performance: {...} }
   const [sets, setSets]             = useState([]);
@@ -632,6 +652,27 @@ function DraftLab({ user }) {
       });
     });
   }, [selectedSet?.code, user?.id]);
+
+  // On first login in a session: push any local sets to Supabase that Supabase doesn't have yet
+  useEffect(() => {
+    if (!user || didFirstSync.current) return;
+    didFirstSync.current = true;
+    const localSetCodes = [];
+    for (let i = 0; i < localStorage.length; i++) {
+      const key = localStorage.key(i);
+      if (key && key.startsWith('draft-grades-')) {
+        localSetCodes.push(key.replace('draft-grades-', ''));
+      }
+    }
+    if (!localSetCodes.length) return;
+    Promise.all(localSetCodes.map(async code => {
+      const remote = await fetchGrades(code);
+      if (!remote) {
+        const raw = localStorage.getItem(`draft-grades-${code}`);
+        if (raw) await syncGrades(code, JSON.parse(raw), user.id);
+      }
+    })).catch(() => {});
+  }, [user?.id]);
 
   // ── Helpers ──
   const toggleTheme = () => {
@@ -746,16 +787,28 @@ function DraftLab({ user }) {
         const parsed = JSON.parse(ev.target.result);
         const data   = parsed.data ?? parsed;
         let count = 0;
+        const restoredGrades = {};
         for (const [key, value] of Object.entries(data)) {
           if ((key.startsWith("draft-grades-") || key.startsWith("draft-import-meta-") || key === "draft-lab-theme") && typeof value === "string") {
             localStorage.setItem(key, value); count++;
+            if (key.startsWith("draft-grades-")) {
+              restoredGrades[key.replace("draft-grades-", "")] = JSON.parse(value);
+            }
           }
         }
         if (count === 0) { alert("No Draft Lab data found in that file."); return; }
         if (selectedSet) loadGrades(selectedSet.code);
         const savedTheme = localStorage.getItem("draft-lab-theme");
         if (savedTheme) { setTheme(savedTheme); document.documentElement.setAttribute("data-theme", savedTheme); }
-        alert(`Restored ${count} item${count !== 1 ? "s" : ""} from backup.`);
+        // Push all restored sets to Supabase (backup restore = authoritative source of truth)
+        if (user) {
+          const setCodes = Object.keys(restoredGrades);
+          Promise.all(setCodes.map(code => syncGrades(code, restoredGrades[code], user.id)))
+            .then(() => alert(`Restored ${count} item${count !== 1 ? "s" : ""} from backup and synced ${setCodes.length} set${setCodes.length !== 1 ? "s" : ""} to cloud.`))
+            .catch(() => alert(`Restored ${count} item${count !== 1 ? "s" : ""} from backup. Cloud sync failed — grades saved locally.`));
+        } else {
+          alert(`Restored ${count} item${count !== 1 ? "s" : ""} from backup.`);
+        }
       } catch (e) { alert(`Could not read backup file: ${e.message}`); }
     };
     reader.readAsText(file);
@@ -816,7 +869,7 @@ function DraftLab({ user }) {
 
   // ── Render ──
   return (
-    <div className="app" onClick={() => { setShowSetDD(false); setShowImport(false); setShowTagFilter(false); }}>
+    <div className="app" onClick={() => { setShowSetDD(false); setShowImport(false); setShowExport(false); setShowTagFilter(false); }}>
 
       {/* ── Header ── */}
       <header className="hdr" onClick={e => e.stopPropagation()}>
@@ -861,7 +914,7 @@ function DraftLab({ user }) {
           {selectedSet && !isMobile && (
             <div className="l17-wrap" onClick={e => e.stopPropagation()}>
               <button className={`btn${showImport ? " active" : ""}`}
-                onClick={() => setShowImport(v => !v)}>Import ▾</button>
+                onClick={() => { setShowExport(false); setShowImport(v => !v); }}>Import ▾</button>
               {showImport && (
                 <div className="l17-panel" style={{ width:300 }}>
                   <ImportPanel
@@ -873,6 +926,28 @@ function DraftLab({ user }) {
               )}
             </div>
           )}
+          <div className="l17-wrap desktop-only" onClick={e => e.stopPropagation()}>
+            <button className={`btn${showExport ? " active" : ""}`}
+              onClick={() => { setShowImport(false); setShowExport(v => !v); }}>Export ▾</button>
+            {showExport && (
+              <div className="l17-panel" style={{ width:220 }}>
+                <div className="l17-title">Export / Restore</div>
+                <button className="l17-fetch" onClick={() => { exportBackup(); setShowExport(false); }}>
+                  Export Backup (JSON)
+                </button>
+                <label className="l17-fetch" style={{ textAlign:"center", cursor:"pointer" }}>
+                  Restore Backup (JSON)
+                  <input type="file" accept=".json" style={{ display:"none" }}
+                    onChange={e => { importBackup(e.target.files[0]); e.target.value = ""; setShowExport(false); }} />
+                </label>
+                {selectedSet && (
+                  <button className="l17-fetch" onClick={() => { exportCSV(); setShowExport(false); }}>
+                    Export Grades (CSV)
+                  </button>
+                )}
+              </div>
+            )}
+          </div>
           {user && syncStatus && <span className="sync-dot desktop-only">{syncStatus === "syncing" ? "↑ Syncing…" : "✓ Synced"}</span>}
           {user && (
             <button className="btn desktop-only" style={{ fontSize:9, color:"var(--dimmer)" }} title={user.email}
@@ -883,13 +958,6 @@ function DraftLab({ user }) {
           <button className="icon-btn" onClick={toggleTheme} title="Toggle light/dark mode" style={{ fontSize:16, padding:"6px 10px" }}>
             {theme === "dark" ? "☀" : "🌙"}
           </button>
-          <button className="btn desktop-only" onClick={exportBackup} title="Export all grades to JSON">Backup</button>
-          <label className="btn desktop-only" style={{ cursor:"pointer" }} title="Restore grades from JSON backup">
-            Restore
-            <input type="file" accept=".json" style={{ display:"none" }}
-              onChange={e => { importBackup(e.target.files[0]); e.target.value = ""; }} />
-          </label>
-          {selectedSet && <button className="btn desktop-only" onClick={exportCSV}>CSV</button>}
         </div>
       </header>
 
@@ -1088,11 +1156,11 @@ function DraftLab({ user }) {
                 const ck = getColorKey(card);
                 const q  = calcQuadrant(g);
                 return (
-                  <tr key={card.id} className={`c${ck}`}
-                    onMouseEnter={e => { setHovered(card); setHoverPos({ x: e.clientX, y: e.clientY }); }}
-                    onMouseMove={e  =>   setHoverPos({ x: e.clientX, y: e.clientY })}
-                    onMouseLeave={()  =>  setHovered(null)}>
-                    <td>
+                  <tr key={card.id} className={`c${ck}`}>
+                    <td
+                      onMouseEnter={e => { setHovered(card); setHoverPos({ x: e.clientX, y: e.clientY }); }}
+                      onMouseMove={e  =>   setHoverPos({ x: e.clientX, y: e.clientY })}
+                      onMouseLeave={()  =>  setHovered(null)}>
                       <div className="card-name">
                         {card.name}
                         {q && <QuadrantBadge g={g} />}
