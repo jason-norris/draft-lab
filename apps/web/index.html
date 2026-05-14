@@ -293,6 +293,18 @@
     .auth-sent { font-size:12px; color:var(--gold); text-align:center; line-height:1.7; }
     .sync-dot { font-size:10px; color:var(--dim); white-space:nowrap; }
 
+    /* ── Tags ── */
+    .tag-chip { display:inline-flex; align-items:center; font-size:9px; padding:2px 8px; border-radius:10px; cursor:pointer; border:1px solid var(--b2); color:var(--dimmer); background:transparent; font-family:'IBM Plex Mono',monospace; white-space:nowrap; transition:all .15s; -webkit-tap-highlight-color:transparent; user-select:none; line-height:1.4; }
+    .tag-chip:hover { border-color:var(--gold2); color:var(--gold); }
+    .tag-chip.active { background:rgba(200,168,75,.15); color:var(--gold); border-color:var(--gold2); }
+    .tag-chips { display:flex; flex-wrap:wrap; gap:4px; }
+    .tag-add-btn { font-size:8px; padding:1px 6px; background:transparent; border:1px dashed var(--b2); color:var(--dimmer); cursor:pointer; border-radius:10px; font-family:'IBM Plex Mono',monospace; transition:all .15s; }
+    .tag-add-btn:hover { border-color:var(--gold2); color:var(--gold); }
+    .tag-filter-wrap { position:relative; }
+    .tag-filter-panel { position:absolute; top:calc(100% + 4px); left:0; background:var(--s1); border:1px solid var(--b2); padding:12px 14px; z-index:300; box-shadow:0 8px 24px rgba(0,0,0,.25); display:flex; flex-direction:column; gap:10px; min-width:260px; }
+    .tag-filter-hdr { font-size:9px; color:var(--dimmer); text-transform:uppercase; letter-spacing:.12em; }
+    @media (max-width:767px) { .tag-chip { padding:7px 12px; font-size:11px; } }
+
     @media (max-width:767px) {
       .desktop-only { display:none !important; }
       .hdr { padding:10px 12px; }
@@ -414,6 +426,61 @@ const GRADE_TIERS = [{
 }, {
   tier: "F — Don't",
   rows: [["F", "#3a0000", "#888", "Never", "Actively costs you games. So slow, narrow, or overcosted you'd rather run a land. Should be a rare call."]]
+}];
+const TAGS = [{
+  id: "sleeper",
+  label: "Sleeper",
+  group: "eval"
+}, {
+  id: "overrated",
+  label: "Overrated",
+  group: "eval"
+}, {
+  id: "uncertain",
+  label: "Uncertain",
+  group: "eval"
+}, {
+  id: "removal",
+  label: "Removal",
+  group: "role"
+}, {
+  id: "finisher",
+  label: "Finisher",
+  group: "role"
+}, {
+  id: "tempo",
+  label: "Tempo",
+  group: "role"
+}, {
+  id: "card-draw",
+  label: "Card Draw",
+  group: "role"
+}, {
+  id: "enabler",
+  label: "Enabler",
+  group: "role"
+}, {
+  id: "build-around",
+  label: "Build-Around",
+  group: "role"
+}, {
+  id: "archetype-only",
+  label: "Arch Only",
+  group: "context"
+}, {
+  id: "filler",
+  label: "Filler",
+  group: "context"
+}];
+const TAG_GROUPS = [{
+  label: "Evaluation",
+  ids: ["sleeper", "overrated", "uncertain"]
+}, {
+  label: "Card Role",
+  ids: ["removal", "finisher", "tempo", "card-draw", "enabler", "build-around"]
+}, {
+  label: "Context",
+  ids: ["archetype-only", "filler"]
 }];
 const SOURCE_LABEL = {
   "17lands": "17L",
@@ -702,10 +769,122 @@ function RatingInput(_ref6) {
     source: source
   }));
 }
-function GradeSelect(_ref7) {
-  let cls = _ref7.cls,
-    value = _ref7.value,
-    onChange = _ref7.onChange;
+function TagCell(_ref7) {
+  let _ref7$tags = _ref7.tags,
+    tags = _ref7$tags === void 0 ? [] : _ref7$tags,
+    onToggle = _ref7.onToggle;
+  const _useState3 = useState(false),
+    _useState4 = _slicedToArray(_useState3, 2),
+    open = _useState4[0],
+    setOpen = _useState4[1];
+  return React.createElement("div", {
+    style: {
+      display: "flex",
+      flexDirection: "column",
+      gap: 3
+    }
+  }, React.createElement("div", {
+    style: {
+      display: "flex",
+      flexWrap: "wrap",
+      gap: 3,
+      alignItems: "center"
+    }
+  }, tags.map(id => {
+    const tag = TAGS.find(t => t.id === id);
+    return tag ? React.createElement("span", {
+      key: id,
+      className: "tag-chip active",
+      style: {
+        fontSize: 8,
+        padding: "1px 6px"
+      },
+      onClick: () => onToggle(id)
+    }, tag.label) : null;
+  }), React.createElement("button", {
+    className: "tag-add-btn",
+    onClick: () => setOpen(v => !v)
+  }, open ? "✕" : tags.length ? "+ more" : "+ tag")), open && React.createElement("div", {
+    style: {
+      borderTop: "1px solid var(--b1)",
+      paddingTop: 4
+    }
+  }, TAG_GROUPS.map(_ref8 => {
+    let label = _ref8.label,
+      ids = _ref8.ids;
+    return React.createElement("div", {
+      key: label,
+      style: {
+        marginBottom: 4
+      }
+    }, React.createElement("div", {
+      style: {
+        fontSize: 8,
+        color: "var(--dimmer)",
+        marginBottom: 3,
+        textTransform: "uppercase",
+        letterSpacing: ".1em"
+      }
+    }, label), React.createElement("div", {
+      className: "tag-chips"
+    }, ids.map(id => {
+      const tag = TAGS.find(t => t.id === id);
+      return tag ? React.createElement("button", {
+        key: id,
+        className: `tag-chip${tags.includes(id) ? " active" : ""}`,
+        style: {
+          fontSize: 8,
+          padding: "1px 6px"
+        },
+        onClick: () => onToggle(id)
+      }, tag.label) : null;
+    })));
+  })));
+}
+function TagFilterPanel(_ref9) {
+  let filterTags = _ref9.filterTags,
+    onToggle = _ref9.onToggle,
+    onClear = _ref9.onClear;
+  return React.createElement("div", {
+    className: "tag-filter-panel"
+  }, React.createElement("div", {
+    className: "tag-filter-hdr"
+  }, "Filter by tag \u2014 any of"), TAG_GROUPS.map(_ref0 => {
+    let label = _ref0.label,
+      ids = _ref0.ids;
+    return React.createElement("div", {
+      key: label
+    }, React.createElement("div", {
+      style: {
+        fontSize: 8,
+        color: "var(--dimmer)",
+        marginBottom: 4,
+        textTransform: "uppercase",
+        letterSpacing: ".1em"
+      }
+    }, label), React.createElement("div", {
+      className: "tag-chips"
+    }, ids.map(id => {
+      const tag = TAGS.find(t => t.id === id);
+      return tag ? React.createElement("button", {
+        key: id,
+        className: `tag-chip${filterTags.includes(id) ? " active" : ""}`,
+        onClick: () => onToggle(id)
+      }, tag.label) : null;
+    })));
+  }), filterTags.length > 0 && React.createElement("button", {
+    className: "btn",
+    style: {
+      fontSize: 9,
+      alignSelf: "flex-start"
+    },
+    onClick: onClear
+  }, "Clear"));
+}
+function GradeSelect(_ref1) {
+  let cls = _ref1.cls,
+    value = _ref1.value,
+    onChange = _ref1.onChange;
   return React.createElement("select", {
     className: cls,
     value: value,
@@ -721,19 +900,19 @@ function GradeSelect(_ref7) {
     }
   }, g || "—")));
 }
-function MobileCardItem(_ref8) {
+function MobileCardItem(_ref10) {
   var _card$type_line2;
-  let card = _ref8.card,
-    grade = _ref8.grade,
-    onUpdate = _ref8.onUpdate;
-  const _useState3 = useState(false),
-    _useState4 = _slicedToArray(_useState3, 2),
-    expanded = _useState4[0],
-    setExpanded = _useState4[1];
+  let card = _ref10.card,
+    grade = _ref10.grade,
+    onUpdate = _ref10.onUpdate;
   const _useState5 = useState(false),
     _useState6 = _slicedToArray(_useState5, 2),
-    bigImg = _useState6[0],
-    setBigImg = _useState6[1];
+    expanded = _useState6[0],
+    setExpanded = _useState6[1];
+  const _useState7 = useState(false),
+    _useState8 = _slicedToArray(_useState7, 2),
+    bigImg = _useState8[0],
+    setBigImg = _useState8[1];
   const ck = getColorKey(card);
   const img = getImageUrl(card);
   const q = calcQuadrant(grade);
@@ -835,30 +1014,41 @@ function MobileCardItem(_ref8) {
     placeholder: "Notes\u2026",
     value: grade.notes || "",
     onChange: e => onUpdate("notes", e.target.value)
-  }))))))));
+  })), React.createElement("div", {
+    className: "mc-field"
+  }, React.createElement("label", null, "Tags"), React.createElement("div", {
+    className: "tag-chips"
+  }, TAGS.map(tag => React.createElement("button", {
+    key: tag.id,
+    className: `tag-chip${(grade.tags ?? []).includes(tag.id) ? " active" : ""}`,
+    onClick: () => {
+      const cur = grade.tags ?? [];
+      onUpdate("tags", cur.includes(tag.id) ? cur.filter(t => t !== tag.id) : [...cur, tag.id]);
+    }
+  }, tag.label))))))))));
 }
-function ImportPanel(_ref9) {
-  let cards = _ref9.cards,
-    grades = _ref9.grades,
-    selectedSet = _ref9.selectedSet,
-    fmt17l = _ref9.fmt17l,
-    setFmt17l = _ref9.setFmt17l,
-    meta = _ref9.meta,
-    setMeta = _ref9.setMeta,
-    onGradesUpdate = _ref9.onGradesUpdate,
-    mobile = _ref9.mobile;
-  const _useState7 = useState(""),
-    _useState8 = _slicedToArray(_useState7, 2),
-    msg = _useState8[0],
-    setMsg = _useState8[1];
-  const _useState9 = useState("17lands"),
+function ImportPanel(_ref11) {
+  let cards = _ref11.cards,
+    grades = _ref11.grades,
+    selectedSet = _ref11.selectedSet,
+    fmt17l = _ref11.fmt17l,
+    setFmt17l = _ref11.setFmt17l,
+    meta = _ref11.meta,
+    setMeta = _ref11.setMeta,
+    onGradesUpdate = _ref11.onGradesUpdate,
+    mobile = _ref11.mobile;
+  const _useState9 = useState(""),
     _useState0 = _slicedToArray(_useState9, 2),
-    source = _useState0[0],
-    setSource = _useState0[1];
-  const _useState1 = useState("auto"),
+    msg = _useState0[0],
+    setMsg = _useState0[1];
+  const _useState1 = useState("17lands"),
     _useState10 = _slicedToArray(_useState1, 2),
-    target = _useState10[0],
-    setTarget = _useState10[1];
+    source = _useState10[0],
+    setSource = _useState10[1];
+  const _useState11 = useState("auto"),
+    _useState12 = _slicedToArray(_useState11, 2),
+    target = _useState12[0],
+    setTarget = _useState12[1];
   const resolvedTarget = target === "auto" ? source === "17lands" ? "performance" : "expert" : target;
   const importCSV = text => {
     const lines = text.trim().split("\n").filter(l => l.trim());
@@ -939,10 +1129,10 @@ function ImportPanel(_ref9) {
   };
   const flush = which => {
     const next = {};
-    for (const _ref0 of Object.entries(grades)) {
-      var _ref1 = _slicedToArray(_ref0, 2);
-      const id = _ref1[0];
-      const g = _ref1[1];
+    for (const _ref12 of Object.entries(grades)) {
+      var _ref13 = _slicedToArray(_ref12, 2);
+      const id = _ref13[0];
+      const g = _ref13[1];
       const updated = {
         ...g
       };
@@ -967,10 +1157,10 @@ function ImportPanel(_ref9) {
   };
   const srcButtons = React.createElement("div", {
     className: "l17-fmt"
-  }, [["17lands", "17Lands"], ["aetherhub", "AetherHub"], ["manual", "Manual"]].map(_ref10 => {
-    let _ref11 = _slicedToArray(_ref10, 2),
-      val = _ref11[0],
-      lbl = _ref11[1];
+  }, [["17lands", "17Lands"], ["aetherhub", "AetherHub"], ["manual", "Manual"]].map(_ref14 => {
+    let _ref15 = _slicedToArray(_ref14, 2),
+      val = _ref15[0],
+      lbl = _ref15[1];
     return React.createElement("button", {
       key: val,
       className: source === val ? "active" : "",
@@ -979,10 +1169,10 @@ function ImportPanel(_ref9) {
   }));
   const fmt17lButtons = source === "17lands" && React.createElement("div", {
     className: "l17-fmt"
-  }, [["PremierDraft", "Premier"], ["QuickDraft", "Quick"], ["TradDraft", "Trad"]].map(_ref12 => {
-    let _ref13 = _slicedToArray(_ref12, 2),
-      val = _ref13[0],
-      lbl = _ref13[1];
+  }, [["PremierDraft", "Premier"], ["QuickDraft", "Quick"], ["TradDraft", "Trad"]].map(_ref16 => {
+    let _ref17 = _slicedToArray(_ref16, 2),
+      val = _ref17[0],
+      lbl = _ref17[1];
     return React.createElement("button", {
       key: val,
       className: fmt17l === val ? "active" : "",
@@ -991,10 +1181,10 @@ function ImportPanel(_ref9) {
   }));
   const targetButtons = React.createElement("div", {
     className: "l17-fmt"
-  }, [["auto", "Auto"], ["expert", "Expert"], ["performance", "Perf"]].map(_ref14 => {
-    let _ref15 = _slicedToArray(_ref14, 2),
-      val = _ref15[0],
-      lbl = _ref15[1];
+  }, [["auto", "Auto"], ["expert", "Expert"], ["performance", "Perf"]].map(_ref18 => {
+    let _ref19 = _slicedToArray(_ref18, 2),
+      val = _ref19[0],
+      lbl = _ref19[1];
     return React.createElement("button", {
       key: val,
       className: target === val ? "active" : "",
@@ -1059,120 +1249,128 @@ function ImportPanel(_ref9) {
     }
   }, metaRow("expert", "Expert"), metaRow("performance", "Perf")));
 }
-function DraftLab(_ref16) {
-  let user = _ref16.user;
+function DraftLab(_ref20) {
+  let user = _ref20.user;
   const isMobile = useIsMobile();
-  const _useState11 = useState(() => localStorage.getItem("draft-lab-theme") || "auto"),
-    _useState12 = _slicedToArray(_useState11, 2),
-    theme = _useState12[0],
-    setTheme = _useState12[1];
-  const _useState13 = useState(false),
+  const _useState13 = useState(() => localStorage.getItem("draft-lab-theme") || "auto"),
     _useState14 = _slicedToArray(_useState13, 2),
-    showImport = _useState14[0],
-    setShowImport = _useState14[1];
-  const _useState15 = useState("PremierDraft"),
+    theme = _useState14[0],
+    setTheme = _useState14[1];
+  const _useState15 = useState(false),
     _useState16 = _slicedToArray(_useState15, 2),
-    fmt17l = _useState16[0],
-    setFmt17l = _useState16[1];
-  const _useState17 = useState(null),
+    showImport = _useState16[0],
+    setShowImport = _useState16[1];
+  const _useState17 = useState("PremierDraft"),
     _useState18 = _slicedToArray(_useState17, 2),
-    importMeta = _useState18[0],
-    setImportMeta = _useState18[1];
-  const _useState19 = useState([]),
+    fmt17l = _useState18[0],
+    setFmt17l = _useState18[1];
+  const _useState19 = useState(null),
     _useState20 = _slicedToArray(_useState19, 2),
-    sets = _useState20[0],
-    setSets = _useState20[1];
-  const _useState21 = useState(null),
+    importMeta = _useState20[0],
+    setImportMeta = _useState20[1];
+  const _useState21 = useState([]),
     _useState22 = _slicedToArray(_useState21, 2),
-    selectedSet = _useState22[0],
-    setSelectedSet = _useState22[1];
-  const _useState23 = useState([]),
+    sets = _useState22[0],
+    setSets = _useState22[1];
+  const _useState23 = useState(null),
     _useState24 = _slicedToArray(_useState23, 2),
-    cards = _useState24[0],
-    setCards = _useState24[1];
-  const _useState25 = useState({}),
+    selectedSet = _useState24[0],
+    setSelectedSet = _useState24[1];
+  const _useState25 = useState([]),
     _useState26 = _slicedToArray(_useState25, 2),
-    grades = _useState26[0],
-    setGrades = _useState26[1];
-  const _useState27 = useState(false),
+    cards = _useState26[0],
+    setCards = _useState26[1];
+  const _useState27 = useState({}),
     _useState28 = _slicedToArray(_useState27, 2),
-    loading = _useState28[0],
-    setLoading = _useState28[1];
-  const _useState29 = useState(""),
+    grades = _useState28[0],
+    setGrades = _useState28[1];
+  const _useState29 = useState(false),
     _useState30 = _slicedToArray(_useState29, 2),
-    loadMsg = _useState30[0],
-    setLoadMsg = _useState30[1];
-  const _useState31 = useState(null),
+    loading = _useState30[0],
+    setLoading = _useState30[1];
+  const _useState31 = useState(""),
     _useState32 = _slicedToArray(_useState31, 2),
-    error = _useState32[0],
-    setError = _useState32[1];
-  const _useState33 = useState("color"),
+    loadMsg = _useState32[0],
+    setLoadMsg = _useState32[1];
+  const _useState33 = useState(null),
     _useState34 = _slicedToArray(_useState33, 2),
-    sortCol = _useState34[0],
-    setSortCol = _useState34[1];
-  const _useState35 = useState("asc"),
+    error = _useState34[0],
+    setError = _useState34[1];
+  const _useState35 = useState("color"),
     _useState36 = _slicedToArray(_useState35, 2),
-    sortDir = _useState36[0],
-    setSortDir = _useState36[1];
-  const _useState37 = useState("color"),
+    sortCol = _useState36[0],
+    setSortCol = _useState36[1];
+  const _useState37 = useState("asc"),
     _useState38 = _slicedToArray(_useState37, 2),
-    mobileSort = _useState38[0],
-    setMobileSort = _useState38[1];
-  const _useState39 = useState("all"),
+    sortDir = _useState38[0],
+    setSortDir = _useState38[1];
+  const _useState39 = useState("color"),
     _useState40 = _slicedToArray(_useState39, 2),
-    filterColor = _useState40[0],
-    setFilterColor = _useState40[1];
+    mobileSort = _useState40[0],
+    setMobileSort = _useState40[1];
   const _useState41 = useState("all"),
     _useState42 = _slicedToArray(_useState41, 2),
-    filterRarity = _useState42[0],
-    setFilterRarity = _useState42[1];
-  const _useState43 = useState(""),
+    filterColor = _useState42[0],
+    setFilterColor = _useState42[1];
+  const _useState43 = useState("all"),
     _useState44 = _slicedToArray(_useState43, 2),
-    filterSearch = _useState44[0],
-    setFilterSearch = _useState44[1];
-  const _useState45 = useState("all"),
+    filterRarity = _useState44[0],
+    setFilterRarity = _useState44[1];
+  const _useState45 = useState(""),
     _useState46 = _slicedToArray(_useState45, 2),
-    filterGraded = _useState46[0],
-    setFilterGraded = _useState46[1];
+    filterSearch = _useState46[0],
+    setFilterSearch = _useState46[1];
   const _useState47 = useState("all"),
     _useState48 = _slicedToArray(_useState47, 2),
-    filterQuadrant = _useState48[0],
-    setFilterQuadrant = _useState48[1];
-  const _useState49 = useState(false),
+    filterGraded = _useState48[0],
+    setFilterGraded = _useState48[1];
+  const _useState49 = useState("all"),
     _useState50 = _slicedToArray(_useState49, 2),
-    showMobF = _useState50[0],
-    setShowMobF = _useState50[1];
-  const _useState51 = useState(false),
+    filterQuadrant = _useState50[0],
+    setFilterQuadrant = _useState50[1];
+  const _useState51 = useState([]),
     _useState52 = _slicedToArray(_useState51, 2),
-    showGuide = _useState52[0],
-    setShowGuide = _useState52[1];
-  const _useState53 = useState(""),
+    filterTags = _useState52[0],
+    setFilterTags = _useState52[1];
+  const _useState53 = useState(false),
     _useState54 = _slicedToArray(_useState53, 2),
-    syncStatus = _useState54[0],
-    setSyncStatus = _useState54[1];
+    showTagFilter = _useState54[0],
+    setShowTagFilter = _useState54[1];
   const _useState55 = useState(false),
     _useState56 = _slicedToArray(_useState55, 2),
-    showLegal = _useState56[0],
-    setShowLegal = _useState56[1];
-  const _useState57 = useState(null),
+    showMobF = _useState56[0],
+    setShowMobF = _useState56[1];
+  const _useState57 = useState(false),
     _useState58 = _slicedToArray(_useState57, 2),
-    hovered = _useState58[0],
-    setHovered = _useState58[1];
-  const _useState59 = useState({
+    showGuide = _useState58[0],
+    setShowGuide = _useState58[1];
+  const _useState59 = useState(""),
+    _useState60 = _slicedToArray(_useState59, 2),
+    syncStatus = _useState60[0],
+    setSyncStatus = _useState60[1];
+  const _useState61 = useState(false),
+    _useState62 = _slicedToArray(_useState61, 2),
+    showLegal = _useState62[0],
+    setShowLegal = _useState62[1];
+  const _useState63 = useState(null),
+    _useState64 = _slicedToArray(_useState63, 2),
+    hovered = _useState64[0],
+    setHovered = _useState64[1];
+  const _useState65 = useState({
       x: 0,
       y: 0
     }),
-    _useState60 = _slicedToArray(_useState59, 2),
-    hoverPos = _useState60[0],
-    setHoverPos = _useState60[1];
-  const _useState61 = useState(""),
-    _useState62 = _slicedToArray(_useState61, 2),
-    setSearch = _useState62[0],
-    setSetSearch = _useState62[1];
-  const _useState63 = useState(false),
-    _useState64 = _slicedToArray(_useState63, 2),
-    showSetDD = _useState64[0],
-    setShowSetDD = _useState64[1];
+    _useState66 = _slicedToArray(_useState65, 2),
+    hoverPos = _useState66[0],
+    setHoverPos = _useState66[1];
+  const _useState67 = useState(""),
+    _useState68 = _slicedToArray(_useState67, 2),
+    setSearch = _useState68[0],
+    setSetSearch = _useState68[1];
+  const _useState69 = useState(false),
+    _useState70 = _slicedToArray(_useState69, 2),
+    showSetDD = _useState70[0],
+    setShowSetDD = _useState70[1];
   useEffect(() => {
     if (theme === "auto") document.documentElement.removeAttribute("data-theme");else document.documentElement.setAttribute("data-theme", theme);
   }, [theme]);
@@ -1236,6 +1434,7 @@ function DraftLab(_ref16) {
     setFilterSearch("");
     setFilterGraded("all");
     setFilterQuadrant("all");
+    setFilterTags([]);
     loadGrades(set.code);
     let url = `https://api.scryfall.com/cards/search?q=set:${set.code}+game:paper&order=color&unique=cards`,
       all = [];
@@ -1277,11 +1476,11 @@ function DraftLab(_ref16) {
     }
   };
   const exportCSV = () => {
-    const hdr = ["Name", "Color", "Mana Cost", "Type", "Rarity", "My Grade", "Expert", "Expert Source", "Performance", "Perf Source", "Sunset", "Quadrant", "Notes"];
+    const hdr = ["Name", "Color", "Mana Cost", "Type", "Rarity", "My Grade", "Expert", "Expert Source", "Performance", "Perf Source", "Sunset", "Quadrant", "Tags", "Notes"];
     const rows = sorted.map(c => {
       const g = grades[c.id] ?? {};
       const q = calcQuadrant(g);
-      return [`"${c.name}"`, getColorKey(c), `"${c.mana_cost ?? ""}"`, `"${c.type_line ?? ""}"`, c.rarity, g.myGrade ?? "", g.expert_rating ?? "", g.expert_source ?? "", g.performance_rating ?? "", g.performance_source ?? "", g.sunsetGrade ?? "", (q === null || q === void 0 ? void 0 : q.label) ?? "", `"${(g.notes ?? "").replace(/"/g, '""')}"`].join(",");
+      return [`"${c.name}"`, getColorKey(c), `"${c.mana_cost ?? ""}"`, `"${c.type_line ?? ""}"`, c.rarity, g.myGrade ?? "", g.expert_rating ?? "", g.expert_source ?? "", g.performance_rating ?? "", g.performance_source ?? "", g.sunsetGrade ?? "", (q === null || q === void 0 ? void 0 : q.label) ?? "", `"${(g.tags ?? []).join("|")}"`, `"${(g.notes ?? "").replace(/"/g, '""')}"`].join(",");
     });
     const blob = new Blob([[hdr.join(","), ...rows].join("\n")], {
       type: "text/csv"
@@ -1323,10 +1522,10 @@ function DraftLab(_ref16) {
         const parsed = JSON.parse(ev.target.result);
         const data = parsed.data ?? parsed;
         let count = 0;
-        for (const _ref17 of Object.entries(data)) {
-          var _ref18 = _slicedToArray(_ref17, 2);
-          const key = _ref18[0];
-          const value = _ref18[1];
+        for (const _ref21 of Object.entries(data)) {
+          var _ref22 = _slicedToArray(_ref21, 2);
+          const key = _ref22[0];
+          const value = _ref22[1];
           if ((key.startsWith("draft-grades-") || key.startsWith("draft-import-meta-") || key === "draft-lab-theme") && typeof value === "string") {
             localStorage.setItem(key, value);
             count++;
@@ -1357,8 +1556,10 @@ function DraftLab(_ref16) {
     setFilterSearch("");
     setFilterGraded("all");
     setFilterQuadrant("all");
+    setFilterTags([]);
   };
-  const hasFilters = filterColor !== "all" || filterRarity !== "all" || filterSearch || filterGraded !== "all" || filterQuadrant !== "all";
+  const toggleFilterTag = id => setFilterTags(prev => prev.includes(id) ? prev.filter(t => t !== id) : [...prev, id]);
+  const hasFilters = filterColor !== "all" || filterRarity !== "all" || filterSearch || filterGraded !== "all" || filterQuadrant !== "all" || filterTags.length > 0;
   const gradedCount = cards.filter(c => {
     var _grades$c$id;
     return (_grades$c$id = grades[c.id]) === null || _grades$c$id === void 0 ? void 0 : _grades$c$id.myGrade;
@@ -1380,6 +1581,10 @@ function DraftLab(_ref16) {
       const q = calcQuadrant(g);
       const label = (q === null || q === void 0 ? void 0 : q.label) ?? "none";
       if (filterQuadrant === "none" ? label !== "none" : label !== filterQuadrant) return false;
+    }
+    if (filterTags.length > 0) {
+      const cardTags = g.tags ?? [];
+      if (!filterTags.some(t => cardTags.includes(t))) return false;
     }
     return true;
   });
@@ -1437,6 +1642,7 @@ function DraftLab(_ref16) {
     onClick: () => {
       setShowSetDD(false);
       setShowImport(false);
+      setShowTagFilter(false);
     }
   }, React.createElement("header", {
     className: "hdr",
@@ -1519,9 +1725,9 @@ function DraftLab(_ref16) {
     onGradesUpdate: handleGradesUpdate,
     mobile: false
   }))), user && syncStatus && React.createElement("span", {
-    className: "sync-dot"
+    className: "sync-dot desktop-only"
   }, syncStatus === "syncing" ? "↑ Syncing…" : "✓ Synced"), user && React.createElement("button", {
-    className: "btn",
+    className: "btn desktop-only",
     style: {
       fontSize: 9,
       color: "var(--dimmer)"
@@ -1552,11 +1758,11 @@ function DraftLab(_ref16) {
       padding: "6px 10px"
     }
   }, theme === "dark" ? "☀" : "🌙"), React.createElement("button", {
-    className: "btn",
+    className: "btn desktop-only",
     onClick: exportBackup,
     title: "Export all grades to JSON"
   }, "Backup"), React.createElement("label", {
-    className: "btn",
+    className: "btn desktop-only",
     style: {
       cursor: "pointer"
     },
@@ -1572,7 +1778,7 @@ function DraftLab(_ref16) {
       e.target.value = "";
     }
   })), selectedSet && React.createElement("button", {
-    className: "btn",
+    className: "btn desktop-only",
     onClick: exportCSV
   }, "CSV"))), React.createElement("div", {
     className: "filters-mobile mobile-only",
@@ -1618,10 +1824,10 @@ function DraftLab(_ref16) {
     className: "fm-row"
   }, React.createElement("span", {
     className: "fl"
-  }, "Rarity:"), [["all", "All"], ["common", "C"], ["uncommon", "U"], ["rare", "R"], ["mythic", "M"]].map(_ref19 => {
-    let _ref20 = _slicedToArray(_ref19, 2),
-      full = _ref20[0],
-      abbr = _ref20[1];
+  }, "Rarity:"), [["all", "All"], ["common", "C"], ["uncommon", "U"], ["rare", "R"], ["mythic", "M"]].map(_ref23 => {
+    let _ref24 = _slicedToArray(_ref23, 2),
+      full = _ref24[0],
+      abbr = _ref24[1];
     return React.createElement("button", {
       key: full,
       className: `fb${filterRarity === full ? " active" : ""}`,
@@ -1647,7 +1853,22 @@ function DraftLab(_ref16) {
     key: q,
     className: `fb${filterQuadrant === q ? " active" : ""}`,
     onClick: () => setFilterQuadrant(q)
-  }, q === "all" ? "All" : q))), hasFilters && React.createElement("div", {
+  }, q === "all" ? "All" : q))), React.createElement("div", {
+    className: "fm-row",
+    style: {
+      flexDirection: "column",
+      alignItems: "flex-start",
+      gap: 6
+    }
+  }, React.createElement("span", {
+    className: "fl"
+  }, "Tags:"), React.createElement("div", {
+    className: "tag-chips"
+  }, TAGS.map(tag => React.createElement("button", {
+    key: tag.id,
+    className: `tag-chip${filterTags.includes(tag.id) ? " active" : ""}`,
+    onClick: () => toggleFilterTag(tag.id)
+  }, tag.label)))), hasFilters && React.createElement("div", {
     className: "fm-row"
   }, React.createElement("button", {
     className: "btn",
@@ -1701,7 +1922,26 @@ function DraftLab(_ref16) {
       e.target.value = "";
       setShowMobF(false);
     }
-  }))))), cards.length > 0 && React.createElement(React.Fragment, null, React.createElement("div", {
+  }))), selectedSet && React.createElement("button", {
+    className: "btn",
+    style: {
+      alignSelf: "flex-start"
+    },
+    onClick: exportCSV
+  }, "Export CSV"), user && syncStatus && React.createElement("span", {
+    className: "sync-dot"
+  }, syncStatus === "syncing" ? "↑ Syncing…" : "✓ Synced"), user && React.createElement("button", {
+    className: "btn",
+    style: {
+      color: "var(--dimmer)",
+      fontSize: 9,
+      alignSelf: "flex-start"
+    },
+    onClick: () => {
+      sb.auth.signOut();
+      setShowMobF(false);
+    }
+  }, "Sign Out"))), cards.length > 0 && React.createElement(React.Fragment, null, React.createElement("div", {
     className: "stats"
   }, React.createElement("span", {
     className: "stat"
@@ -1777,6 +2017,18 @@ function DraftLab(_ref16) {
     onClick: () => setFilterQuadrant(q)
   }, q === "all" ? "All" : q))), React.createElement("div", {
     className: "divv"
+  }), React.createElement("div", {
+    className: "tag-filter-wrap",
+    onClick: e => e.stopPropagation()
+  }, React.createElement("button", {
+    className: `fb${filterTags.length > 0 ? " active" : ""}`,
+    onClick: () => setShowTagFilter(v => !v)
+  }, "Tags", filterTags.length > 0 ? ` (${filterTags.length})` : ""), showTagFilter && React.createElement(TagFilterPanel, {
+    filterTags: filterTags,
+    onToggle: toggleFilterTag,
+    onClear: () => setFilterTags([])
+  })), React.createElement("div", {
+    className: "divv"
   }), React.createElement("input", {
     className: "srch",
     placeholder: "Search cards\u2026",
@@ -1804,10 +2056,10 @@ function DraftLab(_ref16) {
     className: "empty-sub"
   }, "Choose a set above to start evaluating cards"))), !loading && !error && cards.length > 0 && React.createElement("div", {
     className: "tbl-wrap desktop-only"
-  }, React.createElement("table", null, React.createElement("thead", null, React.createElement("tr", null, [["name", "Card"], ["cmc", "Cost"], [null, "Type"], ["rarity", "Rar"], ["color", "Color"], ["myGrade", "My Grade"], ["expert", "Expert"], ["performance", "Perf"], [null, "Δ"], [null, "Sunset"], [null, "Notes"]].map(_ref21 => {
-    let _ref22 = _slicedToArray(_ref21, 2),
-      col = _ref22[0],
-      lbl = _ref22[1];
+  }, React.createElement("table", null, React.createElement("thead", null, React.createElement("tr", null, [["name", "Card"], ["cmc", "Cost"], [null, "Type"], ["rarity", "Rar"], ["color", "Color"], ["myGrade", "My Grade"], ["expert", "Expert"], ["performance", "Perf"], [null, "Δ"], [null, "Sunset"], [null, "Notes"]].map(_ref25 => {
+    let _ref26 = _slicedToArray(_ref25, 2),
+      col = _ref26[0],
+      lbl = _ref26[1];
     return React.createElement("th", {
       key: lbl,
       className: col && sortCol === col ? "sorted" : "",
@@ -1882,6 +2134,12 @@ function DraftLab(_ref16) {
       placeholder: "Notes\u2026",
       value: g.notes ?? "",
       onChange: e => updateGrade(card.id, "notes", e.target.value)
+    }), React.createElement(TagCell, {
+      tags: g.tags ?? [],
+      onToggle: id => {
+        const cur = g.tags ?? [];
+        updateGrade(card.id, "tags", cur.includes(id) ? cur.filter(t => t !== id) : [...cur, id]);
+      }
     })));
   })))), !loading && !error && cards.length > 0 && React.createElement("div", {
     className: "card-list mobile-only"
@@ -1911,21 +2169,21 @@ function DraftLab(_ref16) {
     className: "guide-h1"
   }, "Grade Reference"), React.createElement("div", {
     className: "guide-sub"
-  }, "Half-grade anchors for Limited evaluation"), GRADE_TIERS.map(_ref23 => {
-    let tier = _ref23.tier,
-      rows = _ref23.rows;
+  }, "Half-grade anchors for Limited evaluation"), GRADE_TIERS.map(_ref27 => {
+    let tier = _ref27.tier,
+      rows = _ref27.rows;
     return React.createElement("div", {
       key: tier,
       className: "guide-tier"
     }, React.createElement("div", {
       className: "guide-tier-hdr"
-    }, tier), rows.map(_ref24 => {
-      let _ref25 = _slicedToArray(_ref24, 5),
-        grade = _ref25[0],
-        bg = _ref25[1],
-        fg = _ref25[2],
-        pick = _ref25[3],
-        desc = _ref25[4];
+    }, tier), rows.map(_ref28 => {
+      let _ref29 = _slicedToArray(_ref28, 5),
+        grade = _ref29[0],
+        bg = _ref29[1],
+        fg = _ref29[2],
+        pick = _ref29[3],
+        desc = _ref29[4];
       return React.createElement("div", {
         key: grade,
         className: "guide-row"
@@ -1989,12 +2247,12 @@ function DraftLab(_ref16) {
     }
   }, "Draft Lab source code is released under the MIT License."))));
 }
-function LoginScreen(_ref26) {
-  let email = _ref26.email,
-    setEmail = _ref26.setEmail,
-    sent = _ref26.sent,
-    sending = _ref26.sending,
-    onSend = _ref26.onSend;
+function LoginScreen(_ref30) {
+  let email = _ref30.email,
+    setEmail = _ref30.setEmail,
+    sent = _ref30.sent,
+    sending = _ref30.sending,
+    onSend = _ref30.onSend;
   return React.createElement("div", {
     className: "auth-wrap"
   }, React.createElement("div", {
@@ -2024,33 +2282,33 @@ function LoginScreen(_ref26) {
   }, sending ? "Sending…" : "Send Magic Link"))));
 }
 function AuthGate() {
-  const _useState65 = useState(null),
-    _useState66 = _slicedToArray(_useState65, 2),
-    user = _useState66[0],
-    setUser = _useState66[1];
-  const _useState67 = useState(true),
-    _useState68 = _slicedToArray(_useState67, 2),
-    authLoading = _useState68[0],
-    setAuthLoading = _useState68[1];
-  const _useState69 = useState(""),
-    _useState70 = _slicedToArray(_useState69, 2),
-    email = _useState70[0],
-    setEmail = _useState70[1];
-  const _useState71 = useState(false),
+  const _useState71 = useState(null),
     _useState72 = _slicedToArray(_useState71, 2),
-    sent = _useState72[0],
-    setSent = _useState72[1];
-  const _useState73 = useState(false),
+    user = _useState72[0],
+    setUser = _useState72[1];
+  const _useState73 = useState(true),
     _useState74 = _slicedToArray(_useState73, 2),
-    sending = _useState74[0],
-    setSending = _useState74[1];
+    authLoading = _useState74[0],
+    setAuthLoading = _useState74[1];
+  const _useState75 = useState(""),
+    _useState76 = _slicedToArray(_useState75, 2),
+    email = _useState76[0],
+    setEmail = _useState76[1];
+  const _useState77 = useState(false),
+    _useState78 = _slicedToArray(_useState77, 2),
+    sent = _useState78[0],
+    setSent = _useState78[1];
+  const _useState79 = useState(false),
+    _useState80 = _slicedToArray(_useState79, 2),
+    sending = _useState80[0],
+    setSending = _useState80[1];
   useEffect(() => {
     if (!SUPABASE_CONFIGURED) {
       setAuthLoading(false);
       return;
     }
-    sb.auth.getSession().then(_ref27 => {
-      let session = _ref27.data.session;
+    sb.auth.getSession().then(_ref31 => {
+      let session = _ref31.data.session;
       setUser((session === null || session === void 0 ? void 0 : session.user) ?? null);
       setAuthLoading(false);
     }).catch(() => setAuthLoading(false));
