@@ -873,9 +873,9 @@ function DraftLab({ user }) {
               )}
             </div>
           )}
-          {user && syncStatus && <span className="sync-dot">{syncStatus === "syncing" ? "↑ Syncing…" : "✓ Synced"}</span>}
+          {user && syncStatus && <span className="sync-dot desktop-only">{syncStatus === "syncing" ? "↑ Syncing…" : "✓ Synced"}</span>}
           {user && (
-            <button className="btn" style={{ fontSize:9, color:"var(--dimmer)" }} title={user.email}
+            <button className="btn desktop-only" style={{ fontSize:9, color:"var(--dimmer)" }} title={user.email}
               onClick={() => sb.auth.signOut()}>Sign Out</button>
           )}
           <button className="icon-btn" onClick={() => setShowGuide(true)} title="Grade guide" style={{ fontSize:13, fontWeight:700 }}>?</button>
@@ -883,13 +883,13 @@ function DraftLab({ user }) {
           <button className="icon-btn" onClick={toggleTheme} title="Toggle light/dark mode" style={{ fontSize:16, padding:"6px 10px" }}>
             {theme === "dark" ? "☀" : "🌙"}
           </button>
-          <button className="btn" onClick={exportBackup} title="Export all grades to JSON">Backup</button>
-          <label className="btn" style={{ cursor:"pointer" }} title="Restore grades from JSON backup">
+          <button className="btn desktop-only" onClick={exportBackup} title="Export all grades to JSON">Backup</button>
+          <label className="btn desktop-only" style={{ cursor:"pointer" }} title="Restore grades from JSON backup">
             Restore
             <input type="file" accept=".json" style={{ display:"none" }}
               onChange={e => { importBackup(e.target.files[0]); e.target.value = ""; }} />
           </label>
-          {selectedSet && <button className="btn" onClick={exportCSV}>CSV</button>}
+          {selectedSet && <button className="btn desktop-only" onClick={exportCSV}>CSV</button>}
         </div>
       </header>
 
@@ -970,6 +970,12 @@ function DraftLab({ user }) {
                   onChange={e => { importBackup(e.target.files[0]); e.target.value = ""; setShowMobF(false); }} />
               </label>
             </div>
+            {selectedSet && <button className="btn" style={{ alignSelf:"flex-start" }} onClick={exportCSV}>Export CSV</button>}
+            {user && syncStatus && <span className="sync-dot">{syncStatus === "syncing" ? "↑ Syncing…" : "✓ Synced"}</span>}
+            {user && (
+              <button className="btn" style={{ color:"var(--dimmer)", fontSize:9, alignSelf:"flex-start" }}
+                onClick={() => { sb.auth.signOut(); setShowMobF(false); }}>Sign Out</button>
+            )}
           </div>
         )}
       </div>

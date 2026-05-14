@@ -1725,9 +1725,9 @@ function DraftLab(_ref20) {
     onGradesUpdate: handleGradesUpdate,
     mobile: false
   }))), user && syncStatus && React.createElement("span", {
-    className: "sync-dot"
+    className: "sync-dot desktop-only"
   }, syncStatus === "syncing" ? "↑ Syncing…" : "✓ Synced"), user && React.createElement("button", {
-    className: "btn",
+    className: "btn desktop-only",
     style: {
       fontSize: 9,
       color: "var(--dimmer)"
@@ -1758,11 +1758,11 @@ function DraftLab(_ref20) {
       padding: "6px 10px"
     }
   }, theme === "dark" ? "☀" : "🌙"), React.createElement("button", {
-    className: "btn",
+    className: "btn desktop-only",
     onClick: exportBackup,
     title: "Export all grades to JSON"
   }, "Backup"), React.createElement("label", {
-    className: "btn",
+    className: "btn desktop-only",
     style: {
       cursor: "pointer"
     },
@@ -1778,7 +1778,7 @@ function DraftLab(_ref20) {
       e.target.value = "";
     }
   })), selectedSet && React.createElement("button", {
-    className: "btn",
+    className: "btn desktop-only",
     onClick: exportCSV
   }, "CSV"))), React.createElement("div", {
     className: "filters-mobile mobile-only",
@@ -1922,7 +1922,26 @@ function DraftLab(_ref20) {
       e.target.value = "";
       setShowMobF(false);
     }
-  }))))), cards.length > 0 && React.createElement(React.Fragment, null, React.createElement("div", {
+  }))), selectedSet && React.createElement("button", {
+    className: "btn",
+    style: {
+      alignSelf: "flex-start"
+    },
+    onClick: exportCSV
+  }, "Export CSV"), user && syncStatus && React.createElement("span", {
+    className: "sync-dot"
+  }, syncStatus === "syncing" ? "↑ Syncing…" : "✓ Synced"), user && React.createElement("button", {
+    className: "btn",
+    style: {
+      color: "var(--dimmer)",
+      fontSize: 9,
+      alignSelf: "flex-start"
+    },
+    onClick: () => {
+      sb.auth.signOut();
+      setShowMobF(false);
+    }
+  }, "Sign Out"))), cards.length > 0 && React.createElement(React.Fragment, null, React.createElement("div", {
     className: "stats"
   }, React.createElement("span", {
     className: "stat"
