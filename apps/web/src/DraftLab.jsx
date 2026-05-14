@@ -262,17 +262,17 @@ function RatingInput({ value, source, onChange }) {
   );
 }
 
-// ── TagCell (desktop table — compact chips + inline picker) ──────────────────
+// ── TagCell (desktop table — compact chips + floating picker) ────────────────
 function TagCell({ tags = [], onToggle }) {
   const [open, setOpen] = useState(false);
   return (
-    <div style={{ display:"flex", flexDirection:"column", gap:3 }}>
+    <div style={{ position:"relative" }}>
       <div style={{ display:"flex", flexWrap:"wrap", gap:3, alignItems:"center" }}>
         {tags.map(id => {
           const tag = TAGS.find(t => t.id === id);
           return tag
             ? <span key={id} className="tag-chip active" style={{ fontSize:8, padding:"1px 6px" }}
-                onClick={() => onToggle(id)}>{tag.label}</span>
+                onClick={() => onToggle(id)}>{tag.label} ✕</span>
             : null;
         })}
         <button className="tag-add-btn" onClick={() => setOpen(v => !v)}>
@@ -280,10 +280,15 @@ function TagCell({ tags = [], onToggle }) {
         </button>
       </div>
       {open && (
-        <div style={{ borderTop:"1px solid var(--b1)", paddingTop:4 }}>
+        <div onClick={e => e.stopPropagation()} style={{
+          position:"absolute", top:"calc(100% + 4px)", left:0, zIndex:200,
+          background:"var(--s1)", border:"1px solid var(--b2)",
+          padding:"10px 12px", boxShadow:"0 8px 24px rgba(0,0,0,.3)",
+          minWidth:220
+        }}>
           {TAG_GROUPS.map(({ label, ids }) => (
-            <div key={label} style={{ marginBottom:4 }}>
-              <div style={{ fontSize:8, color:"var(--dimmer)", marginBottom:3, textTransform:"uppercase", letterSpacing:".1em" }}>{label}</div>
+            <div key={label} style={{ marginBottom:8 }}>
+              <div style={{ fontSize:8, color:"var(--dimmer)", marginBottom:4, textTransform:"uppercase", letterSpacing:".1em" }}>{label}</div>
               <div className="tag-chips">
                 {ids.map(id => {
                   const tag = TAGS.find(t => t.id === id);
@@ -1138,11 +1143,11 @@ function DraftLab({ user }) {
                 const ck = getColorKey(card);
                 const q  = calcQuadrant(g);
                 return (
-                  <tr key={card.id} className={`c${ck}`}
-                    onMouseEnter={e => { setHovered(card); setHoverPos({ x: e.clientX, y: e.clientY }); }}
-                    onMouseMove={e  =>   setHoverPos({ x: e.clientX, y: e.clientY })}
-                    onMouseLeave={()  =>  setHovered(null)}>
-                    <td>
+                  <tr key={card.id} className={`c${ck}`}>
+                    <td
+                      onMouseEnter={e => { setHovered(card); setHoverPos({ x: e.clientX, y: e.clientY }); }}
+                      onMouseMove={e  =>   setHoverPos({ x: e.clientX, y: e.clientY })}
+                      onMouseLeave={()  =>  setHovered(null)}>
                       <div className="card-name">
                         {card.name}
                         {q && <QuadrantBadge g={g} />}
