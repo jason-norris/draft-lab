@@ -576,6 +576,7 @@ function DraftLab({ user }) {
   // ── State ──
   const [theme, setTheme]           = useState(() => localStorage.getItem("draft-lab-theme") || "auto");
   const [showImport, setShowImport] = useState(false);
+  const [showExport, setShowExport] = useState(false);
   const [fmt17l, setFmt17l]         = useState("PremierDraft");
   const [importMeta, setImportMeta] = useState(null); // { expert: {...}, performance: {...} }
   const [sets, setSets]             = useState([]);
@@ -850,7 +851,7 @@ function DraftLab({ user }) {
 
   // ── Render ──
   return (
-    <div className="app" onClick={() => { setShowSetDD(false); setShowImport(false); setShowTagFilter(false); }}>
+    <div className="app" onClick={() => { setShowSetDD(false); setShowImport(false); setShowExport(false); setShowTagFilter(false); }}>
 
       {/* ── Header ── */}
       <header className="hdr" onClick={e => e.stopPropagation()}>
@@ -907,6 +908,28 @@ function DraftLab({ user }) {
               )}
             </div>
           )}
+          <div className="l17-wrap desktop-only" onClick={e => e.stopPropagation()}>
+            <button className={`btn${showExport ? " active" : ""}`}
+              onClick={() => setShowExport(v => !v)}>Export ▾</button>
+            {showExport && (
+              <div className="l17-panel" style={{ width:220 }}>
+                <div className="l17-title">Export / Restore</div>
+                <button className="l17-fetch" onClick={() => { exportBackup(); setShowExport(false); }}>
+                  Export Backup (JSON)
+                </button>
+                <label className="l17-fetch" style={{ textAlign:"center", cursor:"pointer" }}>
+                  Restore Backup (JSON)
+                  <input type="file" accept=".json" style={{ display:"none" }}
+                    onChange={e => { importBackup(e.target.files[0]); e.target.value = ""; setShowExport(false); }} />
+                </label>
+                {selectedSet && (
+                  <button className="l17-fetch" onClick={() => { exportCSV(); setShowExport(false); }}>
+                    Export Grades (CSV)
+                  </button>
+                )}
+              </div>
+            )}
+          </div>
           {user && syncStatus && <span className="sync-dot desktop-only">{syncStatus === "syncing" ? "↑ Syncing…" : "✓ Synced"}</span>}
           {user && (
             <button className="btn desktop-only" style={{ fontSize:9, color:"var(--dimmer)" }} title={user.email}
@@ -917,13 +940,6 @@ function DraftLab({ user }) {
           <button className="icon-btn" onClick={toggleTheme} title="Toggle light/dark mode" style={{ fontSize:16, padding:"6px 10px" }}>
             {theme === "dark" ? "☀" : "🌙"}
           </button>
-          <button className="btn desktop-only" onClick={exportBackup} title="Export all grades to JSON">Backup</button>
-          <label className="btn desktop-only" style={{ cursor:"pointer" }} title="Restore grades from JSON backup">
-            Restore
-            <input type="file" accept=".json" style={{ display:"none" }}
-              onChange={e => { importBackup(e.target.files[0]); e.target.value = ""; }} />
-          </label>
-          {selectedSet && <button className="btn desktop-only" onClick={exportCSV}>CSV</button>}
         </div>
       </header>
 

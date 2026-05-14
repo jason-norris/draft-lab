@@ -261,13 +261,7 @@ If the user plays on Arena with the 17Lands tracker installed:
 
 ### 5.4 Restore from CSV Export
 
-**Currently:** only JSON backup can be restored into the app.  
-**Goal:** a previously exported grades CSV can also be reimported to restore grades (without community ratings or metadata).
-
-- [ ] Parse the CSV export format on import
-- [ ] Map card names back to Scryfall card IDs using the currently loaded set
-- [ ] Restore: My Grade, Sunset Grade, Notes (community ratings not in CSV — use JSON backup for those)
-- [ ] Warn user if set is not loaded before attempting CSV restore
+**Decision: won't implement.** JSON backup is the canonical restore path — it preserves grades, community ratings, tags, and metadata. CSV export is for external analysis only (Excel, Python notebooks). Import is reserved for Expert/Performance community rating CSVs only. This keeps the import model unambiguous.
 
 ---
 
