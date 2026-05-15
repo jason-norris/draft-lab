@@ -583,17 +583,19 @@ function MobileCardItem({ card, grade, onUpdate }) {
                         <GradeSelect cls="mc-sel" value={grade.sunsetGrade || ""}
                           onChange={e => onUpdate("sunsetGrade", e.target.value)} />
                       </div>
-                      <div className="mc-field">
-                        <label>Expert <SourceBadge source={grade.expert_source} /></label>
-                        <input type="number" className="mc-num" min="0" max="5" step="0.5"
-                          value={grade.expert_rating ?? ""}
-                          onChange={e => onUpdate("expert_rating", e.target.value === "" ? null : parseFloat(e.target.value))} />
-                      </div>
-                      <div className="mc-field">
-                        <label>Performance <SourceBadge source={grade.performance_source} /></label>
-                        <input type="number" className="mc-num" min="0" max="5" step="0.5"
-                          value={grade.performance_rating ?? ""}
-                          onChange={e => onUpdate("performance_rating", e.target.value === "" ? null : parseFloat(e.target.value))} />
+                      <div className="mc-grade-row">
+                        <div className="mc-field">
+                          <label>Expert <SourceBadge source={grade.expert_source} /></label>
+                          <input type="number" className="mc-num" min="0" max="5" step="0.5"
+                            value={grade.expert_rating ?? ""}
+                            onChange={e => onUpdate("expert_rating", e.target.value === "" ? null : parseFloat(e.target.value))} />
+                        </div>
+                        <div className="mc-field">
+                          <label>Perf <SourceBadge source={grade.performance_source} /></label>
+                          <input type="number" className="mc-num" min="0" max="5" step="0.5"
+                            value={grade.performance_rating ?? ""}
+                            onChange={e => onUpdate("performance_rating", e.target.value === "" ? null : parseFloat(e.target.value))} />
+                        </div>
                       </div>
                       {(() => {
                         const { meVsExp, meVsPerf, expVsPerf } = calcThreeWayDelta(grade);
@@ -618,7 +620,7 @@ function MobileCardItem({ card, grade, onUpdate }) {
                       })()}
                       <div className="mc-field">
                         <label>Notes</label>
-                        <textarea className="mc-note" placeholder="Notes…"
+                        <textarea className="mc-note" placeholder="Notes…" rows="2"
                           value={grade.notes || ""}
                           onChange={e => onUpdate("notes", e.target.value)} />
                       </div>
