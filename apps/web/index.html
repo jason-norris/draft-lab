@@ -306,6 +306,32 @@
     .tag-filter-hdr { font-size:9px; color:var(--dimmer); text-transform:uppercase; letter-spacing:.12em; }
     @media (max-width:767px) { .tag-chip { padding:7px 12px; font-size:11px; } }
 
+    /* ── Card Lightbox ── */
+    .lb-overlay { position:fixed; inset:0; z-index:600; background:rgba(0,0,0,.78); display:flex; align-items:center; justify-content:center; padding:20px; }
+    .lb-modal { background:var(--s1); border:1px solid var(--b2); border-radius:6px; display:flex; width:100%; max-width:940px; max-height:90vh; overflow:hidden; box-shadow:0 24px 64px rgba(0,0,0,.5); }
+    .lb-img-col { flex-shrink:0; width:300px; display:flex; flex-direction:column; background:var(--bg); padding:14px; gap:10px; overflow-y:auto; -webkit-overflow-scrolling:touch; border-right:1px solid var(--b2); }
+    .lb-img { width:100%; border-radius:6px; box-shadow:0 4px 20px rgba(0,0,0,.35); display:block; cursor:pointer; }
+    .lb-oracle { font-size:11px; color:var(--dim); line-height:1.65; white-space:pre-wrap; }
+    .lb-flip-btn { background:transparent; border:1px solid var(--b2); color:var(--dim); font-family:'IBM Plex Mono',monospace; font-size:10px; padding:4px 10px; cursor:pointer; transition:all .15s; border-radius:3px; align-self:flex-start; }
+    .lb-flip-btn:hover { border-color:var(--gold2); color:var(--gold); }
+    .lb-grades-col { flex:1; display:flex; flex-direction:column; overflow-y:auto; -webkit-overflow-scrolling:touch; padding:18px 22px; gap:10px; min-width:0; }
+    .lb-header { display:flex; align-items:flex-start; justify-content:space-between; gap:8px; flex-wrap:nowrap; }
+    .lb-header > div:first-child { min-width:0; overflow:hidden; }
+    .lb-card-name { font-family:'Cinzel',serif; font-size:15px; color:var(--txt); letter-spacing:.06em; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+    .lb-meta { font-size:11px; color:var(--dim); margin-top:3px; }
+    .lb-nav { display:flex; gap:5px; align-items:center; flex-shrink:0; }
+    .lb-nav-btn { background:transparent; border:1px solid var(--b2); color:var(--dim); font-family:'IBM Plex Mono',monospace; font-size:12px; padding:4px 10px; cursor:pointer; transition:all .15s; }
+    .lb-nav-btn:hover:not(:disabled) { border-color:var(--gold2); color:var(--gold); }
+    .lb-nav-btn:disabled { opacity:.3; cursor:default; }
+    .lb-close { background:transparent; border:1px solid var(--b2); color:var(--dim); font-family:'IBM Plex Mono',monospace; font-size:10px; padding:4px 10px; cursor:pointer; transition:all .15s; }
+    .lb-close:hover { border-color:var(--gold2); color:var(--gold); }
+    .lb-counter { font-size:9px; color:var(--dimmer); }
+    .lb-divider { height:1px; background:var(--b1); flex-shrink:0; }
+    .lb-field { display:flex; flex-direction:column; gap:5px; }
+    .lb-field label { font-size:9px; color:var(--dimmer); text-transform:uppercase; letter-spacing:.12em; }
+    .lb-row { display:flex; gap:10px; }
+    .lb-row .lb-field { flex:1; }
+
     @media (max-width:767px) {
       .desktop-only { display:none !important; }
       .hdr { padding:10px 12px; }
@@ -1035,10 +1061,173 @@ function TagFilterPanel(_ref0) {
     onClick: onClear
   }, "Clear"));
 }
-function GradeSelect(_ref10) {
-  let cls = _ref10.cls,
-    value = _ref10.value,
-    onChange = _ref10.onChange;
+function CardLightbox(_ref10) {
+  var _card$card_faces3, _card$card_faces$, _card$card_faces$face, _card$card_faces$face2, _card$type_line2;
+  let sorted = _ref10.sorted,
+    lightboxIndex = _ref10.lightboxIndex,
+    grades = _ref10.grades,
+    onUpdate = _ref10.onUpdate,
+    onClose = _ref10.onClose,
+    onNav = _ref10.onNav;
+  const card = sorted[lightboxIndex];
+  const g = grades[card.id] ?? {};
+  const q = calcQuadrant(g);
+  const hasDFC = ((_card$card_faces3 = card.card_faces) === null || _card$card_faces3 === void 0 ? void 0 : _card$card_faces3.length) >= 2 && ((_card$card_faces$ = card.card_faces[1]) === null || _card$card_faces$ === void 0 ? void 0 : _card$card_faces$.image_uris);
+  const _useState7 = useState(0),
+    _useState8 = _slicedToArray(_useState7, 2),
+    face = _useState8[0],
+    setFace = _useState8[1];
+  useEffect(() => {
+    setFace(0);
+  }, [card.id]);
+  useEffect(() => {
+    const handler = e => {
+      if (e.key === "Escape") onClose();
+      if (e.key === "ArrowLeft") onNav(-1);
+      if (e.key === "ArrowRight") onNav(1);
+    };
+    document.addEventListener("keydown", handler);
+    return () => document.removeEventListener("keydown", handler);
+  }, [onClose, onNav]);
+  const img = hasDFC ? (_card$card_faces$face = card.card_faces[face]) === null || _card$card_faces$face === void 0 || (_card$card_faces$face = _card$card_faces$face.image_uris) === null || _card$card_faces$face === void 0 ? void 0 : _card$card_faces$face.normal : getImageUrl(card);
+  const oracleText = hasDFC ? (_card$card_faces$face2 = card.card_faces[face]) === null || _card$card_faces$face2 === void 0 ? void 0 : _card$card_faces$face2.oracle_text : card.oracle_text;
+  const hasPrev = lightboxIndex > 0;
+  const hasNext = lightboxIndex < sorted.length - 1;
+  const Field = _ref11 => {
+    let label = _ref11.label,
+      children = _ref11.children;
+    return React.createElement("div", {
+      className: "lb-field"
+    }, React.createElement("label", null, label), children);
+  };
+  return React.createElement("div", {
+    className: "lb-overlay",
+    onClick: e => e.target === e.currentTarget && onClose()
+  }, React.createElement("div", {
+    className: "lb-modal"
+  }, React.createElement("div", {
+    className: "lb-img-col"
+  }, img && React.createElement("img", {
+    src: img,
+    alt: card.name,
+    className: "lb-img",
+    onClick: () => hasDFC && setFace(f => f === 0 ? 1 : 0)
+  }), hasDFC && React.createElement("button", {
+    className: "lb-flip-btn",
+    onClick: () => setFace(f => f === 0 ? 1 : 0)
+  }, "\u21BB Flip")), React.createElement("div", {
+    className: "lb-grades-col"
+  }, React.createElement("div", {
+    className: "lb-header"
+  }, React.createElement("div", {
+    style: {
+      minWidth: 0
+    }
+  }, React.createElement("div", {
+    className: "lb-card-name"
+  }, card.name, q && React.createElement(QuadrantBadge, {
+    g: g,
+    style: {
+      marginLeft: 8
+    }
+  })), React.createElement("div", {
+    className: "lb-meta"
+  }, card.mana_cost ? React.createElement(React.Fragment, null, renderMana(card.mana_cost), " \xB7 ") : null, (_card$type_line2 = card.type_line) === null || _card$type_line2 === void 0 || (_card$type_line2 = _card$type_line2.split("—")[0]) === null || _card$type_line2 === void 0 ? void 0 : _card$type_line2.trim(), " · ", React.createElement("span", {
+    style: {
+      color: RARITY_COLORS[card.rarity]
+    }
+  }, card.rarity))), React.createElement("div", {
+    className: "lb-nav"
+  }, React.createElement("button", {
+    className: "lb-nav-btn",
+    disabled: !hasPrev,
+    onClick: () => onNav(-1)
+  }, "\u2190"), React.createElement("span", {
+    className: "lb-counter"
+  }, lightboxIndex + 1, " / ", sorted.length), React.createElement("button", {
+    className: "lb-nav-btn",
+    disabled: !hasNext,
+    onClick: () => onNav(1)
+  }, "\u2192"), React.createElement("button", {
+    className: "lb-close",
+    onClick: onClose
+  }, "Close"))), React.createElement("div", {
+    className: "lb-divider"
+  }), React.createElement("div", {
+    className: "lb-row"
+  }, React.createElement(Field, {
+    label: "My Grade"
+  }, React.createElement(GradeSelect, {
+    cls: "mc-sel",
+    value: g.myGrade || "",
+    onChange: e => onUpdate(card.id, "myGrade", e.target.value)
+  })), React.createElement(Field, {
+    label: "Sunset Grade"
+  }, React.createElement(GradeSelect, {
+    cls: "mc-sel",
+    value: g.sunsetGrade || "",
+    onChange: e => onUpdate(card.id, "sunsetGrade", e.target.value)
+  }))), React.createElement("div", {
+    className: "lb-row"
+  }, React.createElement(Field, {
+    label: React.createElement(React.Fragment, null, "Expert ", React.createElement(SourceBadge, {
+      source: g.expert_source
+    }))
+  }, React.createElement("input", {
+    type: "number",
+    className: "mc-num",
+    min: "0",
+    max: "5",
+    step: "0.5",
+    value: g.expert_rating ?? "",
+    style: g.expert_rating != null ? {
+      color: ratingColor(g.expert_rating)
+    } : {},
+    onChange: e => onUpdate(card.id, "expert_rating", e.target.value === "" ? null : parseFloat(e.target.value))
+  })), React.createElement(Field, {
+    label: React.createElement(React.Fragment, null, "Performance ", React.createElement(SourceBadge, {
+      source: g.performance_source
+    }))
+  }, React.createElement("input", {
+    type: "number",
+    className: "mc-num",
+    min: "0",
+    max: "5",
+    step: "0.5",
+    value: g.performance_rating ?? "",
+    style: g.performance_rating != null ? {
+      color: ratingColor(g.performance_rating)
+    } : {},
+    onChange: e => onUpdate(card.id, "performance_rating", e.target.value === "" ? null : parseFloat(e.target.value))
+  }))), React.createElement("div", {
+    className: "lb-divider"
+  }), React.createElement(Field, {
+    label: "Notes"
+  }, React.createElement("textarea", {
+    className: "mc-note",
+    style: {
+      minHeight: 72
+    },
+    placeholder: "Notes\u2026",
+    value: g.notes || "",
+    onChange: e => onUpdate(card.id, "notes", e.target.value)
+  })), React.createElement(Field, {
+    label: "Tags"
+  }, React.createElement("div", {
+    className: "tag-chips"
+  }, TAGS.map(tag => React.createElement("button", {
+    key: tag.id,
+    className: `tag-chip${(g.tags ?? []).includes(tag.id) ? " active" : ""}`,
+    onClick: () => {
+      const cur = g.tags ?? [];
+      onUpdate(card.id, "tags", cur.includes(tag.id) ? cur.filter(t => t !== tag.id) : [...cur, tag.id]);
+    }
+  }, tag.label)))))));
+}
+function GradeSelect(_ref12) {
+  let cls = _ref12.cls,
+    value = _ref12.value,
+    onChange = _ref12.onChange;
   return React.createElement("select", {
     className: cls,
     value: value,
@@ -1054,19 +1243,19 @@ function GradeSelect(_ref10) {
     }
   }, g || "—")));
 }
-function MobileCardItem(_ref11) {
-  var _card$type_line2;
-  let card = _ref11.card,
-    grade = _ref11.grade,
-    onUpdate = _ref11.onUpdate;
-  const _useState7 = useState(false),
-    _useState8 = _slicedToArray(_useState7, 2),
-    expanded = _useState8[0],
-    setExpanded = _useState8[1];
+function MobileCardItem(_ref13) {
+  var _card$type_line3;
+  let card = _ref13.card,
+    grade = _ref13.grade,
+    onUpdate = _ref13.onUpdate;
   const _useState9 = useState(false),
     _useState0 = _slicedToArray(_useState9, 2),
-    bigImg = _useState0[0],
-    setBigImg = _useState0[1];
+    expanded = _useState0[0],
+    setExpanded = _useState0[1];
+  const _useState1 = useState(false),
+    _useState10 = _slicedToArray(_useState1, 2),
+    bigImg = _useState10[0],
+    setBigImg = _useState10[1];
   const ck = getColorKey(card);
   const img = getImageUrl(card);
   const q = calcQuadrant(grade);
@@ -1097,7 +1286,7 @@ function MobileCardItem(_ref11) {
     }
   })), React.createElement("div", {
     className: "mc-meta"
-  }, (_card$type_line2 = card.type_line) === null || _card$type_line2 === void 0 || (_card$type_line2 = _card$type_line2.split("—")[0]) === null || _card$type_line2 === void 0 ? void 0 : _card$type_line2.trim(), " · ", React.createElement("span", {
+  }, (_card$type_line3 = card.type_line) === null || _card$type_line3 === void 0 || (_card$type_line3 = _card$type_line3.split("—")[0]) === null || _card$type_line3 === void 0 ? void 0 : _card$type_line3.trim(), " · ", React.createElement("span", {
     style: {
       color: RARITY_COLORS[card.rarity],
       fontWeight: 600
@@ -1221,28 +1410,28 @@ function MobileCardItem(_ref11) {
     }
   }, tag.label))))))))));
 }
-function ImportPanel(_ref12) {
-  let cards = _ref12.cards,
-    grades = _ref12.grades,
-    selectedSet = _ref12.selectedSet,
-    fmt17l = _ref12.fmt17l,
-    setFmt17l = _ref12.setFmt17l,
-    meta = _ref12.meta,
-    setMeta = _ref12.setMeta,
-    onGradesUpdate = _ref12.onGradesUpdate,
-    mobile = _ref12.mobile;
-  const _useState1 = useState(""),
-    _useState10 = _slicedToArray(_useState1, 2),
-    msg = _useState10[0],
-    setMsg = _useState10[1];
-  const _useState11 = useState("17lands"),
+function ImportPanel(_ref14) {
+  let cards = _ref14.cards,
+    grades = _ref14.grades,
+    selectedSet = _ref14.selectedSet,
+    fmt17l = _ref14.fmt17l,
+    setFmt17l = _ref14.setFmt17l,
+    meta = _ref14.meta,
+    setMeta = _ref14.setMeta,
+    onGradesUpdate = _ref14.onGradesUpdate,
+    mobile = _ref14.mobile;
+  const _useState11 = useState(""),
     _useState12 = _slicedToArray(_useState11, 2),
-    source = _useState12[0],
-    setSource = _useState12[1];
-  const _useState13 = useState("auto"),
+    msg = _useState12[0],
+    setMsg = _useState12[1];
+  const _useState13 = useState("17lands"),
     _useState14 = _slicedToArray(_useState13, 2),
-    target = _useState14[0],
-    setTarget = _useState14[1];
+    source = _useState14[0],
+    setSource = _useState14[1];
+  const _useState15 = useState("auto"),
+    _useState16 = _slicedToArray(_useState15, 2),
+    target = _useState16[0],
+    setTarget = _useState16[1];
   const resolvedTarget = target === "auto" ? source === "17lands" ? "performance" : "expert" : target;
   const importCSV = text => {
     const lines = text.trim().split("\n").filter(l => l.trim());
@@ -1323,10 +1512,10 @@ function ImportPanel(_ref12) {
   };
   const flush = which => {
     const next = {};
-    for (const _ref13 of Object.entries(grades)) {
-      var _ref14 = _slicedToArray(_ref13, 2);
-      const id = _ref14[0];
-      const g = _ref14[1];
+    for (const _ref15 of Object.entries(grades)) {
+      var _ref16 = _slicedToArray(_ref15, 2);
+      const id = _ref16[0];
+      const g = _ref16[1];
       const updated = {
         ...g
       };
@@ -1351,10 +1540,10 @@ function ImportPanel(_ref12) {
   };
   const srcButtons = React.createElement("div", {
     className: "l17-fmt"
-  }, [["17lands", "17Lands"], ["aetherhub", "AetherHub"], ["manual", "Manual"]].map(_ref15 => {
-    let _ref16 = _slicedToArray(_ref15, 2),
-      val = _ref16[0],
-      lbl = _ref16[1];
+  }, [["17lands", "17Lands"], ["aetherhub", "AetherHub"], ["manual", "Manual"]].map(_ref17 => {
+    let _ref18 = _slicedToArray(_ref17, 2),
+      val = _ref18[0],
+      lbl = _ref18[1];
     return React.createElement("button", {
       key: val,
       className: source === val ? "active" : "",
@@ -1363,10 +1552,10 @@ function ImportPanel(_ref12) {
   }));
   const fmt17lButtons = source === "17lands" && React.createElement("div", {
     className: "l17-fmt"
-  }, [["PremierDraft", "Premier"], ["QuickDraft", "Quick"], ["TradDraft", "Trad"]].map(_ref17 => {
-    let _ref18 = _slicedToArray(_ref17, 2),
-      val = _ref18[0],
-      lbl = _ref18[1];
+  }, [["PremierDraft", "Premier"], ["QuickDraft", "Quick"], ["TradDraft", "Trad"]].map(_ref19 => {
+    let _ref20 = _slicedToArray(_ref19, 2),
+      val = _ref20[0],
+      lbl = _ref20[1];
     return React.createElement("button", {
       key: val,
       className: fmt17l === val ? "active" : "",
@@ -1375,10 +1564,10 @@ function ImportPanel(_ref12) {
   }));
   const targetButtons = React.createElement("div", {
     className: "l17-fmt"
-  }, [["auto", "Auto"], ["expert", "Expert"], ["performance", "Perf"]].map(_ref19 => {
-    let _ref20 = _slicedToArray(_ref19, 2),
-      val = _ref20[0],
-      lbl = _ref20[1];
+  }, [["auto", "Auto"], ["expert", "Expert"], ["performance", "Perf"]].map(_ref21 => {
+    let _ref22 = _slicedToArray(_ref21, 2),
+      val = _ref22[0],
+      lbl = _ref22[1];
     return React.createElement("button", {
       key: val,
       className: target === val ? "active" : "",
@@ -1443,133 +1632,137 @@ function ImportPanel(_ref12) {
     }
   }, metaRow("expert", "Expert"), metaRow("performance", "Perf")));
 }
-function DraftLab(_ref21) {
-  let user = _ref21.user;
+function DraftLab(_ref23) {
+  let user = _ref23.user;
   const isMobile = useIsMobile();
   const didFirstSync = useRef(false);
-  const _useState15 = useState(() => localStorage.getItem("draft-lab-theme") || "auto"),
-    _useState16 = _slicedToArray(_useState15, 2),
-    theme = _useState16[0],
-    setTheme = _useState16[1];
-  const _useState17 = useState(false),
+  const _useState17 = useState(() => localStorage.getItem("draft-lab-theme") || "auto"),
     _useState18 = _slicedToArray(_useState17, 2),
-    showImport = _useState18[0],
-    setShowImport = _useState18[1];
+    theme = _useState18[0],
+    setTheme = _useState18[1];
   const _useState19 = useState(false),
     _useState20 = _slicedToArray(_useState19, 2),
-    showExport = _useState20[0],
-    setShowExport = _useState20[1];
-  const _useState21 = useState("PremierDraft"),
+    showImport = _useState20[0],
+    setShowImport = _useState20[1];
+  const _useState21 = useState(false),
     _useState22 = _slicedToArray(_useState21, 2),
-    fmt17l = _useState22[0],
-    setFmt17l = _useState22[1];
-  const _useState23 = useState(null),
+    showExport = _useState22[0],
+    setShowExport = _useState22[1];
+  const _useState23 = useState("PremierDraft"),
     _useState24 = _slicedToArray(_useState23, 2),
-    importMeta = _useState24[0],
-    setImportMeta = _useState24[1];
-  const _useState25 = useState([]),
+    fmt17l = _useState24[0],
+    setFmt17l = _useState24[1];
+  const _useState25 = useState(null),
     _useState26 = _slicedToArray(_useState25, 2),
-    sets = _useState26[0],
-    setSets = _useState26[1];
-  const _useState27 = useState(null),
+    importMeta = _useState26[0],
+    setImportMeta = _useState26[1];
+  const _useState27 = useState([]),
     _useState28 = _slicedToArray(_useState27, 2),
-    selectedSet = _useState28[0],
-    setSelectedSet = _useState28[1];
-  const _useState29 = useState([]),
+    sets = _useState28[0],
+    setSets = _useState28[1];
+  const _useState29 = useState(null),
     _useState30 = _slicedToArray(_useState29, 2),
-    cards = _useState30[0],
-    setCards = _useState30[1];
-  const _useState31 = useState({}),
+    selectedSet = _useState30[0],
+    setSelectedSet = _useState30[1];
+  const _useState31 = useState([]),
     _useState32 = _slicedToArray(_useState31, 2),
-    grades = _useState32[0],
-    setGrades = _useState32[1];
-  const _useState33 = useState(false),
+    cards = _useState32[0],
+    setCards = _useState32[1];
+  const _useState33 = useState({}),
     _useState34 = _slicedToArray(_useState33, 2),
-    loading = _useState34[0],
-    setLoading = _useState34[1];
-  const _useState35 = useState(""),
+    grades = _useState34[0],
+    setGrades = _useState34[1];
+  const _useState35 = useState(false),
     _useState36 = _slicedToArray(_useState35, 2),
-    loadMsg = _useState36[0],
-    setLoadMsg = _useState36[1];
-  const _useState37 = useState(null),
+    loading = _useState36[0],
+    setLoading = _useState36[1];
+  const _useState37 = useState(""),
     _useState38 = _slicedToArray(_useState37, 2),
-    error = _useState38[0],
-    setError = _useState38[1];
-  const _useState39 = useState("color"),
+    loadMsg = _useState38[0],
+    setLoadMsg = _useState38[1];
+  const _useState39 = useState(null),
     _useState40 = _slicedToArray(_useState39, 2),
-    sortCol = _useState40[0],
-    setSortCol = _useState40[1];
-  const _useState41 = useState("asc"),
+    error = _useState40[0],
+    setError = _useState40[1];
+  const _useState41 = useState("color"),
     _useState42 = _slicedToArray(_useState41, 2),
-    sortDir = _useState42[0],
-    setSortDir = _useState42[1];
-  const _useState43 = useState("color"),
+    sortCol = _useState42[0],
+    setSortCol = _useState42[1];
+  const _useState43 = useState("asc"),
     _useState44 = _slicedToArray(_useState43, 2),
-    mobileSort = _useState44[0],
-    setMobileSort = _useState44[1];
-  const _useState45 = useState("all"),
+    sortDir = _useState44[0],
+    setSortDir = _useState44[1];
+  const _useState45 = useState("color"),
     _useState46 = _slicedToArray(_useState45, 2),
-    filterColor = _useState46[0],
-    setFilterColor = _useState46[1];
+    mobileSort = _useState46[0],
+    setMobileSort = _useState46[1];
   const _useState47 = useState("all"),
     _useState48 = _slicedToArray(_useState47, 2),
-    filterRarity = _useState48[0],
-    setFilterRarity = _useState48[1];
-  const _useState49 = useState(""),
+    filterColor = _useState48[0],
+    setFilterColor = _useState48[1];
+  const _useState49 = useState("all"),
     _useState50 = _slicedToArray(_useState49, 2),
-    filterSearch = _useState50[0],
-    setFilterSearch = _useState50[1];
-  const _useState51 = useState("all"),
+    filterRarity = _useState50[0],
+    setFilterRarity = _useState50[1];
+  const _useState51 = useState(""),
     _useState52 = _slicedToArray(_useState51, 2),
-    filterGraded = _useState52[0],
-    setFilterGraded = _useState52[1];
+    filterSearch = _useState52[0],
+    setFilterSearch = _useState52[1];
   const _useState53 = useState("all"),
     _useState54 = _slicedToArray(_useState53, 2),
-    filterQuadrant = _useState54[0],
-    setFilterQuadrant = _useState54[1];
-  const _useState55 = useState([]),
+    filterGraded = _useState54[0],
+    setFilterGraded = _useState54[1];
+  const _useState55 = useState("all"),
     _useState56 = _slicedToArray(_useState55, 2),
-    filterTags = _useState56[0],
-    setFilterTags = _useState56[1];
-  const _useState57 = useState(false),
+    filterQuadrant = _useState56[0],
+    setFilterQuadrant = _useState56[1];
+  const _useState57 = useState([]),
     _useState58 = _slicedToArray(_useState57, 2),
-    showTagFilter = _useState58[0],
-    setShowTagFilter = _useState58[1];
+    filterTags = _useState58[0],
+    setFilterTags = _useState58[1];
   const _useState59 = useState(false),
     _useState60 = _slicedToArray(_useState59, 2),
-    showMobF = _useState60[0],
-    setShowMobF = _useState60[1];
+    showTagFilter = _useState60[0],
+    setShowTagFilter = _useState60[1];
   const _useState61 = useState(false),
     _useState62 = _slicedToArray(_useState61, 2),
-    showGuide = _useState62[0],
-    setShowGuide = _useState62[1];
-  const _useState63 = useState(""),
+    showMobF = _useState62[0],
+    setShowMobF = _useState62[1];
+  const _useState63 = useState(null),
     _useState64 = _slicedToArray(_useState63, 2),
-    syncStatus = _useState64[0],
-    setSyncStatus = _useState64[1];
+    lightboxIndex = _useState64[0],
+    setLightboxIndex = _useState64[1];
   const _useState65 = useState(false),
     _useState66 = _slicedToArray(_useState65, 2),
-    showLegal = _useState66[0],
-    setShowLegal = _useState66[1];
-  const _useState67 = useState(null),
+    showGuide = _useState66[0],
+    setShowGuide = _useState66[1];
+  const _useState67 = useState(""),
     _useState68 = _slicedToArray(_useState67, 2),
-    hovered = _useState68[0],
-    setHovered = _useState68[1];
-  const _useState69 = useState({
+    syncStatus = _useState68[0],
+    setSyncStatus = _useState68[1];
+  const _useState69 = useState(false),
+    _useState70 = _slicedToArray(_useState69, 2),
+    showLegal = _useState70[0],
+    setShowLegal = _useState70[1];
+  const _useState71 = useState(null),
+    _useState72 = _slicedToArray(_useState71, 2),
+    hovered = _useState72[0],
+    setHovered = _useState72[1];
+  const _useState73 = useState({
       x: 0,
       y: 0
     }),
-    _useState70 = _slicedToArray(_useState69, 2),
-    hoverPos = _useState70[0],
-    setHoverPos = _useState70[1];
-  const _useState71 = useState(""),
-    _useState72 = _slicedToArray(_useState71, 2),
-    setSearch = _useState72[0],
-    setSetSearch = _useState72[1];
-  const _useState73 = useState(false),
     _useState74 = _slicedToArray(_useState73, 2),
-    showSetDD = _useState74[0],
-    setShowSetDD = _useState74[1];
+    hoverPos = _useState74[0],
+    setHoverPos = _useState74[1];
+  const _useState75 = useState(""),
+    _useState76 = _slicedToArray(_useState75, 2),
+    setSearch = _useState76[0],
+    setSetSearch = _useState76[1];
+  const _useState77 = useState(false),
+    _useState78 = _slicedToArray(_useState77, 2),
+    showSetDD = _useState78[0],
+    setShowSetDD = _useState78[1];
   useEffect(() => {
     if (theme === "auto") document.documentElement.removeAttribute("data-theme");else document.documentElement.setAttribute("data-theme", theme);
   }, [theme]);
@@ -1651,6 +1844,7 @@ function DraftLab(_ref21) {
   }, [selectedSet, persistGrades]);
   const loadSet = async set => {
     store.set("draft-lab-last-set", set.code);
+    setLightboxIndex(null);
     setSelectedSet(set);
     setCards([]);
     setLoading(true);
@@ -1749,10 +1943,10 @@ function DraftLab(_ref21) {
         const data = parsed.data ?? parsed;
         let count = 0;
         const restoredGrades = {};
-        for (const _ref22 of Object.entries(data)) {
-          var _ref23 = _slicedToArray(_ref22, 2);
-          const key = _ref23[0];
-          const value = _ref23[1];
+        for (const _ref24 of Object.entries(data)) {
+          var _ref25 = _slicedToArray(_ref24, 2);
+          const key = _ref25[0];
+          const value = _ref25[1];
           if ((key.startsWith("draft-grades-") || key.startsWith("draft-import-meta-") || key === "draft-lab-theme") && typeof value === "string") {
             localStorage.setItem(key, value);
             count++;
@@ -2096,10 +2290,10 @@ function DraftLab(_ref21) {
     className: "fm-row"
   }, React.createElement("span", {
     className: "fl"
-  }, "Rarity:"), [["all", "All"], ["common", "C"], ["uncommon", "U"], ["rare", "R"], ["mythic", "M"]].map(_ref24 => {
-    let _ref25 = _slicedToArray(_ref24, 2),
-      full = _ref25[0],
-      abbr = _ref25[1];
+  }, "Rarity:"), [["all", "All"], ["common", "C"], ["uncommon", "U"], ["rare", "R"], ["mythic", "M"]].map(_ref26 => {
+    let _ref27 = _slicedToArray(_ref26, 2),
+      full = _ref27[0],
+      abbr = _ref27[1];
     return React.createElement("button", {
       key: full,
       className: `fb${filterRarity === full ? " active" : ""}`,
@@ -2328,10 +2522,10 @@ function DraftLab(_ref21) {
     className: "empty-sub"
   }, "Choose a set above to start evaluating cards"))), !loading && !error && cards.length > 0 && React.createElement("div", {
     className: "tbl-wrap desktop-only"
-  }, React.createElement("table", null, React.createElement("thead", null, React.createElement("tr", null, [["name", "Card"], ["cmc", "Cost"], [null, "Type"], ["rarity", "Rar"], ["color", "Color"], ["myGrade", "My Grade"], ["expert", "Expert"], ["performance", "Perf"], [null, "Δ"], [null, "Sunset"], [null, "Notes"]].map(_ref26 => {
-    let _ref27 = _slicedToArray(_ref26, 2),
-      col = _ref27[0],
-      lbl = _ref27[1];
+  }, React.createElement("table", null, React.createElement("thead", null, React.createElement("tr", null, [["name", "Card"], ["cmc", "Cost"], [null, "Type"], ["rarity", "Rar"], ["color", "Color"], ["myGrade", "My Grade"], ["expert", "Expert"], ["performance", "Perf"], [null, "Δ"], [null, "Sunset"], [null, "Notes"]].map(_ref28 => {
+    let _ref29 = _slicedToArray(_ref28, 2),
+      col = _ref29[0],
+      lbl = _ref29[1];
     return React.createElement("th", {
       key: lbl,
       className: col && sortCol === col ? "sorted" : "",
@@ -2341,7 +2535,7 @@ function DraftLab(_ref21) {
       } : {}
     }, lbl, col && sortCol === col ? sortDir === "asc" ? " ▲" : " ▼" : "");
   }))), React.createElement("tbody", null, sorted.map(card => {
-    var _card$type_line3;
+    var _card$type_line4;
     const g = grades[card.id] ?? {};
     const ck = getColorKey(card);
     const q = calcQuadrant(g);
@@ -2360,7 +2554,11 @@ function DraftLab(_ref21) {
         x: e.clientX,
         y: e.clientY
       }),
-      onMouseLeave: () => setHovered(null)
+      onMouseLeave: () => setHovered(null),
+      onClick: () => setLightboxIndex(sorted.indexOf(card)),
+      style: {
+        cursor: "pointer"
+      }
     }, React.createElement("div", {
       className: "card-name"
     }, card.name, q && React.createElement(QuadrantBadge, {
@@ -2369,7 +2567,7 @@ function DraftLab(_ref21) {
       className: "mana"
     }, card.mana_cost ? renderMana(card.mana_cost) : "—")), React.createElement("td", null, React.createElement("span", {
       className: "typ"
-    }, (_card$type_line3 = card.type_line) === null || _card$type_line3 === void 0 || (_card$type_line3 = _card$type_line3.split("—")[0]) === null || _card$type_line3 === void 0 ? void 0 : _card$type_line3.trim())), React.createElement("td", null, React.createElement("span", {
+    }, (_card$type_line4 = card.type_line) === null || _card$type_line4 === void 0 || (_card$type_line4 = _card$type_line4.split("—")[0]) === null || _card$type_line4 === void 0 ? void 0 : _card$type_line4.trim())), React.createElement("td", null, React.createElement("span", {
       className: "rar-dot",
       style: {
         background: RARITY_COLORS[card.rarity],
@@ -2423,7 +2621,7 @@ function DraftLab(_ref21) {
     card: card,
     grade: grades[card.id] ?? {},
     onUpdate: (field, value) => updateGrade(card.id, field, value)
-  }))), hovered && getImageUrl(hovered) && !isMobile && React.createElement("div", {
+  }))), hovered && getImageUrl(hovered) && !isMobile && lightboxIndex === null && React.createElement("div", {
     className: "preview",
     style: {
       left: hoverPos.x + 16,
@@ -2432,7 +2630,17 @@ function DraftLab(_ref21) {
   }, React.createElement("img", {
     src: getImageUrl(hovered),
     alt: hovered.name
-  })), showGuide && React.createElement("div", {
+  })), lightboxIndex !== null && sorted[lightboxIndex] && React.createElement(CardLightbox, {
+    sorted: sorted,
+    lightboxIndex: lightboxIndex,
+    grades: grades,
+    onUpdate: updateGrade,
+    onClose: () => setLightboxIndex(null),
+    onNav: delta => {
+      const next = lightboxIndex + delta;
+      if (next >= 0 && next < sorted.length) setLightboxIndex(next);
+    }
+  }), showGuide && React.createElement("div", {
     className: "guide-overlay",
     onClick: e => e.target === e.currentTarget && setShowGuide(false)
   }, React.createElement("div", {
@@ -2444,21 +2652,21 @@ function DraftLab(_ref21) {
     className: "guide-h1"
   }, "Grade Reference"), React.createElement("div", {
     className: "guide-sub"
-  }, "Half-grade anchors for Limited evaluation"), GRADE_TIERS.map(_ref28 => {
-    let tier = _ref28.tier,
-      rows = _ref28.rows;
+  }, "Half-grade anchors for Limited evaluation"), GRADE_TIERS.map(_ref30 => {
+    let tier = _ref30.tier,
+      rows = _ref30.rows;
     return React.createElement("div", {
       key: tier,
       className: "guide-tier"
     }, React.createElement("div", {
       className: "guide-tier-hdr"
-    }, tier), rows.map(_ref29 => {
-      let _ref30 = _slicedToArray(_ref29, 5),
-        grade = _ref30[0],
-        bg = _ref30[1],
-        fg = _ref30[2],
-        pick = _ref30[3],
-        desc = _ref30[4];
+    }, tier), rows.map(_ref31 => {
+      let _ref32 = _slicedToArray(_ref31, 5),
+        grade = _ref32[0],
+        bg = _ref32[1],
+        fg = _ref32[2],
+        pick = _ref32[3],
+        desc = _ref32[4];
       return React.createElement("div", {
         key: grade,
         className: "guide-row"
@@ -2530,17 +2738,17 @@ function DraftLab(_ref21) {
     }
   }, "View on GitHub \u2192")))));
 }
-function LoginScreen(_ref31) {
-  let onSignIn = _ref31.onSignIn,
-    loading = _ref31.loading;
-  const _useState75 = useState(() => {
+function LoginScreen(_ref33) {
+  let onSignIn = _ref33.onSignIn,
+    loading = _ref33.loading;
+  const _useState79 = useState(() => {
       const saved = localStorage.getItem("draft-lab-theme");
       if (saved && saved !== "auto") return saved;
       return window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
     }),
-    _useState76 = _slicedToArray(_useState75, 2),
-    theme = _useState76[0],
-    setTheme = _useState76[1];
+    _useState80 = _slicedToArray(_useState79, 2),
+    theme = _useState80[0],
+    setTheme = _useState80[1];
   useEffect(() => {
     document.documentElement.setAttribute("data-theme", theme);
     localStorage.setItem("draft-lab-theme", theme);
@@ -2602,25 +2810,25 @@ function LoginScreen(_ref31) {
   })), "Sign in with Google"))));
 }
 function AuthGate() {
-  const _useState77 = useState(null),
-    _useState78 = _slicedToArray(_useState77, 2),
-    user = _useState78[0],
-    setUser = _useState78[1];
-  const _useState79 = useState(true),
-    _useState80 = _slicedToArray(_useState79, 2),
-    authLoading = _useState80[0],
-    setAuthLoading = _useState80[1];
-  const _useState81 = useState(false),
+  const _useState81 = useState(null),
     _useState82 = _slicedToArray(_useState81, 2),
-    signing = _useState82[0],
-    setSigning = _useState82[1];
+    user = _useState82[0],
+    setUser = _useState82[1];
+  const _useState83 = useState(true),
+    _useState84 = _slicedToArray(_useState83, 2),
+    authLoading = _useState84[0],
+    setAuthLoading = _useState84[1];
+  const _useState85 = useState(false),
+    _useState86 = _slicedToArray(_useState85, 2),
+    signing = _useState86[0],
+    setSigning = _useState86[1];
   useEffect(() => {
     if (!SUPABASE_CONFIGURED) {
       setAuthLoading(false);
       return;
     }
-    sb.auth.getSession().then(_ref32 => {
-      let session = _ref32.data.session;
+    sb.auth.getSession().then(_ref34 => {
+      let session = _ref34.data.session;
       setUser((session === null || session === void 0 ? void 0 : session.user) ?? null);
       setAuthLoading(false);
     }).catch(() => setAuthLoading(false));
