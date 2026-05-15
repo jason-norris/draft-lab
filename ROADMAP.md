@@ -194,6 +194,8 @@ Converts GitHub Pages app to native mobile via Capacitor. Prerequisites: Phases 
 
 **Prerequisites:** Phase 4 (Analytics) stable, Supabase schema extensions deployed.
 
+> **AI Architecture:** See [`docs/phase-7-draft-ai.md`](docs/phase-7-draft-ai.md) for the full technical design — four-layer bot system (card value function, Bayesian belief state, mistake injection, optional LLM), the signal accuracy training loop, and implementation guidance for Claude Code.
+
 ### 7.1 Data Model
 
 Three new Supabase tables, completely separate from existing grade tables:
