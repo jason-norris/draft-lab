@@ -106,14 +106,12 @@
 - [x] Applied to Cost column (desktop) and card meta row (mobile)
 - [x] Graceful fallback: unknown symbols hide via `onError`
 
-### 3.2 Desktop Card Lightbox
-- [ ] Clicking a card name opens a lightbox overlay with full card image (~400px)
-- [ ] Card name, mana cost, type line, oracle text alongside image
-- [ ] Current grades (My Grade, Expert, Performance, Sunset, notes, tags) in right panel
-- [ ] Grades editable inline from lightbox
-- [ ] Close via Escape, clicking backdrop, or close button
-- [ ] Keyboard navigable: left/right arrow moves to adjacent card in sort order
-- [ ] DFC flip button (↻) shown when card has two faces — replaces separate DFC polish item
+### 3.2 Desktop Card Lightbox ✅ COMPLETE
+- [x] Click card name → lightbox with 300px image + all grades editable inline
+- [x] DFC flip button (↻) toggles between card faces
+- [x] Close via Escape, clicking backdrop, or Close button
+- [x] Keyboard: left/right arrows navigate cards, counter shows position
+- [x] Hover preview suppressed while lightbox is open
 
 ### 3.3 Source Badge Refinement ✅ COMPLETE
 - [x] Source-specific labels: `17L` | `AH` | `MAN`
@@ -200,7 +198,7 @@ Converts GitHub Pages app to native mobile via Capacitor. Prerequisites: Phases 
 - [x] Login screen theme toggle (☀/🌙)
 - [x] Remember last open set — saves set code on `loadSet()`, auto-restores after sets list populates
 - [ ] Delta cell hover indicator — no visual feedback that the cell is clickable; consider subtle underline or background on hover
-- [ ] DFC image flip — defer to Phase 3.2 lightbox (↻ button on card image)
+- [x] DFC image flip — ↻ button in lightbox toggles between card faces
 - [ ] Mobile ⚙ drawer overflow — Sign Out button not reachable on tall content; make drawer scrollable (`overflow-y: auto; max-height`) or move Sign Out to a fixed position at the bottom of the drawer
 - [ ] iOS input zoom — on large iPhones, tapping a grade select zooms in but doesn't zoom back out; fix by setting `font-size: 16px` minimum on all `<select>` and `<input>` elements on mobile (iOS zooms when font-size < 16px)
 - [ ] GitHub project link inside the app — clickable logo in the main header links to GitHub repo, but consider adding the link explicitly in the © modal as well for discoverability
