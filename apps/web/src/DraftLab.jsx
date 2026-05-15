@@ -398,6 +398,126 @@ function TagFilterPanel({ filterTags, onToggle, onClear }) {
   );
 }
 
+// ── CardLightbox ──────────────────────────────────────────────────────────────
+function CardLightbox({ sorted, lightboxIndex, grades, onUpdate, onClose, onNav }) {
+  const card  = sorted[lightboxIndex];
+  const g     = grades[card.id] ?? {};
+  const q     = calcQuadrant(g);
+  const hasDFC = card.card_faces?.length >= 2 && card.card_faces[1]?.image_uris;
+  const [face, setFace] = useState(0);
+
+  useEffect(() => { setFace(0); }, [card.id]);
+
+  useEffect(() => {
+    const handler = e => {
+      if (e.key === "Escape")      onClose();
+      if (e.key === "ArrowLeft")   onNav(-1);
+      if (e.key === "ArrowRight")  onNav(1);
+    };
+    document.addEventListener("keydown", handler);
+    return () => document.removeEventListener("keydown", handler);
+  }, [onClose, onNav]);
+
+  const img        = hasDFC ? card.card_faces[face]?.image_uris?.normal : getImageUrl(card);
+  const oracleText = hasDFC ? card.card_faces[face]?.oracle_text : card.oracle_text;
+  const hasPrev    = lightboxIndex > 0;
+  const hasNext    = lightboxIndex < sorted.length - 1;
+
+  const Field = ({ label, children }) => (
+    <div className="lb-field"><label>{label}</label>{children}</div>
+  );
+
+  return (
+    <div className="lb-overlay" onClick={e => e.target === e.currentTarget && onClose()}>
+      <div className="lb-modal">
+        {/* ── Left: image + oracle text ── */}
+        <div className="lb-img-col">
+          {img && <img src={img} alt={card.name} className="lb-img"
+            onClick={() => hasDFC && setFace(f => f === 0 ? 1 : 0)} />}
+          {hasDFC && (
+            <button className="lb-flip-btn" onClick={() => setFace(f => f === 0 ? 1 : 0)}>
+              ↻ Flip
+            </button>
+          )}
+          {oracleText && <div className="lb-oracle">{oracleText}</div>}
+        </div>
+
+        {/* ── Right: card info + grades ── */}
+        <div className="lb-grades-col">
+          <div className="lb-header">
+            <div style={{ minWidth:0 }}>
+              <div className="lb-card-name">
+                {card.name}
+                {q && <QuadrantBadge g={g} style={{ marginLeft:8 }} />}
+              </div>
+              <div className="lb-meta">
+                {card.mana_cost ? <>{renderMana(card.mana_cost)} · </> : null}
+                {card.type_line?.split("—")[0]?.trim()}
+                {" · "}
+                <span style={{ color: RARITY_COLORS[card.rarity] }}>{card.rarity}</span>
+              </div>
+            </div>
+            <div className="lb-nav">
+              <button className="lb-nav-btn" disabled={!hasPrev} onClick={() => onNav(-1)}>←</button>
+              <span className="lb-counter">{lightboxIndex + 1} / {sorted.length}</span>
+              <button className="lb-nav-btn" disabled={!hasNext} onClick={() => onNav(1)}>→</button>
+              <button className="lb-close" onClick={onClose}>Close</button>
+            </div>
+          </div>
+
+          <div className="lb-divider" />
+
+          <div className="lb-row">
+            <Field label="My Grade">
+              <GradeSelect cls="mc-sel" value={g.myGrade || ""}
+                onChange={e => onUpdate(card.id, "myGrade", e.target.value)} />
+            </Field>
+            <Field label="Sunset Grade">
+              <GradeSelect cls="mc-sel" value={g.sunsetGrade || ""}
+                onChange={e => onUpdate(card.id, "sunsetGrade", e.target.value)} />
+            </Field>
+          </div>
+
+          <div className="lb-row">
+            <Field label={<>Expert <SourceBadge source={g.expert_source} /></>}>
+              <input type="number" className="mc-num" min="0" max="5" step="0.5"
+                value={g.expert_rating ?? ""}
+                style={g.expert_rating != null ? { color: ratingColor(g.expert_rating) } : {}}
+                onChange={e => onUpdate(card.id, "expert_rating", e.target.value === "" ? null : parseFloat(e.target.value))} />
+            </Field>
+            <Field label={<>Performance <SourceBadge source={g.performance_source} /></>}>
+              <input type="number" className="mc-num" min="0" max="5" step="0.5"
+                value={g.performance_rating ?? ""}
+                style={g.performance_rating != null ? { color: ratingColor(g.performance_rating) } : {}}
+                onChange={e => onUpdate(card.id, "performance_rating", e.target.value === "" ? null : parseFloat(e.target.value))} />
+            </Field>
+          </div>
+
+          <div className="lb-divider" />
+
+          <Field label="Notes">
+            <textarea className="mc-note" style={{ minHeight:72 }} placeholder="Notes…"
+              value={g.notes || ""}
+              onChange={e => onUpdate(card.id, "notes", e.target.value)} />
+          </Field>
+
+          <Field label="Tags">
+            <div className="tag-chips">
+              {TAGS.map(tag => (
+                <button key={tag.id} className={`tag-chip${(g.tags ?? []).includes(tag.id) ? " active" : ""}`}
+                  onClick={() => {
+                    const cur = g.tags ?? [];
+                    onUpdate(card.id, "tags", cur.includes(tag.id) ? cur.filter(t => t !== tag.id) : [...cur, tag.id]);
+                  }}>{tag.label}</button>
+              ))}
+            </div>
+          </Field>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // ── GradeSelect ───────────────────────────────────────────────────────────────
 function GradeSelect({ cls, value, onChange }) {
   return (
@@ -687,6 +807,7 @@ function DraftLab({ user }) {
   const [filterTags, setFilterTags]         = useState([]);
   const [showTagFilter, setShowTagFilter]   = useState(false);
   const [showMobF, setShowMobF]     = useState(false);
+  const [lightboxIndex, setLightboxIndex] = useState(null);
   const [showGuide, setShowGuide]   = useState(false);
   const [syncStatus, setSyncStatus] = useState("");
   const [showLegal, setShowLegal]   = useState(false);
@@ -791,6 +912,7 @@ function DraftLab({ user }) {
 
   const loadSet = async set => {
     store.set("draft-lab-last-set", set.code);
+    setLightboxIndex(null);
     setSelectedSet(set);
     setCards([]);
     setLoading(true);
@@ -1245,7 +1367,9 @@ function DraftLab({ user }) {
                     <td
                       onMouseEnter={e => { setHovered(card); setHoverPos({ x: e.clientX, y: e.clientY }); }}
                       onMouseMove={e  =>   setHoverPos({ x: e.clientX, y: e.clientY })}
-                      onMouseLeave={()  =>  setHovered(null)}>
+                      onMouseLeave={()  =>  setHovered(null)}
+                      onClick={() => setLightboxIndex(sorted.indexOf(card))}
+                      style={{ cursor:"pointer" }}>
                       <div className="card-name">
                         {card.name}
                         {q && <QuadrantBadge g={g} />}
@@ -1304,11 +1428,26 @@ function DraftLab({ user }) {
         </div>
       )}
 
-      {/* ── Hover preview ── */}
-      {hovered && getImageUrl(hovered) && !isMobile && (
+      {/* ── Hover preview (hidden when lightbox open) ── */}
+      {hovered && getImageUrl(hovered) && !isMobile && lightboxIndex === null && (
         <div className="preview" style={{ left: hoverPos.x + 16, top: Math.min(hoverPos.y - 60, window.innerHeight - 300) }}>
           <img src={getImageUrl(hovered)} alt={hovered.name} />
         </div>
+      )}
+
+      {/* ── Card lightbox ── */}
+      {lightboxIndex !== null && sorted[lightboxIndex] && (
+        <CardLightbox
+          sorted={sorted}
+          lightboxIndex={lightboxIndex}
+          grades={grades}
+          onUpdate={updateGrade}
+          onClose={() => setLightboxIndex(null)}
+          onNav={delta => {
+            const next = lightboxIndex + delta;
+            if (next >= 0 && next < sorted.length) setLightboxIndex(next);
+          }}
+        />
       )}
 
       {/* ── Grade guide modal ── */}
