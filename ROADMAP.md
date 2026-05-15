@@ -343,6 +343,7 @@ LLM integration (7.8 Option C) added after step 5 is stable.
 - [x] Login screen theme toggle (☀/🌙)
 - [x] Remember last open set — saves set code on `loadSet()`, auto-restores after sets list populates
 - [ ] Delta cell hover indicator — no visual feedback that the cell is clickable; consider subtle underline or background on hover
+- [ ] Grade guide icon — consider replacing ? with ⚖ (scales) or 🧠 (brain) to better reflect the evaluation/judgment theme
 - [x] DFC image flip — ↻ button in lightbox toggles between card faces
 - [x] iOS input zoom — fixed with `font-size: 16px` minimum on all mobile inputs and selects
 - [x] GitHub project link inside the app — added as "View on GitHub →" in the © modal

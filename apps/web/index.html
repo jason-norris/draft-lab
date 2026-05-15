@@ -146,9 +146,10 @@
     .srch::placeholder { color:var(--dimmer); }
     .srch:focus { border-color:var(--gold2); }
 
-    .filters-mobile { background:var(--s3); border-bottom:1px solid var(--b2); overflow:hidden; transition:max-height .25s ease; flex-shrink:0; }
-    .filters-mobile .fm-inner { overflow-y:auto; max-height:70vh; -webkit-overflow-scrolling:touch; }
+    .filters-mobile { background:var(--s3); border-bottom:1px solid var(--b2); overflow:hidden; transition:max-height .25s ease; flex-shrink:0; display:flex; flex-direction:column; }
+    .filters-mobile .fm-inner { overflow-y:auto; flex:1; -webkit-overflow-scrolling:touch; }
     .fm-inner { padding:12px 14px; display:flex; flex-direction:column; gap:10px; }
+    .fm-footer { border-top:2px solid var(--b2); padding:10px 14px; display:flex; gap:8px; background:var(--s3); flex-shrink:0; }
     .fm-row   { display:flex; align-items:center; gap:6px; flex-wrap:wrap; }
     .fm-srch  { background:var(--s2); border:1px solid var(--b1); color:var(--txt); font-family:'IBM Plex Mono',monospace; font-size:14px; padding:8px 10px; outline:none; flex:1; min-width:120px; border-radius:4px; }
     .fm-srch::placeholder { color:var(--dimmer); }
@@ -2152,16 +2153,8 @@ function DraftLab(_ref23) {
     }, (_s$released_at = s.released_at) === null || _s$released_at === void 0 ? void 0 : _s$released_at.slice(0, 7)));
   }))))), React.createElement("div", {
     className: "hdr-right"
-  }, user && isMobile && React.createElement("button", {
-    className: "btn mobile-only",
-    style: {
-      fontSize: 8,
-      padding: "4px 8px",
-      color: "var(--dimmer)"
-    },
-    onClick: () => sb.auth.signOut()
-  }, "Sign Out"), selectedSet && isMobile && React.createElement("button", {
-    className: `icon-btn${showMobF ? " active" : ""}`,
+  }, selectedSet && isMobile && React.createElement("button", {
+    className: `icon-btn mobile-only${showMobF ? " active" : ""}`,
     onClick: () => setShowMobF(v => !v)
   }, "\u2699"), selectedSet && !isMobile && React.createElement("div", {
     className: "l17-wrap",
@@ -2252,23 +2245,25 @@ function DraftLab(_ref23) {
     }
   }, "?"), React.createElement("button", {
     className: "icon-btn",
-    onClick: () => setShowLegal(true),
-    title: "Legal & Attribution",
-    style: {
-      fontSize: 11
-    }
-  }, "\xA9"), React.createElement("button", {
-    className: "icon-btn",
     onClick: toggleTheme,
     title: "Toggle light/dark mode",
     style: {
       fontSize: 16,
       padding: "6px 10px"
     }
-  }, theme === "dark" ? "☀" : "🌙"))), React.createElement("div", {
+  }, theme === "dark" ? "☀" : "🌙"), React.createElement("button", {
+    className: "icon-btn",
+    onClick: () => setShowLegal(true),
+    title: "Legal & Attribution",
+    style: {
+      fontSize: 11,
+      color: "var(--dimmer)",
+      opacity: 0.6
+    }
+  }, "\xA9"))), React.createElement("div", {
     className: "filters-mobile mobile-only",
     style: {
-      maxHeight: showMobF ? "500px" : "0"
+      maxHeight: showMobF ? "70vh" : "0"
     }
   }, showMobF && React.createElement("div", {
     className: "fm-inner"
@@ -2407,26 +2402,35 @@ function DraftLab(_ref23) {
       e.target.value = "";
       setShowMobF(false);
     }
-  }))), selectedSet && React.createElement("button", {
-    className: "btn",
+  })))), showMobF && React.createElement("div", {
+    className: "fm-footer"
+  }, selectedSet && React.createElement("button", {
+    className: "l17-fetch",
     style: {
-      alignSelf: "flex-start"
+      flex: 1
     },
-    onClick: exportCSV
-  }, "Export CSV"), user && syncStatus && React.createElement("span", {
-    className: "sync-dot"
-  }, syncStatus === "syncing" ? "↑ Syncing…" : "✓ Synced"), user && React.createElement("button", {
-    className: "btn",
+    onClick: () => {
+      exportCSV();
+      setShowMobF(false);
+    }
+  }, "\u2193 Export CSV"), user && React.createElement("button", {
+    className: "l17-fetch",
     style: {
-      color: "var(--dimmer)",
-      fontSize: 9,
-      alignSelf: "flex-start"
+      flex: 1,
+      borderColor: "var(--dimmer)",
+      color: "var(--dimmer)"
     },
     onClick: () => {
       sb.auth.signOut();
       setShowMobF(false);
     }
-  }, "Sign Out"))), cards.length > 0 && React.createElement(React.Fragment, null, React.createElement("div", {
+  }, "Sign Out"), user && syncStatus && React.createElement("span", {
+    className: "sync-dot",
+    style: {
+      alignSelf: "center",
+      flexShrink: 0
+    }
+  }, syncStatus === "syncing" ? "↑" : "✓"))), cards.length > 0 && React.createElement(React.Fragment, null, React.createElement("div", {
     className: "stats"
   }, React.createElement("span", {
     className: "stat"

@@ -146,9 +146,10 @@
     .srch::placeholder { color:var(--dimmer); }
     .srch:focus { border-color:var(--gold2); }
 
-    .filters-mobile { background:var(--s3); border-bottom:1px solid var(--b2); overflow:hidden; transition:max-height .25s ease; flex-shrink:0; }
-    .filters-mobile .fm-inner { overflow-y:auto; max-height:70vh; -webkit-overflow-scrolling:touch; }
+    .filters-mobile { background:var(--s3); border-bottom:1px solid var(--b2); overflow:hidden; transition:max-height .25s ease; flex-shrink:0; display:flex; flex-direction:column; }
+    .filters-mobile .fm-inner { overflow-y:auto; flex:1; -webkit-overflow-scrolling:touch; }
     .fm-inner { padding:12px 14px; display:flex; flex-direction:column; gap:10px; }
+    .fm-footer { border-top:2px solid var(--b2); padding:10px 14px; display:flex; gap:8px; background:var(--s3); flex-shrink:0; }
     .fm-row   { display:flex; align-items:center; gap:6px; flex-wrap:wrap; }
     .fm-srch  { background:var(--s2); border:1px solid var(--b1); color:var(--txt); font-family:'IBM Plex Mono',monospace; font-size:14px; padding:8px 10px; outline:none; flex:1; min-width:120px; border-radius:4px; }
     .fm-srch::placeholder { color:var(--dimmer); }

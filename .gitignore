@@ -4,6 +4,9 @@
 .mcp.json
 skills-lock.json
 
+# Working design files (wireframes, sketches)
+docs/*.html
+
 # Python
 __pycache__/
 *.py[cod]
