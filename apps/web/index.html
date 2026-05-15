@@ -355,6 +355,7 @@ const _React = React,
   useEffect = _React.useEffect,
   useCallback = _React.useCallback,
   useRef = _React.useRef;
+const VERSION = "v2.2";
 const MTG_LABELS = {
   W: "White",
   U: "Blue",
@@ -801,16 +802,19 @@ function ThreeWayDelta(_ref4) {
         justifyContent: "space-between",
         gap: 16,
         fontSize: 10,
-        marginBottom: 4
+        marginBottom: 4,
+        whiteSpace: "nowrap"
       }
     }, React.createElement("span", {
       style: {
-        color: "var(--dim)"
+        color: "var(--dim)",
+        flexShrink: 0
       }
     }, label), React.createElement("span", {
       style: {
         color: "var(--txt)",
-        fontWeight: 600
+        fontWeight: 600,
+        flexShrink: 0
       }
     }, grade ? `${grade} (${(val === null || val === void 0 ? void 0 : val.toFixed(2)) ?? "—"})` : val != null ? val.toFixed(1) : "—"));
   }), React.createElement("div", {
@@ -827,16 +831,20 @@ function ThreeWayDelta(_ref4) {
     style: {
       display: "flex",
       justifyContent: "space-between",
-      fontSize: 10
+      gap: 12,
+      fontSize: 10,
+      whiteSpace: "nowrap"
     }
   }, React.createElement("span", {
     style: {
-      color: "var(--dim)"
+      color: "var(--dim)",
+      flexShrink: 0
     }
   }, r.title), React.createElement("span", {
     style: {
       color: r.color,
-      fontWeight: 700
+      fontWeight: 700,
+      flexShrink: 0
     }
   }, r.symbol, " ", r.detail))))));
 }
@@ -1866,11 +1874,18 @@ function DraftLab(_ref21) {
     onClick: e => e.stopPropagation()
   }, React.createElement("div", {
     className: "hdr-left"
-  }, React.createElement("div", null, React.createElement("div", {
+  }, React.createElement("div", null, React.createElement("a", {
+    href: "https://github.com/jason-norris/draft-lab",
+    target: "_blank",
+    rel: "noopener noreferrer",
+    style: {
+      textDecoration: "none"
+    }
+  }, React.createElement("div", {
     className: "logo"
-  }, "DRAFT LAB"), React.createElement("div", {
+  }, "DRAFT LAB")), React.createElement("div", {
     className: "logo-sub"
-  }, "MTG")), React.createElement("div", {
+  }, "MTG \xB7 ", VERSION)), React.createElement("div", {
     className: "set-wrap"
   }, React.createElement("button", {
     className: "set-btn",
@@ -2495,15 +2510,43 @@ function DraftLab(_ref21) {
 function LoginScreen(_ref31) {
   let onSignIn = _ref31.onSignIn,
     loading = _ref31.loading;
+  const _useState75 = useState(() => {
+      const saved = localStorage.getItem("draft-lab-theme");
+      if (saved && saved !== "auto") return saved;
+      return window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
+    }),
+    _useState76 = _slicedToArray(_useState75, 2),
+    theme = _useState76[0],
+    setTheme = _useState76[1];
+  useEffect(() => {
+    document.documentElement.setAttribute("data-theme", theme);
+    localStorage.setItem("draft-lab-theme", theme);
+  }, [theme]);
   return React.createElement("div", {
     className: "auth-wrap"
   }, React.createElement("div", {
-    className: "auth-card"
-  }, React.createElement("div", {
+    className: "auth-card",
+    style: {
+      position: "relative"
+    }
+  }, React.createElement("button", {
+    onClick: () => setTheme(t => t === "dark" ? "light" : "dark"),
+    style: {
+      position: "absolute",
+      top: 12,
+      right: 12,
+      background: "transparent",
+      border: "none",
+      color: "var(--dim)",
+      fontSize: 16,
+      cursor: "pointer",
+      padding: 4
+    }
+  }, theme === "dark" ? "☀" : "🌙"), React.createElement("div", {
     className: "logo"
   }, "DRAFT LAB"), React.createElement("div", {
     className: "logo-sub"
-  }, "MTG"), React.createElement("button", {
+  }, "MTG \xB7 ", VERSION), React.createElement("button", {
     className: "auth-btn",
     disabled: loading,
     onClick: onSignIn,
@@ -2532,18 +2575,18 @@ function LoginScreen(_ref31) {
   })), "Sign in with Google"))));
 }
 function AuthGate() {
-  const _useState75 = useState(null),
-    _useState76 = _slicedToArray(_useState75, 2),
-    user = _useState76[0],
-    setUser = _useState76[1];
-  const _useState77 = useState(true),
+  const _useState77 = useState(null),
     _useState78 = _slicedToArray(_useState77, 2),
-    authLoading = _useState78[0],
-    setAuthLoading = _useState78[1];
-  const _useState79 = useState(false),
+    user = _useState78[0],
+    setUser = _useState78[1];
+  const _useState79 = useState(true),
     _useState80 = _slicedToArray(_useState79, 2),
-    signing = _useState80[0],
-    setSigning = _useState80[1];
+    authLoading = _useState80[0],
+    setAuthLoading = _useState80[1];
+  const _useState81 = useState(false),
+    _useState82 = _slicedToArray(_useState81, 2),
+    signing = _useState82[0],
+    setSigning = _useState82[1];
   useEffect(() => {
     if (!SUPABASE_CONFIGURED) {
       setAuthLoading(false);

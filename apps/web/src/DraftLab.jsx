@@ -1,5 +1,6 @@
 // Globals provided by template.html: SUPABASE_CONFIGURED, ALLOWED_EMAIL, sb, syncGrades, fetchGrades
 const { useState, useEffect, useCallback, useRef } = React;
+const VERSION = "v2.2";
 
 // ── Constants ────────────────────────────────────────────────────────────────
 const MTG_LABELS   = { W:"White", U:"Blue", B:"Black", R:"Red", G:"Green", M:"Multicolor", C:"Colorless", L:"Land" };
@@ -264,18 +265,18 @@ function ThreeWayDelta({ g }) {
             { label:"Expert",      val: exp,  grade: null },
             { label:"Performance", val: perf, grade: null },
           ].map(({ label, val, grade }) => (
-            <div key={label} style={{ display:"flex", justifyContent:"space-between", gap:16, fontSize:10, marginBottom:4 }}>
-              <span style={{ color:"var(--dim)" }}>{label}</span>
-              <span style={{ color:"var(--txt)", fontWeight:600 }}>
+            <div key={label} style={{ display:"flex", justifyContent:"space-between", gap:16, fontSize:10, marginBottom:4, whiteSpace:"nowrap" }}>
+              <span style={{ color:"var(--dim)", flexShrink:0 }}>{label}</span>
+              <span style={{ color:"var(--txt)", fontWeight:600, flexShrink:0 }}>
                 {grade ? `${grade} (${val?.toFixed(2) ?? "—"})` : val != null ? val.toFixed(1) : "—"}
               </span>
             </div>
           ))}
           <div style={{ borderTop:"1px solid var(--b1)", marginTop:8, paddingTop:8, display:"flex", flexDirection:"column", gap:4 }}>
             {rows.map(r => (
-              <div key={r.key} style={{ display:"flex", justifyContent:"space-between", fontSize:10 }}>
-                <span style={{ color:"var(--dim)" }}>{r.title}</span>
-                <span style={{ color: r.color, fontWeight:700 }}>{r.symbol} {r.detail}</span>
+              <div key={r.key} style={{ display:"flex", justifyContent:"space-between", gap:12, fontSize:10, whiteSpace:"nowrap" }}>
+                <span style={{ color:"var(--dim)", flexShrink:0 }}>{r.title}</span>
+                <span style={{ color: r.color, fontWeight:700, flexShrink:0 }}>{r.symbol} {r.detail}</span>
               </div>
             ))}
           </div>
@@ -946,8 +947,11 @@ function DraftLab({ user }) {
       <header className="hdr" onClick={e => e.stopPropagation()}>
         <div className="hdr-left">
           <div>
-            <div className="logo">DRAFT LAB</div>
-            <div className="logo-sub">MTG</div>
+            <a href="https://github.com/jason-norris/draft-lab" target="_blank" rel="noopener noreferrer"
+              style={{ textDecoration:"none" }}>
+              <div className="logo">DRAFT LAB</div>
+            </a>
+            <div className="logo-sub">MTG · {VERSION}</div>
           </div>
           <div className="set-wrap">
             <button className="set-btn" onClick={() => setShowSetDD(v => !v)}>
@@ -1358,11 +1362,25 @@ function DraftLab({ user }) {
 
 // ── LoginScreen ───────────────────────────────────────────────────────────────
 function LoginScreen({ onSignIn, loading }) {
+  const [theme, setTheme] = useState(() => {
+    const saved = localStorage.getItem("draft-lab-theme");
+    if (saved && saved !== "auto") return saved;
+    return window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
+  });
+  useEffect(() => {
+    document.documentElement.setAttribute("data-theme", theme);
+    localStorage.setItem("draft-lab-theme", theme);
+  }, [theme]);
   return (
     <div className="auth-wrap">
-      <div className="auth-card">
+      <div className="auth-card" style={{ position:"relative" }}>
+        <button onClick={() => setTheme(t => t === "dark" ? "light" : "dark")}
+          style={{ position:"absolute", top:12, right:12, background:"transparent", border:"none",
+            color:"var(--dim)", fontSize:16, cursor:"pointer", padding:4 }}>
+          {theme === "dark" ? "☀" : "🌙"}
+        </button>
         <div className="logo">DRAFT LAB</div>
-        <div className="logo-sub">MTG</div>
+        <div className="logo-sub">MTG · {VERSION}</div>
         <button className="auth-btn" disabled={loading} onClick={onSignIn}
           style={{ display:"flex", alignItems:"center", justifyContent:"center", gap:10 }}>
           {loading
