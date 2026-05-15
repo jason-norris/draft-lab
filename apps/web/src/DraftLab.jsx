@@ -1361,7 +1361,11 @@ function DraftLab({ user }) {
             </div>
             <div className="guide-desc">This project is not affiliated with or endorsed by any of the above.</div>
             <div className="guide-desc" style={{ marginTop:16, color:"var(--dimmer)", fontSize:10 }}>
-              Draft Lab source code is released under the MIT License.
+              Draft Lab source code is released under the MIT License.{" "}
+              <a href="https://github.com/jason-norris/draft-lab" target="_blank" rel="noopener noreferrer"
+                style={{ color:"var(--gold2)", textDecoration:"none" }}>
+                View on GitHub →
+              </a>
             </div>
           </div>
         </div>
