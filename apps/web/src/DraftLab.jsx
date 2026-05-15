@@ -439,7 +439,6 @@ function CardLightbox({ sorted, lightboxIndex, grades, onUpdate, onClose, onNav 
               ↻ Flip
             </button>
           )}
-          {oracleText && <div className="lb-oracle">{oracleText}</div>}
         </div>
 
         {/* ── Right: card info + grades ── */}
