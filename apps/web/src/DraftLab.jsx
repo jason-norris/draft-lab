@@ -1,6 +1,6 @@
 // Globals provided by template.html: SUPABASE_CONFIGURED, ALLOWED_EMAIL, sb, syncGrades, fetchGrades
 const { useState, useEffect, useCallback, useRef } = React;
-const VERSION = "v2.2";
+const VERSION = "v2.3";
 
 // ── Constants ────────────────────────────────────────────────────────────────
 const MTG_LABELS   = { W:"White", U:"Blue", B:"Black", R:"Red", G:"Green", M:"Multicolor", C:"Colorless", L:"Land" };
