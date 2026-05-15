@@ -1116,12 +1116,9 @@ function DraftLab({ user }) {
         </div>
 
         <div className="hdr-right">
-          {user && isMobile && (
-            <button className="btn mobile-only" style={{ fontSize:8, padding:"4px 8px", color:"var(--dimmer)" }}
-              onClick={() => sb.auth.signOut()}>Sign Out</button>
-          )}
+          {/* Mobile header: ⚙ ? 🌙 © — ordered left to right */}
           {selectedSet && isMobile && (
-            <button className={`icon-btn${showMobF ? " active" : ""}`} onClick={() => setShowMobF(v => !v)}>⚙</button>
+            <button className={`icon-btn mobile-only${showMobF ? " active" : ""}`} onClick={() => setShowMobF(v => !v)}>⚙</button>
           )}
           {selectedSet && !isMobile && (
             <div className="l17-wrap" onClick={e => e.stopPropagation()}>
@@ -1166,15 +1163,16 @@ function DraftLab({ user }) {
               onClick={() => sb.auth.signOut()}>Sign Out</button>
           )}
           <button className="icon-btn" onClick={() => setShowGuide(true)} title="Grade guide" style={{ fontSize:13, fontWeight:700 }}>?</button>
-          <button className="icon-btn" onClick={() => setShowLegal(true)} title="Legal & Attribution" style={{ fontSize:11 }}>©</button>
           <button className="icon-btn" onClick={toggleTheme} title="Toggle light/dark mode" style={{ fontSize:16, padding:"6px 10px" }}>
             {theme === "dark" ? "☀" : "🌙"}
           </button>
+          <button className="icon-btn" onClick={() => setShowLegal(true)} title="Legal & Attribution"
+            style={{ fontSize:11, color:"var(--dimmer)", opacity:0.6 }}>©</button>
         </div>
       </header>
 
       {/* ── Mobile filter drawer ── */}
-      <div className="filters-mobile mobile-only" style={{ maxHeight: showMobF ? "500px" : "0" }}>
+      <div className="filters-mobile mobile-only" style={{ maxHeight: showMobF ? "70vh" : "0" }}>
         {showMobF && (
           <div className="fm-inner">
             <div className="fm-row">
@@ -1250,11 +1248,27 @@ function DraftLab({ user }) {
                   onChange={e => { importBackup(e.target.files[0]); e.target.value = ""; setShowMobF(false); }} />
               </label>
             </div>
-            {selectedSet && <button className="btn" style={{ alignSelf:"flex-start" }} onClick={exportCSV}>Export CSV</button>}
-            {user && syncStatus && <span className="sync-dot">{syncStatus === "syncing" ? "↑ Syncing…" : "✓ Synced"}</span>}
+          </div>
+        )}
+        {/* ── Pinned footer — always visible, never scrolled away ── */}
+        {showMobF && (
+          <div className="fm-footer">
+            {selectedSet && (
+              <button className="l17-fetch" style={{ flex:1 }}
+                onClick={() => { exportCSV(); setShowMobF(false); }}>
+                ↓ Export CSV
+              </button>
+            )}
             {user && (
-              <button className="btn" style={{ color:"var(--dimmer)", fontSize:9, alignSelf:"flex-start" }}
-                onClick={() => { sb.auth.signOut(); setShowMobF(false); }}>Sign Out</button>
+              <button className="l17-fetch" style={{ flex:1, borderColor:"var(--dimmer)", color:"var(--dimmer)" }}
+                onClick={() => { sb.auth.signOut(); setShowMobF(false); }}>
+                Sign Out
+              </button>
+            )}
+            {user && syncStatus && (
+              <span className="sync-dot" style={{ alignSelf:"center", flexShrink:0 }}>
+                {syncStatus === "syncing" ? "↑" : "✓"}
+              </span>
             )}
           </div>
         )}
