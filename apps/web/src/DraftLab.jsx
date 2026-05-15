@@ -746,6 +746,15 @@ function DraftLab({ user }) {
     })).catch(() => {});
   }, [user?.id]);
 
+  // Auto-restore last open set when sets list first populates
+  useEffect(() => {
+    if (!sets.length || selectedSet) return;
+    const saved = store.get("draft-lab-last-set");
+    if (!saved) return;
+    const set = sets.find(s => s.code === saved.value);
+    if (set) loadSet(set);
+  }, [sets.length]);
+
   // ── Helpers ──
   const toggleTheme = () => {
     setTheme(prev => {
@@ -781,6 +790,7 @@ function DraftLab({ user }) {
   }, [selectedSet, persistGrades]);
 
   const loadSet = async set => {
+    store.set("draft-lab-last-set", set.code);
     setSelectedSet(set);
     setCards([]);
     setLoading(true);
@@ -951,7 +961,7 @@ function DraftLab({ user }) {
               style={{ textDecoration:"none" }}>
               <div className="logo">DRAFT LAB</div>
             </a>
-            <div className="logo-sub">MTG · {VERSION}</div>
+            <div className="logo-sub">MTG · <span style={{ textTransform:"none" }}>{VERSION}</span></div>
           </div>
           <div className="set-wrap">
             <button className="set-btn" onClick={() => setShowSetDD(v => !v)}>
@@ -1380,7 +1390,7 @@ function LoginScreen({ onSignIn, loading }) {
           {theme === "dark" ? "☀" : "🌙"}
         </button>
         <div className="logo">DRAFT LAB</div>
-        <div className="logo-sub">MTG · {VERSION}</div>
+        <div className="logo-sub">MTG · <span style={{ textTransform:"none" }}>{VERSION}</span></div>
         <button className="auth-btn" disabled={loading} onClick={onSignIn}
           style={{ display:"flex", alignItems:"center", justifyContent:"center", gap:10 }}>
           {loading

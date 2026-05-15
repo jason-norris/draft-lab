@@ -1612,6 +1612,13 @@ function DraftLab(_ref21) {
       }
     })).catch(() => {});
   }, [user === null || user === void 0 ? void 0 : user.id]);
+  useEffect(() => {
+    if (!sets.length || selectedSet) return;
+    const saved = store.get("draft-lab-last-set");
+    if (!saved) return;
+    const set = sets.find(s => s.code === saved.value);
+    if (set) loadSet(set);
+  }, [sets.length]);
   const toggleTheme = () => {
     setTheme(prev => {
       const sysDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
@@ -1640,6 +1647,7 @@ function DraftLab(_ref21) {
     if (selectedSet) persistGrades(next, selectedSet.code);
   }, [selectedSet, persistGrades]);
   const loadSet = async set => {
+    store.set("draft-lab-last-set", set.code);
     setSelectedSet(set);
     setCards([]);
     setLoading(true);
@@ -1885,7 +1893,11 @@ function DraftLab(_ref21) {
     className: "logo"
   }, "DRAFT LAB")), React.createElement("div", {
     className: "logo-sub"
-  }, "MTG \xB7 ", VERSION)), React.createElement("div", {
+  }, "MTG \xB7 ", React.createElement("span", {
+    style: {
+      textTransform: "none"
+    }
+  }, VERSION))), React.createElement("div", {
     className: "set-wrap"
   }, React.createElement("button", {
     className: "set-btn",
@@ -2546,7 +2558,11 @@ function LoginScreen(_ref31) {
     className: "logo"
   }, "DRAFT LAB"), React.createElement("div", {
     className: "logo-sub"
-  }, "MTG \xB7 ", VERSION), React.createElement("button", {
+  }, "MTG \xB7 ", React.createElement("span", {
+    style: {
+      textTransform: "none"
+    }
+  }, VERSION)), React.createElement("button", {
     className: "auth-btn",
     disabled: loading,
     onClick: onSignIn,
