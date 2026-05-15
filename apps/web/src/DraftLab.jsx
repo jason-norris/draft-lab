@@ -204,10 +204,15 @@ function useIsMobile() {
 }
 
 // ── SourceBadge ───────────────────────────────────────────────────────────────
-function SourceBadge({ source }) {
+function SourceBadge({ source, meta }) {
   if (!source) return null;
+  const sourceName = { "17lands":"17Lands", "aetherhub":"AetherHub", "manual":"Manual" }[source] ?? source;
+  const fmt  = meta?.format ? ` · ${meta.format === "PremierDraft" ? "Premier" : meta.format === "QuickDraft" ? "Quick" : meta.format}` : "";
+  const date = meta?.importedAt ? ` · ${timeAgo(meta.importedAt)}` : "";
+  const tip  = `${sourceName}${fmt}${date}`;
   return (
-    <span className="src-badge" style={{ color: SOURCE_COLOR[source], borderColor: SOURCE_COLOR[source]+"55" }}>
+    <span className="src-badge" title={tip}
+      style={{ color: SOURCE_COLOR[source], borderColor: SOURCE_COLOR[source]+"55", cursor:"help" }}>
       {SOURCE_LABEL[source] || source}
     </span>
   );
@@ -215,6 +220,15 @@ function SourceBadge({ source }) {
 
 // ── ThreeWayDelta (desktop table cell) ────────────────────────────────────────
 function ThreeWayDelta({ g }) {
+  const [open, setOpen] = useState(false);
+  const ref = useRef(null);
+  useEffect(() => {
+    if (!open) return;
+    const handler = e => { if (ref.current && !ref.current.contains(e.target)) setOpen(false); };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, [open]);
+
   const { meVsExp, meVsPerf, expVsPerf } = calcThreeWayDelta(g);
   const rows = [
     meVsExp   && { key:"ME", title:"Me vs Expert",      ...meVsExp },
@@ -222,15 +236,51 @@ function ThreeWayDelta({ g }) {
     expVsPerf && { key:"EP", title:"Expert vs Perf",    ...expVsPerf },
   ].filter(Boolean);
   if (!rows.length) return null;
+
+  const me   = gradeToNum(g.myGrade);
+  const exp  = g.expert_rating ?? null;
+  const perf = g.performance_rating ?? null;
+
   return (
-    <div style={{ display:"flex", flexDirection:"column", gap:2 }}>
-      {rows.map(r => (
-        <div key={r.key} title={`${r.title}: ${r.detail}`}
-          style={{ display:"flex", alignItems:"center", gap:4, whiteSpace:"nowrap" }}>
-          <span style={{ fontSize:8, color:"var(--dimmer)", minWidth:16, letterSpacing:".02em" }}>{r.key}</span>
-          <span style={{ fontSize:11, fontWeight:700, color: r.color }}>{r.symbol}</span>
+    <div ref={ref} style={{ position:"relative", cursor:"pointer" }} onClick={() => setOpen(v => !v)}>
+      <div style={{ display:"flex", flexDirection:"column", gap:2 }}>
+        {rows.map(r => (
+          <div key={r.key} title={`${r.title}: ${r.detail}`}
+            style={{ display:"flex", alignItems:"center", gap:4, whiteSpace:"nowrap" }}>
+            <span style={{ fontSize:8, color:"var(--dimmer)", minWidth:16, letterSpacing:".02em" }}>{r.key}</span>
+            <span style={{ fontSize:11, fontWeight:700, color: r.color }}>{r.symbol}</span>
+          </div>
+        ))}
+      </div>
+      {open && (
+        <div onClick={e => e.stopPropagation()} style={{
+          position:"absolute", top:"calc(100% + 4px)", left:0, zIndex:200,
+          background:"var(--s1)", border:"1px solid var(--b2)",
+          padding:"10px 12px", boxShadow:"0 8px 24px rgba(0,0,0,.3)", minWidth:180
+        }}>
+          <div style={{ fontSize:9, color:"var(--dimmer)", textTransform:"uppercase", letterSpacing:".1em", marginBottom:8 }}>Comparison</div>
+          {[
+            { label:"My Grade",    val: me,   grade: g.myGrade },
+            { label:"Expert",      val: exp,  grade: null },
+            { label:"Performance", val: perf, grade: null },
+          ].map(({ label, val, grade }) => (
+            <div key={label} style={{ display:"flex", justifyContent:"space-between", gap:16, fontSize:10, marginBottom:4 }}>
+              <span style={{ color:"var(--dim)" }}>{label}</span>
+              <span style={{ color:"var(--txt)", fontWeight:600 }}>
+                {grade ? `${grade} (${val?.toFixed(2) ?? "—"})` : val != null ? val.toFixed(1) : "—"}
+              </span>
+            </div>
+          ))}
+          <div style={{ borderTop:"1px solid var(--b1)", marginTop:8, paddingTop:8, display:"flex", flexDirection:"column", gap:4 }}>
+            {rows.map(r => (
+              <div key={r.key} style={{ display:"flex", justifyContent:"space-between", fontSize:10 }}>
+                <span style={{ color:"var(--dim)" }}>{r.title}</span>
+                <span style={{ color: r.color, fontWeight:700 }}>{r.symbol} {r.detail}</span>
+              </div>
+            ))}
+          </div>
         </div>
-      ))}
+      )}
     </div>
   );
 }
@@ -250,14 +300,14 @@ function QuadrantBadge({ g, style }) {
 }
 
 // ── RatingInput (desktop table) ───────────────────────────────────────────────
-function RatingInput({ value, source, onChange }) {
+function RatingInput({ value, source, sourceMeta, onChange }) {
   return (
     <span style={{ whiteSpace:"nowrap" }}>
       <input type="number" className="lsv-in" min="0" max="5" step="0.5"
         value={value ?? ""}
         style={value != null ? { color: ratingColor(value) } : {}}
         onChange={e => onChange(e.target.value === "" ? null : parseFloat(e.target.value))} />
-      <SourceBadge source={source} />
+      <SourceBadge source={source} meta={sourceMeta} />
     </span>
   );
 }
@@ -425,6 +475,27 @@ function MobileCardItem({ card, grade, onUpdate }) {
                           value={grade.performance_rating ?? ""}
                           onChange={e => onUpdate("performance_rating", e.target.value === "" ? null : parseFloat(e.target.value))} />
                       </div>
+                      {(() => {
+                        const { meVsExp, meVsPerf, expVsPerf } = calcThreeWayDelta(grade);
+                        const rows = [
+                          meVsExp   && { key:"Me vs Expert",      ...meVsExp },
+                          meVsPerf  && { key:"Me vs Performance", ...meVsPerf },
+                          expVsPerf && { key:"Expert vs Perf",    ...expVsPerf },
+                        ].filter(Boolean);
+                        return rows.length ? (
+                          <div className="mc-field">
+                            <label>Comparison</label>
+                            <div style={{ display:"flex", flexDirection:"column", gap:4 }}>
+                              {rows.map(r => (
+                                <div key={r.key} style={{ display:"flex", justifyContent:"space-between", fontSize:12 }}>
+                                  <span style={{ color:"var(--dim)" }}>{r.key}</span>
+                                  <span style={{ color: r.color, fontWeight:700 }}>{r.symbol} {r.detail}</span>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        ) : null;
+                      })()}
                       <div className="mc-field">
                         <label>Notes</label>
                         <textarea className="mc-note" placeholder="Notes…"
@@ -1179,10 +1250,12 @@ function DraftLab({ user }) {
                     </td>
                     <td>
                       <RatingInput value={g.expert_rating} source={g.expert_source}
+                        sourceMeta={importMeta?.expert}
                         onChange={v => updateGrade(card.id, "expert_rating", v)} />
                     </td>
                     <td>
                       <RatingInput value={g.performance_rating} source={g.performance_source}
+                        sourceMeta={importMeta?.performance}
                         onChange={v => updateGrade(card.id, "performance_rating", v)} />
                     </td>
                     <td><ThreeWayDelta g={g} /></td>
