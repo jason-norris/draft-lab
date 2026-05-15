@@ -600,18 +600,18 @@ function MobileCardItem({ card, grade, onUpdate }) {
                       {(() => {
                         const { meVsExp, meVsPerf, expVsPerf } = calcThreeWayDelta(grade);
                         const rows = [
-                          meVsExp   && { key:"Me vs Expert",      ...meVsExp },
-                          meVsPerf  && { key:"Me vs Performance", ...meVsPerf },
-                          expVsPerf && { key:"Expert vs Perf",    ...expVsPerf },
+                          meVsExp   && { key:"Me / Expert",  ...meVsExp },
+                          meVsPerf  && { key:"Me / Perf",    ...meVsPerf },
+                          expVsPerf && { key:"Exp / Perf",   ...expVsPerf },
                         ].filter(Boolean);
                         return rows.length ? (
                           <div className="mc-field">
                             <label>Comparison</label>
                             <div style={{ display:"flex", flexDirection:"column", gap:4 }}>
                               {rows.map(r => (
-                                <div key={r.key} style={{ display:"flex", justifyContent:"space-between", fontSize:12 }}>
-                                  <span style={{ color:"var(--dim)" }}>{r.key}</span>
-                                  <span style={{ color: r.color, fontWeight:700 }}>{r.symbol} {r.detail}</span>
+                                <div key={r.key} style={{ display:"flex", justifyContent:"space-between", gap:8, fontSize:12, whiteSpace:"nowrap" }}>
+                                  <span style={{ color:"var(--dim)", flexShrink:0 }}>{r.key}</span>
+                                  <span style={{ color: r.color, fontWeight:700, flexShrink:0 }}>{r.symbol} {r.detail}</span>
                                 </div>
                               ))}
                             </div>
@@ -1116,6 +1116,10 @@ function DraftLab({ user }) {
         </div>
 
         <div className="hdr-right">
+          {user && isMobile && (
+            <button className="btn mobile-only" style={{ fontSize:8, padding:"4px 8px", color:"var(--dimmer)" }}
+              onClick={() => sb.auth.signOut()}>Sign Out</button>
+          )}
           {selectedSet && isMobile && (
             <button className={`icon-btn${showMobF ? " active" : ""}`} onClick={() => setShowMobF(v => !v)}>⚙</button>
           )}

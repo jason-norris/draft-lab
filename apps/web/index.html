@@ -1362,13 +1362,13 @@ function MobileCardItem(_ref13) {
       meVsPerf = _calcThreeWayDelta2.meVsPerf,
       expVsPerf = _calcThreeWayDelta2.expVsPerf;
     const rows = [meVsExp && {
-      key: "Me vs Expert",
+      key: "Me / Expert",
       ...meVsExp
     }, meVsPerf && {
-      key: "Me vs Performance",
+      key: "Me / Perf",
       ...meVsPerf
     }, expVsPerf && {
-      key: "Expert vs Perf",
+      key: "Exp / Perf",
       ...expVsPerf
     }].filter(Boolean);
     return rows.length ? React.createElement("div", {
@@ -1384,16 +1384,20 @@ function MobileCardItem(_ref13) {
       style: {
         display: "flex",
         justifyContent: "space-between",
-        fontSize: 12
+        gap: 8,
+        fontSize: 12,
+        whiteSpace: "nowrap"
       }
     }, React.createElement("span", {
       style: {
-        color: "var(--dim)"
+        color: "var(--dim)",
+        flexShrink: 0
       }
     }, r.key), React.createElement("span", {
       style: {
         color: r.color,
-        fontWeight: 700
+        fontWeight: 700,
+        flexShrink: 0
       }
     }, r.symbol, " ", r.detail))))) : null;
   })(), React.createElement("div", {
@@ -2148,7 +2152,15 @@ function DraftLab(_ref23) {
     }, (_s$released_at = s.released_at) === null || _s$released_at === void 0 ? void 0 : _s$released_at.slice(0, 7)));
   }))))), React.createElement("div", {
     className: "hdr-right"
-  }, selectedSet && isMobile && React.createElement("button", {
+  }, user && isMobile && React.createElement("button", {
+    className: "btn mobile-only",
+    style: {
+      fontSize: 8,
+      padding: "4px 8px",
+      color: "var(--dimmer)"
+    },
+    onClick: () => sb.auth.signOut()
+  }, "Sign Out"), selectedSet && isMobile && React.createElement("button", {
     className: `icon-btn${showMobF ? " active" : ""}`,
     onClick: () => setShowMobF(v => !v)
   }, "\u2699"), selectedSet && !isMobile && React.createElement("div", {
