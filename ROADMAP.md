@@ -192,9 +192,18 @@ Converts GitHub Pages app to native mobile via Capacitor. Prerequisites: Phases 
 - [x] Mobile header overflow — trimmed to 4 icon buttons; all actions in ⚙ drawer
 - [x] Tag picker inline expansion — converted to floating popover
 - [x] Card hover on full row — confined to name cell only
+- [x] Δ cell click popover — shows My Grade / Expert / Performance values + full comparison rows
+- [x] Source badge tooltip — shows source name, format, and time since import
+- [x] Mobile comparison row — three-way delta displayed in expanded card view
+- [x] Clickable Draft Lab logo → GitHub repo
+- [x] Version display (v2.2) in header subtitle and login screen
+- [x] Login screen theme toggle (☀/🌙)
+- [x] Remember last open set — saves set code on `loadSet()`, auto-restores after sets list populates
+- [ ] Delta cell hover indicator — no visual feedback that the cell is clickable; consider subtle underline or background on hover
 - [ ] DFC image flip — defer to Phase 3.2 lightbox (↻ button on card image)
-- [ ] Δ cell click popover (numerical values) — small addition to existing delta cell
-- [ ] Source badge tooltip showing format + import date
+- [ ] Mobile ⚙ drawer overflow — Sign Out button not reachable on tall content; make drawer scrollable (`overflow-y: auto; max-height`) or move Sign Out to a fixed position at the bottom of the drawer
+- [ ] iOS input zoom — on large iPhones, tapping a grade select zooms in but doesn't zoom back out; fix by setting `font-size: 16px` minimum on all `<select>` and `<input>` elements on mobile (iOS zooms when font-size < 16px)
+- [ ] GitHub project link inside the app — clickable logo in the main header links to GitHub repo, but consider adding the link explicitly in the © modal as well for discoverability
 
 ---
 
