@@ -147,6 +147,7 @@
     .srch:focus { border-color:var(--gold2); }
 
     .filters-mobile { background:var(--s3); border-bottom:1px solid var(--b2); overflow:hidden; transition:max-height .25s ease; flex-shrink:0; }
+    .filters-mobile .fm-inner { overflow-y:auto; max-height:70vh; -webkit-overflow-scrolling:touch; }
     .fm-inner { padding:12px 14px; display:flex; flex-direction:column; gap:10px; }
     .fm-row   { display:flex; align-items:center; gap:6px; flex-wrap:wrap; }
     .fm-srch  { background:var(--s2); border:1px solid var(--b1); color:var(--txt); font-family:'IBM Plex Mono',monospace; font-size:14px; padding:8px 10px; outline:none; flex:1; min-width:120px; border-radius:4px; }
@@ -311,6 +312,8 @@
       .logo { font-size:15px; }
       .set-btn { font-size:11px; padding:6px 10px; min-width:0; max-width:160px; }
       .stats { padding:6px 12px; gap:8px; }
+      /* Prevent iOS Safari auto-zoom on input focus (requires font-size >= 16px) */
+      .mc-gsel, .mc-sel, .mc-num, .mc-note, .fm-srch, .fm-sort, .auth-input { font-size:16px !important; }
     }
     @media (min-width:768px) {
       .mobile-only { display:none !important; }
@@ -2517,7 +2520,15 @@ function DraftLab(_ref21) {
       color: "var(--dimmer)",
       fontSize: 10
     }
-  }, "Draft Lab source code is released under the MIT License."))));
+  }, "Draft Lab source code is released under the MIT License.", " ", React.createElement("a", {
+    href: "https://github.com/jason-norris/draft-lab",
+    target: "_blank",
+    rel: "noopener noreferrer",
+    style: {
+      color: "var(--gold2)",
+      textDecoration: "none"
+    }
+  }, "View on GitHub \u2192")))));
 }
 function LoginScreen(_ref31) {
   let onSignIn = _ref31.onSignIn,
