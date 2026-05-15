@@ -26,6 +26,11 @@
 - Supabase auth (Google OAuth), cloud sync, multi-user via invite-only access
 - First-login local→Supabase push; backup restore pushes to cloud
 - Card hover preview confined to name cell
+- Desktop card lightbox: click card name → full overlay with image, editable grades, DFC flip, keyboard nav
+- v2.2 version display in header and login screen
+- Login screen theme toggle (☀/🌙)
+- Auto-restore last open set on refresh/login
+- GitHub link in © modal
 
 ---
 
@@ -68,8 +73,8 @@
 - [x] Compact ME / MP / EP rows with colored ≈/▲/▼ symbol (green/yellow/red by magnitude)
 - [x] Only shown where both values are populated
 - [x] Hover tooltip shows comparison name and delta value
-- [ ] Clicking Δ cell opens popover with all three values spelled out numerically — not yet built
-- [ ] Mobile expanded view: three-way delta indicators alongside Expert/Performance fields — not yet built
+- [x] Clicking Δ cell opens popover with My Grade / Expert / Performance values + full comparison rows
+- [x] Mobile expanded view: Comparison section with ME/MP/EP rows below Expert/Performance fields
 
 ### 1.5 Four-Quadrant Classification
 - [x] FORMAT / MISS / SPOT / VAR badges in card name cell (desktop + mobile collapsed row)
@@ -116,7 +121,7 @@
 ### 3.3 Source Badge Refinement ✅ COMPLETE
 - [x] Source-specific labels: `17L` | `AH` | `MAN`
 - [x] Badge color varies by source: gold (17Lands), blue (AetherHub), dimmer (manual)
-- [ ] Tooltip on badge shows full source name, format, and import date — not yet built
+- [x] Tooltip on badge shows full source name, format, and time since import
 
 ---
 
@@ -199,9 +204,9 @@ Converts GitHub Pages app to native mobile via Capacitor. Prerequisites: Phases 
 - [x] Remember last open set — saves set code on `loadSet()`, auto-restores after sets list populates
 - [ ] Delta cell hover indicator — no visual feedback that the cell is clickable; consider subtle underline or background on hover
 - [x] DFC image flip — ↻ button in lightbox toggles between card faces
-- [ ] Mobile ⚙ drawer overflow — Sign Out button not reachable on tall content; make drawer scrollable (`overflow-y: auto; max-height`) or move Sign Out to a fixed position at the bottom of the drawer
-- [ ] iOS input zoom — on large iPhones, tapping a grade select zooms in but doesn't zoom back out; fix by setting `font-size: 16px` minimum on all `<select>` and `<input>` elements on mobile (iOS zooms when font-size < 16px)
-- [ ] GitHub project link inside the app — clickable logo in the main header links to GitHub repo, but consider adding the link explicitly in the © modal as well for discoverability
+- [x] iOS input zoom — fixed with `font-size: 16px` minimum on all mobile inputs and selects
+- [x] GitHub project link inside the app — added as "View on GitHub →" in the © modal
+- [ ] Sign Out unreachable on mobile — drawer content taller than screen; scrollable inner div attempted but didn't resolve on Android; preferred fix is moving Sign Out to the top-right of the mobile header as a dedicated button
 
 ---
 
