@@ -346,7 +346,8 @@ LLM integration (7.8 Option C) added after step 5 is stable.
 - [x] DFC image flip — ↻ button in lightbox toggles between card faces
 - [x] iOS input zoom — fixed with `font-size: 16px` minimum on all mobile inputs and selects
 - [x] GitHub project link inside the app — added as "View on GitHub →" in the © modal
-- [ ] Sign Out unreachable on mobile — drawer content taller than screen; scrollable inner div attempted but didn't resolve on Android; preferred fix is moving Sign Out to the top-right of the mobile header as a dedicated button
+- [x] Sign Out unreachable on mobile — moved to mobile header as a small button to the left of ⚙
+- [ ] Mobile card whitespace — image column has dead space below the card when controls column is taller; consider full-width layout (image on top, controls stacked below) as a future option; also a natural placement for Phase 4 analytics shortcut buttons (e.g. "View in Analytics" linking to that card's scatter plot position)
 
 ---
 
