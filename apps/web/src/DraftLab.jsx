@@ -697,10 +697,10 @@ function AnalyticsView({ cards, grades, isMobile, onCardClick }) {
         const { ctx:c, scales:{x:xs, y:ys} } = chart;
         const px = xs.getPixelForValue(avgX), py = ys.getPixelForValue(avgY);
         c.save();
-        c.setLineDash([4,4]); c.strokeStyle="rgba(200,168,75,0.3)"; c.lineWidth=1;
+        c.setLineDash([4,4]); c.strokeStyle="rgba(200,168,75,0.5)"; c.lineWidth=1;
         c.beginPath(); c.moveTo(px, ys.top); c.lineTo(px, ys.bottom); c.stroke();
         c.beginPath(); c.moveTo(xs.left, py); c.lineTo(xs.right, py); c.stroke();
-        c.setLineDash([]); c.strokeStyle="rgba(200,168,75,0.15)";
+        c.setLineDash([]); c.strokeStyle="rgba(200,168,75,0.4)"; c.lineWidth=1.5;
         c.beginPath(); c.moveTo(xs.getPixelForValue(0),ys.getPixelForValue(0));
         c.lineTo(xs.getPixelForValue(5),ys.getPixelForValue(5)); c.stroke();
         c.restore();
