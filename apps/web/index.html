@@ -106,8 +106,10 @@
     .hdr { display:flex; align-items:center; justify-content:space-between; gap:10px; padding:12px 16px; background:var(--s1); border-bottom:1px solid var(--b2); flex-shrink:0; flex-wrap:wrap; }
     .hdr-left { display:flex; align-items:center; gap:12px; }
     .hdr-right { display:flex; align-items:center; }
-    .logo     { font-family:'Cinzel',serif; font-size:17px; color:var(--gold); letter-spacing:.18em; white-space:nowrap; }
-    .logo-sub { font-size:8px; color:var(--dimmer); letter-spacing:.25em; text-transform:uppercase; margin-top:1px; }
+    .logo        { font-family:'Cinzel',serif; font-size:19px; color:var(--gold); letter-spacing:.18em; white-space:nowrap; }
+    .logo-sub    { font-size:8px; color:var(--dimmer); letter-spacing:.2em; text-transform:uppercase; margin-top:1px; }
+    .logo-inline { display:flex; align-items:baseline; gap:10px; }
+    .logo-inline .logo-sub { margin-top:0; }
     /* Icon bar — no boxes, pipe separators */
     .icon-bar { display:flex; align-items:center; }
     .icon-bar-btn { background:transparent; border:none; color:var(--dim); font-size:16px; padding:6px 11px; cursor:pointer; transition:color .15s; -webkit-tap-highlight-color:transparent; display:flex; align-items:center; line-height:1; }
@@ -348,9 +350,6 @@
       .hdr { padding:8px 12px; gap:6px; }
       .hdr-left { flex-direction:column; align-items:flex-start; gap:4px; width:100%; }
       .hdr-right { width:100%; border-top:1px solid var(--b1); padding-top:6px; }
-      .logo { font-size:17px; }
-      .logo-inline { display:flex; align-items:baseline; gap:8px; }
-      .logo-sub-inline { font-size:8px; color:var(--dimmer); letter-spacing:.2em; text-transform:uppercase; }
       .set-btn { font-size:12px; padding:6px 10px; min-width:0; max-width:100%; width:100%; }
       .stats { padding:6px 12px; gap:8px; }
       /* Prevent iOS Safari auto-zoom on input focus (requires font-size >= 16px) */
@@ -2103,7 +2102,7 @@ function DraftLab(_ref23) {
     onClick: e => e.stopPropagation()
   }, React.createElement("div", {
     className: "hdr-left"
-  }, React.createElement("div", null, React.createElement("div", {
+  }, React.createElement("div", {
     className: "logo-inline"
   }, React.createElement("a", {
     href: "https://github.com/jason-norris/draft-lab",
@@ -2114,14 +2113,8 @@ function DraftLab(_ref23) {
     }
   }, React.createElement("div", {
     className: "logo"
-  }, "DRAFT LAB")), React.createElement("span", {
-    className: "logo-sub-inline desktop-only"
-  }, "MTG \xB7 ", React.createElement("span", {
-    style: {
-      textTransform: "none"
-    }
-  }, VERSION))), React.createElement("div", {
-    className: "logo-sub mobile-only"
+  }, "DRAFT LAB")), React.createElement("div", {
+    className: "logo-sub"
   }, "MTG \xB7 ", React.createElement("span", {
     style: {
       textTransform: "none"
@@ -2173,10 +2166,7 @@ function DraftLab(_ref23) {
     }, (_s$released_at = s.released_at) === null || _s$released_at === void 0 ? void 0 : _s$released_at.slice(0, 7)));
   }))))), React.createElement("div", {
     className: "hdr-right"
-  }, selectedSet && isMobile && React.createElement("button", {
-    className: `icon-bar-btn mobile-only${showMobF ? " active" : ""}`,
-    onClick: () => setShowMobF(v => !v)
-  }, "\u2699"), selectedSet && !isMobile && React.createElement("div", {
+  }, selectedSet && !isMobile && React.createElement("div", {
     className: "l17-wrap",
     onClick: e => e.stopPropagation()
   }, React.createElement("button", {
@@ -2257,7 +2247,13 @@ function DraftLab(_ref23) {
     onClick: () => sb.auth.signOut()
   }, "Sign Out"), React.createElement("div", {
     className: "icon-bar"
-  }, React.createElement("button", {
+  }, isMobile && React.createElement(React.Fragment, null, React.createElement("button", {
+    className: `icon-bar-btn mobile-only${showMobF ? " active" : ""}`,
+    onClick: () => setShowMobF(v => !v),
+    title: "Filters & settings"
+  }, "\u2699"), React.createElement("div", {
+    className: "icon-pipe"
+  })), React.createElement("button", {
     className: "icon-bar-btn",
     onClick: () => setShowGuide(true),
     title: "Grade guide"

@@ -1079,15 +1079,12 @@ function DraftLab({ user }) {
       {/* ── Header ── */}
       <header className="hdr" onClick={e => e.stopPropagation()}>
         <div className="hdr-left">
-          <div>
-            <div className="logo-inline">
-              <a href="https://github.com/jason-norris/draft-lab" target="_blank" rel="noopener noreferrer"
-                style={{ textDecoration:"none" }}>
-                <div className="logo">DRAFT LAB</div>
-              </a>
-              <span className="logo-sub-inline desktop-only">MTG · <span style={{ textTransform:"none" }}>{VERSION}</span></span>
-            </div>
-            <div className="logo-sub mobile-only">MTG · <span style={{ textTransform:"none" }}>{VERSION}</span></div>
+          <div className="logo-inline">
+            <a href="https://github.com/jason-norris/draft-lab" target="_blank" rel="noopener noreferrer"
+              style={{ textDecoration:"none" }}>
+              <div className="logo">DRAFT LAB</div>
+            </a>
+            <div className="logo-sub">MTG · <span style={{ textTransform:"none" }}>{VERSION}</span></div>
           </div>
           <div className="set-wrap">
             <button className="set-btn" onClick={() => setShowSetDD(v => !v)}>
@@ -1120,9 +1117,7 @@ function DraftLab({ user }) {
 
         <div className="hdr-right">
           {/* Mobile header: ⚙ ? 🌙 © — ordered left to right */}
-          {selectedSet && isMobile && (
-            <button className={`icon-bar-btn mobile-only${showMobF ? " active" : ""}`} onClick={() => setShowMobF(v => !v)}>⚙</button>
-          )}
+          {/* Gear lives inside icon-bar on mobile — see below */}
           {selectedSet && !isMobile && (
             <div className="l17-wrap" onClick={e => e.stopPropagation()}>
               <button className={`btn${showImport ? " active" : ""}`}
@@ -1166,6 +1161,13 @@ function DraftLab({ user }) {
               onClick={() => sb.auth.signOut()}>Sign Out</button>
           )}
           <div className="icon-bar">
+            {isMobile && (
+              <>
+                <button className={`icon-bar-btn mobile-only${showMobF ? " active" : ""}`}
+                  onClick={() => setShowMobF(v => !v)} title="Filters & settings">⚙</button>
+                <div className="icon-pipe" />
+              </>
+            )}
             <button className="icon-bar-btn" onClick={() => setShowGuide(true)} title="Grade guide">⚖</button>
             <div className="icon-pipe" />
             <button className="icon-bar-btn" onClick={toggleTheme} title="Toggle light/dark mode">
