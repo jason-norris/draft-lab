@@ -7,6 +7,7 @@
   <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
   <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4/dist/chart.umd.min.js"></script>
   <link rel="preconnect" href="https://fonts.googleapis.com"/>
   <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700&family=IBM+Plex+Mono:wght@300;400;500&display=swap" rel="stylesheet"/>
   <style>
@@ -118,7 +119,7 @@
     .icon-bar-btn.faint:hover { color:var(--dim); opacity:1; }
     .icon-pipe { width:1px; height:16px; background:var(--b2); flex-shrink:0; }
 
-    .set-wrap { position:relative; }
+    .set-wrap { position:relative; display:flex; align-items:center; gap:10px; }
     .set-btn  { display:flex; align-items:center; gap:8px; background:var(--s2); border:1px solid var(--b2); color:var(--txt); font-family:'IBM Plex Mono',monospace; font-size:12px; padding:7px 11px; cursor:pointer; transition:border-color .2s; min-width:150px; max-width:230px; }
     .set-btn:hover { border-color:var(--gold2); }
     .set-btn-label { flex:1; text-align:left; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
@@ -318,6 +319,48 @@
     .tag-filter-hdr { font-size:9px; color:var(--dimmer); text-transform:uppercase; letter-spacing:.12em; }
     @media (max-width:767px) { .tag-chip { padding:7px 12px; font-size:11px; } }
 
+    /* ── Analytics View ── */
+    .analytics-wrap { flex:1; overflow-y:auto; padding:20px 24px; display:flex; flex-direction:column; gap:20px; }
+    .analytics-tabs { display:flex; gap:6px; flex-wrap:wrap; }
+    .analytics-tab { background:transparent; border:1px solid var(--b2); color:var(--dim); font-family:'IBM Plex Mono',monospace; font-size:10px; padding:5px 14px; cursor:pointer; transition:all .15s; text-transform:uppercase; letter-spacing:.06em; }
+    .analytics-tab.active { border-color:var(--gold2); color:var(--gold); background:rgba(200,168,75,.08); }
+    .analytics-content { display:flex; gap:20px; align-items:flex-start; flex-wrap:wrap; }
+    .analytics-chart-wrap { flex:1; min-width:300px; position:relative; }
+    .analytics-panel { flex-shrink:0; width:260px; display:flex; flex-direction:column; gap:14px; }
+    @media (orientation:portrait) and (max-width:767px) { .analytics-chart-wrap { min-height:220px; } }
+    @media (orientation:landscape) and (max-width:900px) { .analytics-chart-wrap { min-height:180px; } }
+    .analytics-stat-block { background:var(--s2); border:1px solid var(--b1); padding:12px 14px; }
+    .analytics-stat-label { font-size:9px; color:var(--dimmer); text-transform:uppercase; letter-spacing:.12em; margin-bottom:6px; }
+    .analytics-stat-row { display:flex; justify-content:space-between; font-size:11px; margin-bottom:3px; }
+    .analytics-stat-val { color:var(--gold); font-weight:600; }
+    .analytics-quad-row { display:flex; align-items:center; gap:8px; font-size:10px; margin-bottom:4px; cursor:pointer; }
+    .analytics-quad-row:hover { color:var(--txt); }
+    .analytics-quad-dot { width:8px; height:8px; border-radius:50%; flex-shrink:0; }
+    .analytics-empty { color:var(--dimmer); font-size:11px; text-align:center; padding:40px; line-height:1.7; }
+    .analytics-quads-wrap { display:flex; flex-direction:column; gap:16px; }
+    .analytics-quad-section { background:var(--s1); border:1px solid var(--b2); border-radius:6px; overflow:hidden; }
+    .analytics-quad-header { display:flex; align-items:center; gap:8px; padding:8px 12px; background:var(--s2); border-bottom:1px solid var(--b2); }
+    .analytics-quad-title { font-size:12px; font-weight:600; color:var(--txt); white-space:nowrap; }
+    .analytics-quad-badge { font-size:10px; background:var(--b2); color:var(--dim); border-radius:10px; padding:1px 6px; }
+    .analytics-quad-desc { font-size:10px; color:var(--dimmer); margin-left:2px; }
+    .analytics-quad-list { display:flex; flex-direction:column; max-height:200px; overflow-y:auto; }
+    .analytics-quad-card { display:flex; align-items:center; gap:6px; padding:5px 12px; font-size:11px; cursor:pointer; border-bottom:1px solid var(--b2); }
+    .analytics-quad-card:last-child { border-bottom:none; }
+    .analytics-quad-card:hover { background:var(--b2); }
+    .analytics-quad-card-name { flex:1; color:var(--dim); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+    .analytics-quad-card-gap { font-size:10px; min-width:30px; text-align:right; font-weight:600; }
+    @media (max-width:767px) {
+      .analytics-wrap { padding:10px 10px; }
+      .analytics-content { flex-direction:column; gap:10px; }
+      .analytics-chart-wrap { min-width:0; width:100%; flex:0 0 auto; }
+      .analytics-panel { width:100%; }
+    }
+    .analytics-preview-overlay { position:fixed; inset:0; background:rgba(0,0,0,.85); z-index:500; display:flex; align-items:center; justify-content:center; padding:20px; }
+    .analytics-preview-card { position:relative; background:#0e0e1c; border:1px solid #2e2e4a; border-radius:10px; padding:12px; max-width:260px; width:100%; }
+    .analytics-preview-close { position:absolute; top:8px; right:10px; background:none; border:none; color:#5a5a7a; font-size:18px; cursor:pointer; line-height:1; padding:0; }
+    .analytics-preview-name { text-align:center; font-size:13px; color:#d4aa50; font-weight:600; margin-top:8px; }
+    .analytics-preview-info { padding:4px 0 0; }
+
     /* ── Card Lightbox ── */
     .lb-overlay { position:fixed; inset:0; z-index:600; background:rgba(0,0,0,.78); display:flex; align-items:center; justify-content:center; padding:20px; }
     .lb-modal { background:var(--s1); border:1px solid var(--b2); border-radius:6px; display:flex; width:100%; max-width:940px; max-height:90vh; overflow:hidden; box-shadow:0 24px 64px rgba(0,0,0,.5); }
@@ -350,7 +393,7 @@
       .hdr { padding:8px 12px; gap:6px; }
       .hdr-left { flex-direction:column; align-items:flex-start; gap:4px; width:100%; }
       .hdr-right { width:100%; border-top:1px solid var(--b1); padding-top:6px; }
-      .set-btn { font-size:12px; padding:6px 10px; min-width:0; max-width:100%; width:100%; }
+      .set-btn { font-size:12px; padding:6px 10px; min-width:0; max-width:100%; flex:1; }
       .stats { padding:6px 12px; gap:8px; }
       /* Prevent iOS Safari auto-zoom on input focus (requires font-size >= 16px) */
       .mc-gsel, .mc-sel, .mc-num, .mc-note, .fm-srch, .fm-sort, .auth-input { font-size:16px !important; }
@@ -582,10 +625,14 @@ function migrateGrades(grades) {
   }
   return out;
 }
+const isBasicLand = card => {
+  var _card$type_line;
+  return (_card$type_line = card.type_line) === null || _card$type_line === void 0 ? void 0 : _card$type_line.toLowerCase().startsWith("basic land");
+};
 function getColorKey(card) {
-  var _card$card_faces, _card$type_line;
+  var _card$card_faces, _card$type_line2;
   const c = card.colors ?? ((_card$card_faces = card.card_faces) === null || _card$card_faces === void 0 || (_card$card_faces = _card$card_faces[0]) === null || _card$card_faces === void 0 ? void 0 : _card$card_faces.colors) ?? [];
-  if (!c.length) return (_card$type_line = card.type_line) !== null && _card$type_line !== void 0 && _card$type_line.toLowerCase().includes("land") ? "L" : "C";
+  if (!c.length) return (_card$type_line2 = card.type_line) !== null && _card$type_line2 !== void 0 && _card$type_line2.toLowerCase().includes("land") ? "L" : "C";
   return c.length > 1 ? "M" : c[0];
 }
 function getImageUrl(card) {
@@ -794,7 +841,7 @@ function ThreeWayDelta(_ref4) {
   }, React.createElement("span", {
     style: {
       fontSize: 8,
-      color: "var(--dimmer)",
+      color: "#5a5a7a",
       minWidth: 16,
       letterSpacing: ".02em"
     }
@@ -820,7 +867,7 @@ function ThreeWayDelta(_ref4) {
   }, React.createElement("div", {
     style: {
       fontSize: 9,
-      color: "var(--dimmer)",
+      color: "#5a5a7a",
       textTransform: "uppercase",
       letterSpacing: ".1em",
       marginBottom: 8
@@ -987,7 +1034,7 @@ function TagCell(_ref8) {
   }), overflow > 0 && React.createElement("span", {
     style: {
       fontSize: 8,
-      color: "var(--dimmer)",
+      color: "#5a5a7a",
       whiteSpace: "nowrap"
     }
   }, "+", overflow), React.createElement("button", {
@@ -1017,7 +1064,7 @@ function TagCell(_ref8) {
     }, React.createElement("div", {
       style: {
         fontSize: 8,
-        color: "var(--dimmer)",
+        color: "#5a5a7a",
         marginBottom: 4,
         textTransform: "uppercase",
         letterSpacing: ".1em"
@@ -1054,7 +1101,7 @@ function TagFilterPanel(_ref0) {
     }, React.createElement("div", {
       style: {
         fontSize: 8,
-        color: "var(--dimmer)",
+        color: "#5a5a7a",
         marginBottom: 4,
         textTransform: "uppercase",
         letterSpacing: ".1em"
@@ -1079,7 +1126,7 @@ function TagFilterPanel(_ref0) {
   }, "Clear"));
 }
 function CardLightbox(_ref10) {
-  var _card$card_faces3, _card$card_faces$, _card$card_faces$face, _card$card_faces$face2, _card$type_line2;
+  var _card$card_faces3, _card$card_faces$, _card$card_faces$face, _card$card_faces$face2, _card$type_line3;
   let sorted = _ref10.sorted,
     lightboxIndex = _ref10.lightboxIndex,
     grades = _ref10.grades,
@@ -1149,7 +1196,7 @@ function CardLightbox(_ref10) {
     }
   })), React.createElement("div", {
     className: "lb-meta"
-  }, card.mana_cost ? React.createElement(React.Fragment, null, renderMana(card.mana_cost), " \xB7 ") : null, (_card$type_line2 = card.type_line) === null || _card$type_line2 === void 0 || (_card$type_line2 = _card$type_line2.split("—")[0]) === null || _card$type_line2 === void 0 ? void 0 : _card$type_line2.trim(), " · ", React.createElement("span", {
+  }, card.mana_cost ? React.createElement(React.Fragment, null, renderMana(card.mana_cost), " \xB7 ") : null, (_card$type_line3 = card.type_line) === null || _card$type_line3 === void 0 || (_card$type_line3 = _card$type_line3.split("—")[0]) === null || _card$type_line3 === void 0 ? void 0 : _card$type_line3.trim(), " · ", React.createElement("span", {
     style: {
       color: RARITY_COLORS[card.rarity]
     }
@@ -1241,10 +1288,728 @@ function CardLightbox(_ref10) {
     }
   }, tag.label)))))));
 }
-function GradeSelect(_ref12) {
-  let cls = _ref12.cls,
-    value = _ref12.value,
-    onChange = _ref12.onChange;
+const QUAD_COLORS = {
+  CONSENSUS: "#32a050",
+  MISS: "#e05030",
+  SPOT: "#32a050",
+  FORMAT: "#9c5ef5",
+  VAR: "#e6c800"
+};
+function gradeToNumeric(grade) {
+  return GRADE_NUMERIC[grade] ?? null;
+}
+function jitter(cardId, axis) {
+  let range = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : 0.12;
+  let h = 0;
+  const s = cardId + axis;
+  for (let i = 0; i < s.length; i++) h = Math.imul(31, h) + s.charCodeAt(i) | 0;
+  return ((h & 0xFFFF) / 0xFFFF - 0.5) * range * 2;
+}
+function classifyQuadrant(myNum, exp, perf) {
+  let thresh = arguments.length > 3 && arguments[3] !== undefined ? arguments[3] : 0.75;
+  if (myNum == null || exp == null || perf == null) return null;
+  const mePerf = Math.abs(myNum - perf) <= thresh;
+  const meExp = Math.abs(myNum - exp) <= thresh;
+  const expPerf = Math.abs(exp - perf) <= thresh;
+  if (mePerf && meExp) return "CONSENSUS";
+  if (meExp && !expPerf) return "FORMAT";
+  if (!meExp && expPerf) return "MISS";
+  if (mePerf && !meExp) return "SPOT";
+  return "VAR";
+}
+const GRADE_ORDER = ["A+", "A", "A-", "B+", "B", "B-", "C+", "C", "C-", "D+", "D", "F"];
+const SCATTER_MODES = [{
+  id: "meVsPerf",
+  label: "Me vs Perf",
+  xKey: "perf",
+  yKey: "myNum",
+  xLabel: "Performance",
+  yLabel: "My Grade"
+}, {
+  id: "meVsExp",
+  label: "Me vs Expert",
+  xKey: "exp",
+  yKey: "myNum",
+  xLabel: "Expert",
+  yLabel: "My Grade"
+}, {
+  id: "expVsPerf",
+  label: "Expert vs Perf",
+  xKey: "perf",
+  yKey: "exp",
+  xLabel: "Performance",
+  yLabel: "Expert"
+}];
+function AnalyticsView(_ref12) {
+  let cards = _ref12.cards,
+    grades = _ref12.grades,
+    isMobile = _ref12.isMobile,
+    onCardClick = _ref12.onCardClick;
+  const _useState9 = useState("distribution"),
+    _useState0 = _slicedToArray(_useState9, 2),
+    activeTab = _useState0[0],
+    setActiveTab = _useState0[1];
+  const _useState1 = useState("meVsPerf"),
+    _useState10 = _slicedToArray(_useState1, 2),
+    scatterMode = _useState10[0],
+    setScatterMode = _useState10[1];
+  const _useState11 = useState(null),
+    _useState12 = _slicedToArray(_useState11, 2),
+    previewCard = _useState12[0],
+    setPreviewCard = _useState12[1];
+  const chartRef = useRef(null);
+  const chartInstance = useRef(null);
+  const dataset = useMemo(() => {
+    return cards.filter(c => {
+      var _grades$c$id;
+      return !isBasicLand(c) && ((_grades$c$id = grades[c.id]) === null || _grades$c$id === void 0 ? void 0 : _grades$c$id.myGrade);
+    }).map(c => {
+      const g = grades[c.id] ?? {};
+      const myNum = gradeToNumeric(g.myGrade);
+      const perf = g.performance_rating ?? null;
+      const exp = g.expert_rating ?? null;
+      return {
+        card: c,
+        g,
+        myNum,
+        perf,
+        exp,
+        quad: classifyQuadrant(myNum, exp, perf),
+        colorKey: getColorKey(c)
+      };
+    }).filter(d => d.myNum != null);
+  }, [cards, grades]);
+  const withPerf = useMemo(() => dataset.filter(d => d.perf != null), [dataset]);
+  const stats = useMemo(() => {
+    if (!withPerf.length) return null;
+    const gaps = withPerf.map(d => d.myNum - d.perf);
+    const avgGap = gaps.reduce((a, b) => a + b, 0) / gaps.length;
+    const overrated = withPerf.filter(d => d.myNum > d.perf + 0.75).length;
+    const underrated = withPerf.filter(d => d.myNum < d.perf - 0.75).length;
+    const agreed = withPerf.filter(d => Math.abs(d.myNum - d.perf) <= 0.5).length;
+    const quads = {
+      CONSENSUS: 0,
+      MISS: 0,
+      SPOT: 0,
+      FORMAT: 0,
+      VAR: 0
+    };
+    withPerf.forEach(d => {
+      if (d.quad) quads[d.quad]++;
+    });
+    return {
+      avgGap,
+      overrated,
+      underrated,
+      agreed,
+      quads,
+      total: withPerf.length
+    };
+  }, [withPerf]);
+  const RARITY_SIZE = isMobile ? {
+    common: 3,
+    uncommon: 4,
+    rare: 5,
+    mythic: 7
+  } : {
+    common: 4,
+    uncommon: 6,
+    rare: 9,
+    mythic: 12
+  };
+  const destroy = () => {
+    if (chartInstance.current) {
+      chartInstance.current.destroy();
+      chartInstance.current = null;
+    }
+  };
+  useEffect(() => {
+    if (activeTab !== "distribution" || !chartRef.current || !dataset.length) return;
+    destroy();
+    const myCounts = GRADE_ORDER.map(g => dataset.filter(d => d.g.myGrade === g).length);
+    const perfCounts = GRADE_ORDER.map(g => {
+      const num = GRADE_NUMERIC[g];
+      return withPerf.filter(d => Math.abs(d.perf - num) < 0.4).length;
+    });
+    chartInstance.current = new Chart(chartRef.current.getContext("2d"), {
+      type: "bar",
+      data: {
+        labels: GRADE_ORDER,
+        datasets: [{
+          label: "My Grades",
+          data: myCounts,
+          backgroundColor: GRADE_ORDER.map(g => (GRADE_COLOR[g] || "#888") + "cc"),
+          borderColor: GRADE_ORDER.map(g => GRADE_COLOR[g] || "#888"),
+          borderWidth: 1.5
+        }, {
+          label: "Performance",
+          data: perfCounts,
+          type: "line",
+          borderColor: "rgba(200,168,75,0.7)",
+          backgroundColor: "transparent",
+          borderWidth: 2,
+          pointRadius: 3,
+          pointBackgroundColor: "rgba(200,168,75,0.7)",
+          tension: 0.3
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: true,
+        animation: {
+          duration: 400
+        },
+        plugins: {
+          legend: {
+            display: true,
+            labels: {
+              color: "#9090b8",
+              font: {
+                size: 10
+              },
+              boxWidth: 12,
+              boxHeight: 10
+            }
+          },
+          tooltip: {
+            backgroundColor: "#0e0e1c",
+            titleColor: "#d4aa50",
+            bodyColor: "#9090b8",
+            borderColor: "#2e2e4a",
+            borderWidth: 1,
+            boxHeight: 10,
+            boxWidth: 10
+          }
+        },
+        scales: {
+          x: {
+            ticks: {
+              color: "#5a5a7a"
+            },
+            grid: {
+              color: "#22223a"
+            }
+          },
+          y: {
+            ticks: {
+              color: "#5a5a7a"
+            },
+            grid: {
+              color: "#22223a"
+            },
+            beginAtZero: true
+          }
+        }
+      }
+    });
+    return destroy;
+  }, [activeTab, dataset, withPerf]);
+  useEffect(() => {
+    if (activeTab !== "scatter" || !chartRef.current || !withPerf.length) return;
+    destroy();
+    const mode = SCATTER_MODES.find(m => m.id === scatterMode) ?? SCATTER_MODES[0];
+    const pts = withPerf.filter(d => d[mode.xKey] != null && d[mode.yKey] != null).map(d => ({
+      x: d[mode.xKey] + jitter(d.card.id, 'x'),
+      y: d[mode.yKey] + jitter(d.card.id, 'y'),
+      card: d.card,
+      g: d.g,
+      quad: d.quad,
+      backgroundColor: (QUAD_COLORS[d.quad] ?? "#808098") + "bb",
+      borderColor: QUAD_COLORS[d.quad] ?? "#808098",
+      radius: RARITY_SIZE[d.card.rarity] ?? 5
+    }));
+    const avgX = pts.reduce((a, p) => a + p.x, 0) / pts.length;
+    const avgY = pts.reduce((a, p) => a + p.y, 0) / pts.length;
+    const gradeLabel = v => {
+      var _Object$entries$find;
+      return ((_Object$entries$find = Object.entries(GRADE_NUMERIC).find(_ref13 => {
+        let _ref14 = _slicedToArray(_ref13, 2),
+          n = _ref14[1];
+        return Math.abs(n - v) < 0.1;
+      })) === null || _Object$entries$find === void 0 ? void 0 : _Object$entries$find[0]) ?? "";
+    };
+    chartInstance.current = new Chart(chartRef.current.getContext("2d"), {
+      type: "scatter",
+      data: {
+        datasets: [{
+          data: pts,
+          pointBackgroundColor: pts.map(p => p.backgroundColor),
+          pointBorderColor: pts.map(p => p.borderColor),
+          pointRadius: pts.map(p => p.radius),
+          pointHoverRadius: pts.map(p => p.radius + 3),
+          pointHitRadius: 10,
+          pointBorderWidth: 1
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: !isMobile,
+        aspectRatio: isMobile ? 1 : 1.5,
+        animation: {
+          duration: 400
+        },
+        events: ['mousemove', 'mouseout', 'click', 'touchstart', 'touchmove'],
+        interaction: {
+          mode: 'nearest',
+          intersect: false
+        },
+        layout: {
+          padding: {
+            top: 20,
+            right: 20,
+            bottom: 20,
+            left: 20
+          }
+        },
+        plugins: {
+          legend: {
+            display: false
+          },
+          tooltip: {
+            callbacks: {
+              label: ctx => {
+                const p = ctx.raw;
+                const xl = mode.xKey === "perf" ? `Perf:${p.x.toFixed(1)}` : mode.xKey === "exp" ? `Exp:${p.x.toFixed(1)}` : `Perf:${p.x.toFixed(1)}`;
+                const yl = mode.yKey === "myNum" ? `Me:${p.g.myGrade}` : `Exp:${p.y.toFixed(1)}`;
+                return [`${p.card.name}`, `${yl}  ${xl}  ${p.quad ?? ""}`];
+              }
+            },
+            backgroundColor: "#0e0e1c",
+            titleColor: "#d4aa50",
+            bodyColor: "#9090b8",
+            borderColor: "#2e2e4a",
+            borderWidth: 1
+          }
+        },
+        scales: {
+          x: {
+            min: 0,
+            max: 5,
+            title: {
+              display: true,
+              text: mode.xLabel,
+              color: "#5a5a7a",
+              font: {
+                size: 10
+              }
+            },
+            ticks: {
+              color: "#5a5a7a",
+              stepSize: 0.5,
+              callback: mode.xKey !== "perf" ? gradeLabel : undefined
+            },
+            grid: {
+              color: "#22223a"
+            }
+          },
+          y: {
+            min: 0,
+            max: 5,
+            title: {
+              display: true,
+              text: mode.yLabel,
+              color: "#5a5a7a",
+              font: {
+                size: 10
+              }
+            },
+            ticks: {
+              color: "#5a5a7a",
+              stepSize: 0.5,
+              callback: gradeLabel
+            },
+            grid: {
+              color: "#22223a"
+            }
+          }
+        },
+        onClick: (e, els) => {
+          if (!els.length) return;
+          const p = pts[els[0].index];
+          if (!p.card) return;
+          if (isMobile) setPreviewCard(p.card);else if (onCardClick) onCardClick(p.card);
+        }
+      },
+      plugins: [{
+        id: "crosshairs",
+        afterDatasetsDraw: chart => {
+          const c = chart.ctx,
+            _chart$scales = chart.scales,
+            xs = _chart$scales.x,
+            ys = _chart$scales.y;
+          const px = xs.getPixelForValue(avgX),
+            py = ys.getPixelForValue(avgY);
+          c.save();
+          c.setLineDash([4, 4]);
+          c.strokeStyle = "rgba(200,168,75,0.5)";
+          c.lineWidth = 1;
+          c.beginPath();
+          c.moveTo(px, ys.top);
+          c.lineTo(px, ys.bottom);
+          c.stroke();
+          c.beginPath();
+          c.moveTo(xs.left, py);
+          c.lineTo(xs.right, py);
+          c.stroke();
+          c.setLineDash([]);
+          c.strokeStyle = "rgba(200,168,75,0.4)";
+          c.lineWidth = 1.5;
+          c.beginPath();
+          c.moveTo(xs.getPixelForValue(0), ys.getPixelForValue(0));
+          c.lineTo(xs.getPixelForValue(5), ys.getPixelForValue(5));
+          c.stroke();
+          c.restore();
+        }
+      }]
+    });
+    return destroy;
+  }, [activeTab, withPerf]);
+  if (!dataset.length) return React.createElement("div", {
+    className: "analytics-empty"
+  }, React.createElement("div", {
+    style: {
+      fontSize: 32,
+      marginBottom: 12
+    }
+  }, "\uD83D\uDCA1"), React.createElement("div", null, "Grade at least 50% of the cards and import community ratings", React.createElement("br", null), "to unlock analytics for this set."));
+  return React.createElement("div", {
+    className: "analytics-wrap"
+  }, React.createElement("div", {
+    className: "analytics-tabs"
+  }, [["distribution", "Distribution"], ["scatter", "Scatter"], ["quadrants", "Quadrants"]].map(_ref15 => {
+    let _ref16 = _slicedToArray(_ref15, 2),
+      id = _ref16[0],
+      lbl = _ref16[1];
+    return React.createElement("button", {
+      key: id,
+      className: `analytics-tab${activeTab === id ? " active" : ""}`,
+      onClick: () => setActiveTab(id)
+    }, lbl);
+  })), activeTab === "distribution" && React.createElement("div", {
+    className: "analytics-content",
+    style: {
+      gap: 12
+    }
+  }, React.createElement("div", {
+    className: "analytics-chart-wrap"
+  }, React.createElement("canvas", {
+    ref: chartRef
+  })), React.createElement("div", {
+    className: "analytics-panel"
+  }, stats && React.createElement("div", {
+    className: "analytics-stat-block"
+  }, React.createElement("div", {
+    className: "analytics-stat-label"
+  }, "Calibration"), React.createElement("div", {
+    className: "analytics-stat-row"
+  }, React.createElement("span", null, "Cards compared"), React.createElement("span", {
+    className: "analytics-stat-val"
+  }, stats.total)), React.createElement("div", {
+    className: "analytics-stat-row"
+  }, React.createElement("span", null, "Avg gap"), React.createElement("span", {
+    className: "analytics-stat-val",
+    style: {
+      color: stats.avgGap > 0 ? "#e05030" : "#32a050"
+    }
+  }, stats.avgGap > 0 ? "+" : "", stats.avgGap.toFixed(2))), React.createElement("div", {
+    className: "analytics-stat-row"
+  }, React.createElement("span", null, "Overrated"), React.createElement("span", {
+    className: "analytics-stat-val"
+  }, stats.overrated, " (", Math.round(100 * stats.overrated / stats.total), "%)")), React.createElement("div", {
+    className: "analytics-stat-row"
+  }, React.createElement("span", null, "Underrated"), React.createElement("span", {
+    className: "analytics-stat-val"
+  }, stats.underrated, " (", Math.round(100 * stats.underrated / stats.total), "%)")), React.createElement("div", {
+    className: "analytics-stat-row"
+  }, React.createElement("span", null, "Agreed"), React.createElement("span", {
+    className: "analytics-stat-val"
+  }, stats.agreed, " (", Math.round(100 * stats.agreed / stats.total), "%)"))), React.createElement("div", {
+    className: "analytics-stat-block",
+    style: {
+      fontSize: 10,
+      color: "#5a5a7a",
+      lineHeight: 1.7
+    }
+  }, React.createElement("div", {
+    className: "analytics-stat-label"
+  }, "How to read this"), React.createElement("div", null, React.createElement("span", {
+    style: {
+      color: "var(--dim)"
+    }
+  }, "Bars"), " \u2014 your grade distribution"), React.createElement("div", null, React.createElement("span", {
+    style: {
+      color: "rgba(200,168,75,0.9)"
+    }
+  }, "Gold line"), " \u2014 GIH Win Rate distribution"), React.createElement("div", {
+    style: {
+      marginTop: 4
+    }
+  }, "If your bars peak ", React.createElement("em", null, "left"), " of the gold line (more A/B grades than the data supports), you overrated.")))), activeTab === "scatter" && React.createElement("div", {
+    style: {
+      display: "flex",
+      flexDirection: "column",
+      gap: 10
+    }
+  }, React.createElement("div", {
+    className: "analytics-content"
+  }, React.createElement("div", {
+    className: "analytics-chart-wrap"
+  }, React.createElement("canvas", {
+    ref: chartRef
+  })), stats && React.createElement("div", {
+    className: "analytics-panel"
+  }, React.createElement("div", {
+    className: "analytics-stat-block"
+  }, React.createElement("div", {
+    className: "analytics-stat-label"
+  }, "Quadrants"), Object.entries(stats.quads).map(_ref17 => {
+    let _ref18 = _slicedToArray(_ref17, 2),
+      q = _ref18[0],
+      n = _ref18[1];
+    return React.createElement("div", {
+      key: q,
+      className: "analytics-quad-row"
+    }, React.createElement("div", {
+      className: "analytics-quad-dot",
+      style: {
+        background: QUAD_COLORS[q]
+      }
+    }), React.createElement("span", {
+      style: {
+        color: "var(--dim)",
+        minWidth: 80
+      }
+    }, q), React.createElement("span", {
+      className: "analytics-stat-val"
+    }, n), React.createElement("span", {
+      style: {
+        color: "#5a5a7a",
+        fontSize: 9,
+        marginLeft: 4
+      }
+    }, Math.round(100 * n / stats.total), "%"));
+  })), React.createElement("div", {
+    className: "analytics-stat-block"
+  }, React.createElement("div", {
+    className: "analytics-stat-label"
+  }, "Calibration"), React.createElement("div", {
+    className: "analytics-stat-row"
+  }, React.createElement("span", null, "Cards compared"), React.createElement("span", {
+    className: "analytics-stat-val"
+  }, stats.total)), React.createElement("div", {
+    className: "analytics-stat-row"
+  }, React.createElement("span", null, "Avg gap"), React.createElement("span", {
+    className: "analytics-stat-val",
+    style: {
+      color: stats.avgGap > 0 ? "#e05030" : "#32a050"
+    }
+  }, stats.avgGap > 0 ? "+" : "", stats.avgGap.toFixed(2))), React.createElement("div", {
+    className: "analytics-stat-row"
+  }, React.createElement("span", null, "Overrated"), React.createElement("span", {
+    className: "analytics-stat-val"
+  }, stats.overrated, " (", Math.round(100 * stats.overrated / stats.total), "%)")), React.createElement("div", {
+    className: "analytics-stat-row"
+  }, React.createElement("span", null, "Underrated"), React.createElement("span", {
+    className: "analytics-stat-val"
+  }, stats.underrated, " (", Math.round(100 * stats.underrated / stats.total), "%)")), React.createElement("div", {
+    className: "analytics-stat-row"
+  }, React.createElement("span", null, "Agreed"), React.createElement("span", {
+    className: "analytics-stat-val"
+  }, stats.agreed, " (", Math.round(100 * stats.agreed / stats.total), "%)"))), React.createElement("div", {
+    className: "analytics-stat-block",
+    style: {
+      fontSize: 10,
+      color: "#5a5a7a",
+      lineHeight: 1.7
+    }
+  }, React.createElement("div", {
+    className: "analytics-stat-label"
+  }, "How to read this"), React.createElement("div", null, React.createElement("span", {
+    style: {
+      color: "var(--dim)"
+    }
+  }, "Diagonal"), " \u2014 Perfect agreement"), React.createElement("div", null, React.createElement("span", {
+    style: {
+      color: "#e05030"
+    }
+  }, "Above"), " \u2014 You overrated"), React.createElement("div", null, React.createElement("span", {
+    style: {
+      color: "#32a050"
+    }
+  }, "Below"), " \u2014 You underrated"), React.createElement("div", null, React.createElement("span", {
+    style: {
+      color: "var(--dim)"
+    }
+  }, "Crosshairs"), " \u2014 Mean of each axis"), React.createElement("div", null, React.createElement("span", {
+    style: {
+      color: "var(--dim)"
+    }
+  }, "Color"), " \u2014 Quadrant classification"), React.createElement("div", null, React.createElement("span", {
+    style: {
+      color: "var(--dim)"
+    }
+  }, "Size"), " \u2014 Rarity (mythic largest)"), React.createElement("div", {
+    style: {
+      marginTop: 6
+    }
+  }, "Hover to preview or click for detail"))))), activeTab === "quadrants" && React.createElement("div", {
+    className: "analytics-quads-wrap"
+  }, [{
+    id: "MISS",
+    label: "Miss",
+    desc: "You overrated vs both sources"
+  }, {
+    id: "SPOT",
+    label: "Spot On",
+    desc: "You underrated vs both sources"
+  }, {
+    id: "CONSENSUS",
+    label: "Consensus",
+    desc: "All three roughly agreed"
+  }, {
+    id: "FORMAT",
+    label: "Format Gem",
+    desc: "Expert agreed; Performance didn't"
+  }, {
+    id: "VAR",
+    label: "Variable",
+    desc: "Mixed signals across sources"
+  }].map(_ref19 => {
+    let id = _ref19.id,
+      label = _ref19.label,
+      desc = _ref19.desc;
+    const qs = withPerf.filter(d => d.quad === id).sort((a, b) => {
+      if (id === "MISS") return b.myNum - b.perf - (a.myNum - a.perf);
+      if (id === "SPOT") return a.myNum - a.perf - (b.myNum - b.perf);
+      return b.perf - a.perf;
+    });
+    if (!qs.length) return null;
+    return React.createElement("div", {
+      key: id,
+      className: "analytics-quad-section"
+    }, React.createElement("div", {
+      className: "analytics-quad-header"
+    }, React.createElement("div", {
+      className: "analytics-quad-dot",
+      style: {
+        background: QUAD_COLORS[id]
+      }
+    }), React.createElement("span", {
+      className: "analytics-quad-title"
+    }, label), React.createElement("span", {
+      className: "analytics-quad-badge"
+    }, qs.length), React.createElement("span", {
+      className: "analytics-quad-desc"
+    }, desc)), React.createElement("div", {
+      className: "analytics-quad-list"
+    }, qs.map(d => {
+      const gap = d.myNum - d.perf;
+      return React.createElement("div", {
+        key: d.card.id,
+        className: "analytics-quad-card",
+        onClick: () => isMobile ? setPreviewCard(d.card) : onCardClick && onCardClick(d.card)
+      }, React.createElement("span", {
+        className: "analytics-quad-card-name"
+      }, d.card.name), React.createElement("span", {
+        style: {
+          color: GRADE_COLOR[d.g.myGrade] ?? "var(--dim)",
+          display: "inline-block",
+          width: "2ch",
+          flexShrink: 0
+        }
+      }, d.g.myGrade), React.createElement("span", {
+        className: "analytics-quad-card-gap",
+        style: {
+          color: gap > 0 ? "#e05030" : gap < 0 ? "#32a050" : "#5a5a7a"
+        }
+      }, gap > 0 ? "+" : "", gap.toFixed(1)));
+    })));
+  })), previewCard && ((_previewCard$card_fac, _previewCard$image_ur) => {
+    const pd = withPerf.find(d => d.card.id === previewCard.id);
+    const pg = grades[previewCard.id] ?? {};
+    const imgUrl = ((_previewCard$card_fac = previewCard.card_faces) === null || _previewCard$card_fac === void 0 || (_previewCard$card_fac = _previewCard$card_fac[0]) === null || _previewCard$card_fac === void 0 || (_previewCard$card_fac = _previewCard$card_fac.image_uris) === null || _previewCard$card_fac === void 0 ? void 0 : _previewCard$card_fac.normal) ?? ((_previewCard$image_ur = previewCard.image_uris) === null || _previewCard$image_ur === void 0 ? void 0 : _previewCard$image_ur.normal);
+    return React.createElement("div", {
+      className: "analytics-preview-overlay",
+      onClick: () => setPreviewCard(null)
+    }, React.createElement("div", {
+      className: "analytics-preview-card",
+      onClick: e => e.stopPropagation()
+    }, React.createElement("button", {
+      className: "analytics-preview-close",
+      onClick: () => setPreviewCard(null)
+    }, "✕"), imgUrl && React.createElement("img", {
+      src: imgUrl,
+      style: {
+        width: "100%",
+        borderRadius: 8,
+        display: "block"
+      }
+    }), React.createElement("div", {
+      className: "analytics-preview-info"
+    }, React.createElement("div", {
+      className: "analytics-preview-name"
+    }, previewCard.name), React.createElement("div", {
+      style: {
+        display: "flex",
+        gap: 16,
+        justifyContent: "center",
+        marginTop: 10
+      }
+    }, React.createElement("div", {
+      style: {
+        textAlign: "center"
+      }
+    }, React.createElement("div", {
+      style: {
+        fontSize: 9,
+        color: "#5a5a7a",
+        marginBottom: 3
+      }
+    }, "MY GRADE"), React.createElement("div", {
+      style: {
+        fontSize: 18,
+        fontWeight: 700,
+        color: GRADE_COLOR[pg.myGrade] ?? "var(--dim)"
+      }
+    }, pg.myGrade || "—")), (pd === null || pd === void 0 ? void 0 : pd.perf) != null && React.createElement("div", {
+      style: {
+        textAlign: "center"
+      }
+    }, React.createElement("div", {
+      style: {
+        fontSize: 9,
+        color: "#5a5a7a",
+        marginBottom: 3
+      }
+    }, "PERFORMANCE"), React.createElement("div", {
+      style: {
+        fontSize: 18,
+        fontWeight: 700,
+        color: "#d4aa50"
+      }
+    }, pd.perf.toFixed(1))), (pd === null || pd === void 0 ? void 0 : pd.quad) && React.createElement("div", {
+      style: {
+        textAlign: "center"
+      }
+    }, React.createElement("div", {
+      style: {
+        fontSize: 9,
+        color: "#5a5a7a",
+        marginBottom: 3
+      }
+    }, "QUADRANT"), React.createElement("div", {
+      style: {
+        fontSize: 11,
+        fontWeight: 600,
+        color: QUAD_COLORS[pd.quad] ?? "#808098"
+      }
+    }, pd.quad))))));
+  })());
+}
+function GradeSelect(_ref20) {
+  let cls = _ref20.cls,
+    value = _ref20.value,
+    onChange = _ref20.onChange;
   return React.createElement("select", {
     className: cls,
     value: value,
@@ -1260,23 +2025,23 @@ function GradeSelect(_ref12) {
     }
   }, g || "—")));
 }
-function MobileCardItem(_ref13) {
-  var _card$card_faces4, _card$card_faces$2, _card$card_faces$face3, _card$type_line3;
-  let card = _ref13.card,
-    grade = _ref13.grade,
-    onUpdate = _ref13.onUpdate;
-  const _useState9 = useState(false),
-    _useState0 = _slicedToArray(_useState9, 2),
-    expanded = _useState0[0],
-    setExpanded = _useState0[1];
-  const _useState1 = useState(false),
-    _useState10 = _slicedToArray(_useState1, 2),
-    bigImg = _useState10[0],
-    setBigImg = _useState10[1];
-  const _useState11 = useState(0),
-    _useState12 = _slicedToArray(_useState11, 2),
-    face = _useState12[0],
-    setFace = _useState12[1];
+function MobileCardItem(_ref21) {
+  var _card$card_faces4, _card$card_faces$2, _card$card_faces$face3, _card$type_line4;
+  let card = _ref21.card,
+    grade = _ref21.grade,
+    onUpdate = _ref21.onUpdate;
+  const _useState13 = useState(false),
+    _useState14 = _slicedToArray(_useState13, 2),
+    expanded = _useState14[0],
+    setExpanded = _useState14[1];
+  const _useState15 = useState(false),
+    _useState16 = _slicedToArray(_useState15, 2),
+    bigImg = _useState16[0],
+    setBigImg = _useState16[1];
+  const _useState17 = useState(0),
+    _useState18 = _slicedToArray(_useState17, 2),
+    face = _useState18[0],
+    setFace = _useState18[1];
   const ck = getColorKey(card);
   const hasDFC = ((_card$card_faces4 = card.card_faces) === null || _card$card_faces4 === void 0 ? void 0 : _card$card_faces4.length) >= 2 && ((_card$card_faces$2 = card.card_faces[1]) === null || _card$card_faces$2 === void 0 ? void 0 : _card$card_faces$2.image_uris);
   const img = hasDFC ? (_card$card_faces$face3 = card.card_faces[face]) === null || _card$card_faces$face3 === void 0 || (_card$card_faces$face3 = _card$card_faces$face3.image_uris) === null || _card$card_faces$face3 === void 0 ? void 0 : _card$card_faces$face3.normal : getImageUrl(card);
@@ -1309,7 +2074,7 @@ function MobileCardItem(_ref13) {
     }
   })), React.createElement("div", {
     className: "mc-meta"
-  }, (_card$type_line3 = card.type_line) === null || _card$type_line3 === void 0 || (_card$type_line3 = _card$type_line3.split("—")[0]) === null || _card$type_line3 === void 0 ? void 0 : _card$type_line3.trim(), " · ", React.createElement("span", {
+  }, (_card$type_line4 = card.type_line) === null || _card$type_line4 === void 0 || (_card$type_line4 = _card$type_line4.split("—")[0]) === null || _card$type_line4 === void 0 ? void 0 : _card$type_line4.trim(), " · ", React.createElement("span", {
     style: {
       color: RARITY_COLORS[card.rarity],
       fontWeight: 600
@@ -1455,28 +2220,28 @@ function MobileCardItem(_ref13) {
     }
   }, tag.label))))))))));
 }
-function ImportPanel(_ref14) {
-  let cards = _ref14.cards,
-    grades = _ref14.grades,
-    selectedSet = _ref14.selectedSet,
-    fmt17l = _ref14.fmt17l,
-    setFmt17l = _ref14.setFmt17l,
-    meta = _ref14.meta,
-    setMeta = _ref14.setMeta,
-    onGradesUpdate = _ref14.onGradesUpdate,
-    mobile = _ref14.mobile;
-  const _useState13 = useState(""),
-    _useState14 = _slicedToArray(_useState13, 2),
-    msg = _useState14[0],
-    setMsg = _useState14[1];
-  const _useState15 = useState("17lands"),
-    _useState16 = _slicedToArray(_useState15, 2),
-    source = _useState16[0],
-    setSource = _useState16[1];
-  const _useState17 = useState("auto"),
-    _useState18 = _slicedToArray(_useState17, 2),
-    target = _useState18[0],
-    setTarget = _useState18[1];
+function ImportPanel(_ref22) {
+  let cards = _ref22.cards,
+    grades = _ref22.grades,
+    selectedSet = _ref22.selectedSet,
+    fmt17l = _ref22.fmt17l,
+    setFmt17l = _ref22.setFmt17l,
+    meta = _ref22.meta,
+    setMeta = _ref22.setMeta,
+    onGradesUpdate = _ref22.onGradesUpdate,
+    mobile = _ref22.mobile;
+  const _useState19 = useState(""),
+    _useState20 = _slicedToArray(_useState19, 2),
+    msg = _useState20[0],
+    setMsg = _useState20[1];
+  const _useState21 = useState("17lands"),
+    _useState22 = _slicedToArray(_useState21, 2),
+    source = _useState22[0],
+    setSource = _useState22[1];
+  const _useState23 = useState("auto"),
+    _useState24 = _slicedToArray(_useState23, 2),
+    target = _useState24[0],
+    setTarget = _useState24[1];
   const resolvedTarget = target === "auto" ? source === "17lands" ? "performance" : "expert" : target;
   const importCSV = text => {
     const lines = text.trim().split("\n").filter(l => l.trim());
@@ -1557,10 +2322,10 @@ function ImportPanel(_ref14) {
   };
   const flush = which => {
     const next = {};
-    for (const _ref15 of Object.entries(grades)) {
-      var _ref16 = _slicedToArray(_ref15, 2);
-      const id = _ref16[0];
-      const g = _ref16[1];
+    for (const _ref23 of Object.entries(grades)) {
+      var _ref24 = _slicedToArray(_ref23, 2);
+      const id = _ref24[0];
+      const g = _ref24[1];
       const updated = {
         ...g
       };
@@ -1585,10 +2350,10 @@ function ImportPanel(_ref14) {
   };
   const srcButtons = React.createElement("div", {
     className: "l17-fmt"
-  }, [["17lands", "17Lands"], ["aetherhub", "AetherHub"], ["manual", "Manual"]].map(_ref17 => {
-    let _ref18 = _slicedToArray(_ref17, 2),
-      val = _ref18[0],
-      lbl = _ref18[1];
+  }, [["17lands", "17Lands"], ["aetherhub", "AetherHub"], ["manual", "Manual"]].map(_ref25 => {
+    let _ref26 = _slicedToArray(_ref25, 2),
+      val = _ref26[0],
+      lbl = _ref26[1];
     return React.createElement("button", {
       key: val,
       className: source === val ? "active" : "",
@@ -1597,10 +2362,10 @@ function ImportPanel(_ref14) {
   }));
   const fmt17lButtons = source === "17lands" && React.createElement("div", {
     className: "l17-fmt"
-  }, [["PremierDraft", "Premier"], ["QuickDraft", "Quick"], ["TradDraft", "Trad"]].map(_ref19 => {
-    let _ref20 = _slicedToArray(_ref19, 2),
-      val = _ref20[0],
-      lbl = _ref20[1];
+  }, [["PremierDraft", "Premier"], ["QuickDraft", "Quick"], ["TradDraft", "Trad"]].map(_ref27 => {
+    let _ref28 = _slicedToArray(_ref27, 2),
+      val = _ref28[0],
+      lbl = _ref28[1];
     return React.createElement("button", {
       key: val,
       className: fmt17l === val ? "active" : "",
@@ -1609,10 +2374,10 @@ function ImportPanel(_ref14) {
   }));
   const targetButtons = React.createElement("div", {
     className: "l17-fmt"
-  }, [["auto", "Auto"], ["expert", "Expert"], ["performance", "Perf"]].map(_ref21 => {
-    let _ref22 = _slicedToArray(_ref21, 2),
-      val = _ref22[0],
-      lbl = _ref22[1];
+  }, [["auto", "Auto"], ["expert", "Expert"], ["performance", "Perf"]].map(_ref29 => {
+    let _ref30 = _slicedToArray(_ref29, 2),
+      val = _ref30[0],
+      lbl = _ref30[1];
     return React.createElement("button", {
       key: val,
       className: target === val ? "active" : "",
@@ -1677,26 +2442,30 @@ function ImportPanel(_ref14) {
     }
   }, metaRow("expert", "Expert"), metaRow("performance", "Perf")));
 }
-function DraftLab(_ref23) {
-  let user = _ref23.user;
+function DraftLab(_ref31) {
+  let user = _ref31.user;
   const isMobile = useIsMobile();
   const didFirstSync = useRef(false);
-  const _useState19 = useState(() => localStorage.getItem("draft-lab-theme") || "auto"),
-    _useState20 = _slicedToArray(_useState19, 2),
-    theme = _useState20[0],
-    setTheme = _useState20[1];
-  const _useState21 = useState(false),
-    _useState22 = _slicedToArray(_useState21, 2),
-    showImport = _useState22[0],
-    setShowImport = _useState22[1];
-  const _useState23 = useState(false),
-    _useState24 = _slicedToArray(_useState23, 2),
-    showExport = _useState24[0],
-    setShowExport = _useState24[1];
-  const _useState25 = useState("PremierDraft"),
+  const _useState25 = useState(() => localStorage.getItem("draft-lab-theme") || "auto"),
     _useState26 = _slicedToArray(_useState25, 2),
-    fmt17l = _useState26[0],
-    setFmt17l = _useState26[1];
+    theme = _useState26[0],
+    setTheme = _useState26[1];
+  const _useState27 = useState(false),
+    _useState28 = _slicedToArray(_useState27, 2),
+    showAnalytics = _useState28[0],
+    setShowAnalytics = _useState28[1];
+  const _useState29 = useState(false),
+    _useState30 = _slicedToArray(_useState29, 2),
+    showImport = _useState30[0],
+    setShowImport = _useState30[1];
+  const _useState31 = useState(false),
+    _useState32 = _slicedToArray(_useState31, 2),
+    showExport = _useState32[0],
+    setShowExport = _useState32[1];
+  const _useState33 = useState("PremierDraft"),
+    _useState34 = _slicedToArray(_useState33, 2),
+    fmt17l = _useState34[0],
+    setFmt17l = _useState34[1];
   const importRef = useRef(null);
   const exportRef = useRef(null);
   useEffect(() => {
@@ -1715,117 +2484,117 @@ function DraftLab(_ref23) {
     document.addEventListener("mousedown", h);
     return () => document.removeEventListener("mousedown", h);
   }, [showExport]);
-  const _useState27 = useState(null),
-    _useState28 = _slicedToArray(_useState27, 2),
-    importMeta = _useState28[0],
-    setImportMeta = _useState28[1];
-  const _useState29 = useState([]),
-    _useState30 = _slicedToArray(_useState29, 2),
-    sets = _useState30[0],
-    setSets = _useState30[1];
-  const _useState31 = useState(null),
-    _useState32 = _slicedToArray(_useState31, 2),
-    selectedSet = _useState32[0],
-    setSelectedSet = _useState32[1];
-  const _useState33 = useState([]),
-    _useState34 = _slicedToArray(_useState33, 2),
-    cards = _useState34[0],
-    setCards = _useState34[1];
-  const _useState35 = useState({}),
+  const _useState35 = useState(null),
     _useState36 = _slicedToArray(_useState35, 2),
-    grades = _useState36[0],
-    setGrades = _useState36[1];
-  const _useState37 = useState(false),
+    importMeta = _useState36[0],
+    setImportMeta = _useState36[1];
+  const _useState37 = useState([]),
     _useState38 = _slicedToArray(_useState37, 2),
-    loading = _useState38[0],
-    setLoading = _useState38[1];
-  const _useState39 = useState(""),
+    sets = _useState38[0],
+    setSets = _useState38[1];
+  const _useState39 = useState(null),
     _useState40 = _slicedToArray(_useState39, 2),
-    loadMsg = _useState40[0],
-    setLoadMsg = _useState40[1];
-  const _useState41 = useState(null),
+    selectedSet = _useState40[0],
+    setSelectedSet = _useState40[1];
+  const _useState41 = useState([]),
     _useState42 = _slicedToArray(_useState41, 2),
-    error = _useState42[0],
-    setError = _useState42[1];
-  const _useState43 = useState("color"),
+    cards = _useState42[0],
+    setCards = _useState42[1];
+  const _useState43 = useState({}),
     _useState44 = _slicedToArray(_useState43, 2),
-    sortCol = _useState44[0],
-    setSortCol = _useState44[1];
-  const _useState45 = useState("asc"),
+    grades = _useState44[0],
+    setGrades = _useState44[1];
+  const _useState45 = useState(false),
     _useState46 = _slicedToArray(_useState45, 2),
-    sortDir = _useState46[0],
-    setSortDir = _useState46[1];
-  const _useState47 = useState("color"),
+    loading = _useState46[0],
+    setLoading = _useState46[1];
+  const _useState47 = useState(""),
     _useState48 = _slicedToArray(_useState47, 2),
-    mobileSort = _useState48[0],
-    setMobileSort = _useState48[1];
-  const _useState49 = useState("all"),
+    loadMsg = _useState48[0],
+    setLoadMsg = _useState48[1];
+  const _useState49 = useState(null),
     _useState50 = _slicedToArray(_useState49, 2),
-    filterColor = _useState50[0],
-    setFilterColor = _useState50[1];
-  const _useState51 = useState("all"),
+    error = _useState50[0],
+    setError = _useState50[1];
+  const _useState51 = useState("color"),
     _useState52 = _slicedToArray(_useState51, 2),
-    filterRarity = _useState52[0],
-    setFilterRarity = _useState52[1];
-  const _useState53 = useState(""),
+    sortCol = _useState52[0],
+    setSortCol = _useState52[1];
+  const _useState53 = useState("asc"),
     _useState54 = _slicedToArray(_useState53, 2),
-    filterSearch = _useState54[0],
-    setFilterSearch = _useState54[1];
-  const _useState55 = useState("all"),
+    sortDir = _useState54[0],
+    setSortDir = _useState54[1];
+  const _useState55 = useState("color"),
     _useState56 = _slicedToArray(_useState55, 2),
-    filterGraded = _useState56[0],
-    setFilterGraded = _useState56[1];
+    mobileSort = _useState56[0],
+    setMobileSort = _useState56[1];
   const _useState57 = useState("all"),
     _useState58 = _slicedToArray(_useState57, 2),
-    filterQuadrant = _useState58[0],
-    setFilterQuadrant = _useState58[1];
-  const _useState59 = useState([]),
+    filterColor = _useState58[0],
+    setFilterColor = _useState58[1];
+  const _useState59 = useState("all"),
     _useState60 = _slicedToArray(_useState59, 2),
-    filterTags = _useState60[0],
-    setFilterTags = _useState60[1];
-  const _useState61 = useState(false),
+    filterRarity = _useState60[0],
+    setFilterRarity = _useState60[1];
+  const _useState61 = useState(""),
     _useState62 = _slicedToArray(_useState61, 2),
-    showTagFilter = _useState62[0],
-    setShowTagFilter = _useState62[1];
-  const _useState63 = useState(false),
+    filterSearch = _useState62[0],
+    setFilterSearch = _useState62[1];
+  const _useState63 = useState("all"),
     _useState64 = _slicedToArray(_useState63, 2),
-    showMobF = _useState64[0],
-    setShowMobF = _useState64[1];
-  const _useState65 = useState(null),
+    filterGraded = _useState64[0],
+    setFilterGraded = _useState64[1];
+  const _useState65 = useState("all"),
     _useState66 = _slicedToArray(_useState65, 2),
-    lightboxIndex = _useState66[0],
-    setLightboxIndex = _useState66[1];
-  const _useState67 = useState(false),
+    filterQuadrant = _useState66[0],
+    setFilterQuadrant = _useState66[1];
+  const _useState67 = useState([]),
     _useState68 = _slicedToArray(_useState67, 2),
-    showGuide = _useState68[0],
-    setShowGuide = _useState68[1];
-  const _useState69 = useState(""),
+    filterTags = _useState68[0],
+    setFilterTags = _useState68[1];
+  const _useState69 = useState(false),
     _useState70 = _slicedToArray(_useState69, 2),
-    syncStatus = _useState70[0],
-    setSyncStatus = _useState70[1];
+    showTagFilter = _useState70[0],
+    setShowTagFilter = _useState70[1];
   const _useState71 = useState(false),
     _useState72 = _slicedToArray(_useState71, 2),
-    showLegal = _useState72[0],
-    setShowLegal = _useState72[1];
+    showMobF = _useState72[0],
+    setShowMobF = _useState72[1];
   const _useState73 = useState(null),
     _useState74 = _slicedToArray(_useState73, 2),
-    hovered = _useState74[0],
-    setHovered = _useState74[1];
-  const _useState75 = useState({
+    lightboxIndex = _useState74[0],
+    setLightboxIndex = _useState74[1];
+  const _useState75 = useState(false),
+    _useState76 = _slicedToArray(_useState75, 2),
+    showGuide = _useState76[0],
+    setShowGuide = _useState76[1];
+  const _useState77 = useState(""),
+    _useState78 = _slicedToArray(_useState77, 2),
+    syncStatus = _useState78[0],
+    setSyncStatus = _useState78[1];
+  const _useState79 = useState(false),
+    _useState80 = _slicedToArray(_useState79, 2),
+    showLegal = _useState80[0],
+    setShowLegal = _useState80[1];
+  const _useState81 = useState(null),
+    _useState82 = _slicedToArray(_useState81, 2),
+    hovered = _useState82[0],
+    setHovered = _useState82[1];
+  const _useState83 = useState({
       x: 0,
       y: 0
     }),
-    _useState76 = _slicedToArray(_useState75, 2),
-    hoverPos = _useState76[0],
-    setHoverPos = _useState76[1];
-  const _useState77 = useState(""),
-    _useState78 = _slicedToArray(_useState77, 2),
-    setSearch = _useState78[0],
-    setSetSearch = _useState78[1];
-  const _useState79 = useState(false),
-    _useState80 = _slicedToArray(_useState79, 2),
-    showSetDD = _useState80[0],
-    setShowSetDD = _useState80[1];
+    _useState84 = _slicedToArray(_useState83, 2),
+    hoverPos = _useState84[0],
+    setHoverPos = _useState84[1];
+  const _useState85 = useState(""),
+    _useState86 = _slicedToArray(_useState85, 2),
+    setSearch = _useState86[0],
+    setSetSearch = _useState86[1];
+  const _useState87 = useState(false),
+    _useState88 = _slicedToArray(_useState87, 2),
+    showSetDD = _useState88[0],
+    setShowSetDD = _useState88[1];
   useEffect(() => {
     if (theme === "auto") document.documentElement.removeAttribute("data-theme");else document.documentElement.setAttribute("data-theme", theme);
   }, [theme]);
@@ -1920,6 +2689,7 @@ function DraftLab(_ref23) {
   const loadSet = async set => {
     store.set("draft-lab-last-set", set.code);
     setLightboxIndex(null);
+    setShowAnalytics(false);
     setSelectedSet(set);
     setCards([]);
     setLoading(true);
@@ -2023,10 +2793,10 @@ function DraftLab(_ref23) {
         const data = parsed.data ?? parsed;
         let count = 0;
         const restoredGrades = {};
-        for (const _ref24 of Object.entries(data)) {
-          var _ref25 = _slicedToArray(_ref24, 2);
-          const key = _ref25[0];
-          const value = _ref25[1];
+        for (const _ref32 of Object.entries(data)) {
+          var _ref33 = _slicedToArray(_ref32, 2);
+          const key = _ref33[0];
+          const value = _ref33[1];
           if ((key.startsWith("draft-grades-") || key.startsWith("draft-import-meta-") || key === "draft-lab-theme") && typeof value === "string") {
             localStorage.setItem(key, value);
             count++;
@@ -2069,15 +2839,23 @@ function DraftLab(_ref23) {
   };
   const toggleFilterTag = id => setFilterTags(prev => prev.includes(id) ? prev.filter(t => t !== id) : [...prev, id]);
   const hasFilters = filterColor !== "all" || filterRarity !== "all" || filterSearch || filterGraded !== "all" || filterQuadrant !== "all" || filterTags.length > 0;
-  const gradedCount = cards.filter(c => {
-    var _grades$c$id;
-    return (_grades$c$id = grades[c.id]) === null || _grades$c$id === void 0 ? void 0 : _grades$c$id.myGrade;
+  const gradableCards = useMemo(() => cards.filter(c => !isBasicLand(c)), [cards]);
+  const gradedCount = gradableCards.filter(c => {
+    var _grades$c$id2;
+    return (_grades$c$id2 = grades[c.id]) === null || _grades$c$id2 === void 0 ? void 0 : _grades$c$id2.myGrade;
   }).length;
   const gradeCounts = {};
   for (const g of Object.values(grades)) {
     if (g.myGrade) gradeCounts[g.myGrade] = (gradeCounts[g.myGrade] ?? 0) + 1;
   }
-  const pct = cards.length ? Math.round(gradedCount / cards.length * 100) : 0;
+  const pct = gradableCards.length ? Math.round(gradedCount / gradableCards.length * 100) : 0;
+  const analyticsUnlocked = pct >= 50 && (cards.some(c => {
+    var _grades$c$id3;
+    return ((_grades$c$id3 = grades[c.id]) === null || _grades$c$id3 === void 0 ? void 0 : _grades$c$id3.expert_rating) != null;
+  }) || cards.some(c => {
+    var _grades$c$id4;
+    return ((_grades$c$id4 = grades[c.id]) === null || _grades$c$id4 === void 0 ? void 0 : _grades$c$id4.performance_rating) != null;
+  }));
   const filtered = useMemo(() => cards.filter(c => {
     const ck = getColorKey(c);
     const g = grades[c.id] ?? {};
@@ -2139,12 +2917,12 @@ function DraftLab(_ref23) {
     return 0;
   }), [filtered, grades, activeSort, sortDir, isMobile]);
   const hasExpertData = cards.some(c => {
-    var _grades$c$id2;
-    return ((_grades$c$id2 = grades[c.id]) === null || _grades$c$id2 === void 0 ? void 0 : _grades$c$id2.expert_rating) != null;
+    var _grades$c$id5;
+    return ((_grades$c$id5 = grades[c.id]) === null || _grades$c$id5 === void 0 ? void 0 : _grades$c$id5.expert_rating) != null;
   });
   const hasPerformanceData = cards.some(c => {
-    var _grades$c$id3;
-    return ((_grades$c$id3 = grades[c.id]) === null || _grades$c$id3 === void 0 ? void 0 : _grades$c$id3.performance_rating) != null;
+    var _grades$c$id6;
+    return ((_grades$c$id6 = grades[c.id]) === null || _grades$c$id6 === void 0 ? void 0 : _grades$c$id6.performance_rating) != null;
   });
   return React.createElement("div", {
     className: "app",
@@ -2185,7 +2963,7 @@ function DraftLab(_ref23) {
     className: "set-btn-label"
   }, selectedSet ? React.createElement(React.Fragment, null, selectedSet.name, " ", React.createElement("span", {
     style: {
-      color: "var(--dimmer)",
+      color: "#5a5a7a",
       fontSize: 9
     }
   }, "\xB7 ", selectedSet.code.toUpperCase())) : "Select a Set"), React.createElement("span", {
@@ -2221,7 +2999,20 @@ function DraftLab(_ref23) {
     }, s.code), React.createElement("span", {
       className: "si-date"
     }, (_s$released_at = s.released_at) === null || _s$released_at === void 0 ? void 0 : _s$released_at.slice(0, 7)));
-  }))))), React.createElement("div", {
+  }))), selectedSet && React.createElement("img", {
+    src: `https://svgs.scryfall.io/sets/${selectedSet.code.toLowerCase()}.svg`,
+    alt: "",
+    onError: e => {
+      e.target.style.display = "none";
+    },
+    style: {
+      height: isMobile ? 34 : 22,
+      width: isMobile ? 34 : 22,
+      flexShrink: 0,
+      filter: "brightness(0) saturate(100%) invert(72%) sepia(54%) saturate(421%) hue-rotate(3deg)",
+      opacity: 0.85
+    }
+  }))), React.createElement("div", {
     className: "hdr-right"
   }, selectedSet && !isMobile && React.createElement("div", {
     className: "l17-wrap",
@@ -2298,7 +3089,7 @@ function DraftLab(_ref23) {
     className: "btn desktop-only",
     style: {
       fontSize: 9,
-      color: "var(--dimmer)"
+      color: "#5a5a7a"
     },
     title: user.email,
     onClick: () => sb.auth.signOut()
@@ -2315,6 +3106,15 @@ function DraftLab(_ref23) {
     onClick: () => setShowGuide(true),
     title: "Grade guide"
   }, "\u2696"), React.createElement("div", {
+    className: "icon-pipe"
+  }), React.createElement("button", {
+    className: `icon-bar-btn${showAnalytics ? " active" : ""}${!analyticsUnlocked ? " faint" : ""}`,
+    onClick: () => analyticsUnlocked && setShowAnalytics(v => !v),
+    title: analyticsUnlocked ? "Analytics" : "Grade 50%+ of cards and import community ratings to unlock",
+    style: {
+      cursor: analyticsUnlocked ? "pointer" : "default"
+    }
+  }, "\uD83D\uDCA1"), React.createElement("div", {
     className: "icon-pipe"
   }), React.createElement("button", {
     className: "icon-bar-btn",
@@ -2370,10 +3170,10 @@ function DraftLab(_ref23) {
     className: "fm-row"
   }, React.createElement("span", {
     className: "fl"
-  }, "Rarity:"), [["all", "All"], ["common", "C"], ["uncommon", "U"], ["rare", "R"], ["mythic", "M"]].map(_ref26 => {
-    let _ref27 = _slicedToArray(_ref26, 2),
-      full = _ref27[0],
-      abbr = _ref27[1];
+  }, "Rarity:"), [["all", "All"], ["common", "C"], ["uncommon", "U"], ["rare", "R"], ["mythic", "M"]].map(_ref34 => {
+    let _ref35 = _slicedToArray(_ref34, 2),
+      full = _ref35[0],
+      abbr = _ref35[1];
     return React.createElement("button", {
       key: full,
       className: `fb${filterRarity === full ? " active" : ""}`,
@@ -2484,7 +3284,7 @@ function DraftLab(_ref23) {
     style: {
       flex: 1,
       borderColor: "var(--dimmer)",
-      color: "var(--dimmer)"
+      color: "#5a5a7a"
     },
     onClick: () => {
       sb.auth.signOut();
@@ -2534,7 +3334,7 @@ function DraftLab(_ref23) {
     style: {
       width: `${pct}%`
     }
-  }))), cards.length > 0 && React.createElement("div", {
+  }))), !showAnalytics && cards.length > 0 && React.createElement("div", {
     className: "filters-desktop desktop-only"
   }, React.createElement("span", {
     className: "fl"
@@ -2597,7 +3397,15 @@ function DraftLab(_ref23) {
     style: {
       marginLeft: "auto"
     }
-  }, sorted.length, " shown")), (loading || error || cards.length === 0) && React.createElement("div", {
+  }, sorted.length, " shown")), showAnalytics && analyticsUnlocked && React.createElement(AnalyticsView, {
+    cards: cards,
+    grades: grades,
+    isMobile: isMobile,
+    onCardClick: card => {
+      const idx = sorted.indexOf(card);
+      if (idx !== -1) setLightboxIndex(idx);
+    }
+  }), !showAnalytics && (loading || error || cards.length === 0) && React.createElement("div", {
     className: "center"
   }, loading ? React.createElement(React.Fragment, null, React.createElement("div", {
     className: "spin"
@@ -2609,12 +3417,12 @@ function DraftLab(_ref23) {
     className: "empty-title"
   }, "Draft Lab"), React.createElement("div", {
     className: "empty-sub"
-  }, "Choose a set above to start evaluating cards"))), !loading && !error && cards.length > 0 && React.createElement("div", {
+  }, "Choose a set above to start evaluating cards"))), !showAnalytics && !loading && !error && cards.length > 0 && React.createElement("div", {
     className: "tbl-wrap desktop-only"
-  }, React.createElement("table", null, React.createElement("thead", null, React.createElement("tr", null, [["name", "Card"], ["cmc", "Cost"], [null, "Type"], ["rarity", "Rar"], ["color", "Color"], ["myGrade", "My Grade"], ["expert", "Expert"], ["performance", "Perf"], [null, "Δ"], [null, "Sunset"], [null, "Notes"]].map(_ref28 => {
-    let _ref29 = _slicedToArray(_ref28, 2),
-      col = _ref29[0],
-      lbl = _ref29[1];
+  }, React.createElement("table", null, React.createElement("thead", null, React.createElement("tr", null, [["name", "Card"], ["cmc", "Cost"], [null, "Type"], ["rarity", "Rar"], ["color", "Color"], ["myGrade", "My Grade"], ["expert", "Expert"], ["performance", "Perf"], [null, "Δ"], [null, "Sunset"], [null, "Notes"]].map(_ref36 => {
+    let _ref37 = _slicedToArray(_ref36, 2),
+      col = _ref37[0],
+      lbl = _ref37[1];
     return React.createElement("th", {
       key: lbl,
       className: col && sortCol === col ? "sorted" : "",
@@ -2624,7 +3432,7 @@ function DraftLab(_ref23) {
       } : {}
     }, lbl, col && sortCol === col ? sortDir === "asc" ? " ▲" : " ▼" : "");
   }))), React.createElement("tbody", null, sorted.map(card => {
-    var _card$type_line4;
+    var _card$type_line5;
     const g = grades[card.id] ?? {};
     const ck = getColorKey(card);
     const q = calcQuadrant(g);
@@ -2656,7 +3464,7 @@ function DraftLab(_ref23) {
       className: "mana"
     }, card.mana_cost ? renderMana(card.mana_cost) : "—")), React.createElement("td", null, React.createElement("span", {
       className: "typ"
-    }, (_card$type_line4 = card.type_line) === null || _card$type_line4 === void 0 || (_card$type_line4 = _card$type_line4.split("—")[0]) === null || _card$type_line4 === void 0 ? void 0 : _card$type_line4.trim())), React.createElement("td", null, React.createElement("span", {
+    }, (_card$type_line5 = card.type_line) === null || _card$type_line5 === void 0 || (_card$type_line5 = _card$type_line5.split("—")[0]) === null || _card$type_line5 === void 0 ? void 0 : _card$type_line5.trim())), React.createElement("td", null, React.createElement("span", {
       className: "rar-dot",
       style: {
         background: RARITY_COLORS[card.rarity],
@@ -2703,7 +3511,7 @@ function DraftLab(_ref23) {
         updateGrade(card.id, "tags", cur.includes(id) ? cur.filter(t => t !== id) : [...cur, id]);
       }
     })));
-  })))), !loading && !error && cards.length > 0 && React.createElement("div", {
+  })))), !showAnalytics && !loading && !error && cards.length > 0 && React.createElement("div", {
     className: "card-list mobile-only"
   }, sorted.map(card => React.createElement(MobileCardItem, {
     key: card.id,
@@ -2741,21 +3549,21 @@ function DraftLab(_ref23) {
     className: "guide-h1"
   }, "Grade Reference"), React.createElement("div", {
     className: "guide-sub"
-  }, "Half-grade anchors for Limited evaluation"), GRADE_TIERS.map(_ref30 => {
-    let tier = _ref30.tier,
-      rows = _ref30.rows;
+  }, "Half-grade anchors for Limited evaluation"), GRADE_TIERS.map(_ref38 => {
+    let tier = _ref38.tier,
+      rows = _ref38.rows;
     return React.createElement("div", {
       key: tier,
       className: "guide-tier"
     }, React.createElement("div", {
       className: "guide-tier-hdr"
-    }, tier), rows.map(_ref31 => {
-      let _ref32 = _slicedToArray(_ref31, 5),
-        grade = _ref32[0],
-        bg = _ref32[1],
-        fg = _ref32[2],
-        pick = _ref32[3],
-        desc = _ref32[4];
+    }, tier), rows.map(_ref39 => {
+      let _ref40 = _slicedToArray(_ref39, 5),
+        grade = _ref40[0],
+        bg = _ref40[1],
+        fg = _ref40[2],
+        pick = _ref40[3],
+        desc = _ref40[4];
       return React.createElement("div", {
         key: grade,
         className: "guide-row"
@@ -2814,7 +3622,7 @@ function DraftLab(_ref23) {
     className: "guide-desc",
     style: {
       marginTop: 16,
-      color: "var(--dimmer)",
+      color: "#5a5a7a",
       fontSize: 10
     }
   }, "Draft Lab source code is released under the MIT License.", " ", React.createElement("a", {
@@ -2827,17 +3635,17 @@ function DraftLab(_ref23) {
     }
   }, "View on GitHub \u2192")))));
 }
-function LoginScreen(_ref33) {
-  let onSignIn = _ref33.onSignIn,
-    loading = _ref33.loading;
-  const _useState81 = useState(() => {
+function LoginScreen(_ref41) {
+  let onSignIn = _ref41.onSignIn,
+    loading = _ref41.loading;
+  const _useState89 = useState(() => {
       const saved = localStorage.getItem("draft-lab-theme");
       if (saved && saved !== "auto") return saved;
       return window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
     }),
-    _useState82 = _slicedToArray(_useState81, 2),
-    theme = _useState82[0],
-    setTheme = _useState82[1];
+    _useState90 = _slicedToArray(_useState89, 2),
+    theme = _useState90[0],
+    setTheme = _useState90[1];
   useEffect(() => {
     document.documentElement.setAttribute("data-theme", theme);
     localStorage.setItem("draft-lab-theme", theme);
@@ -2899,25 +3707,25 @@ function LoginScreen(_ref33) {
   })), "Sign in with Google"))));
 }
 function AuthGate() {
-  const _useState83 = useState(null),
-    _useState84 = _slicedToArray(_useState83, 2),
-    user = _useState84[0],
-    setUser = _useState84[1];
-  const _useState85 = useState(true),
-    _useState86 = _slicedToArray(_useState85, 2),
-    authLoading = _useState86[0],
-    setAuthLoading = _useState86[1];
-  const _useState87 = useState(false),
-    _useState88 = _slicedToArray(_useState87, 2),
-    signing = _useState88[0],
-    setSigning = _useState88[1];
+  const _useState91 = useState(null),
+    _useState92 = _slicedToArray(_useState91, 2),
+    user = _useState92[0],
+    setUser = _useState92[1];
+  const _useState93 = useState(true),
+    _useState94 = _slicedToArray(_useState93, 2),
+    authLoading = _useState94[0],
+    setAuthLoading = _useState94[1];
+  const _useState95 = useState(false),
+    _useState96 = _slicedToArray(_useState95, 2),
+    signing = _useState96[0],
+    setSigning = _useState96[1];
   useEffect(() => {
     if (!SUPABASE_CONFIGURED) {
       setAuthLoading(false);
       return;
     }
-    sb.auth.getSession().then(_ref34 => {
-      let session = _ref34.data.session;
+    sb.auth.getSession().then(_ref42 => {
+      let session = _ref42.data.session;
       setUser((session === null || session === void 0 ? void 0 : session.user) ?? null);
       setAuthLoading(false);
     }).catch(() => setAuthLoading(false));

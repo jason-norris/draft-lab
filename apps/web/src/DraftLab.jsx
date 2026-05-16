@@ -100,6 +100,9 @@ function migrateGrades(grades) {
 }
 
 // ── Utility functions ────────────────────────────────────────────────────────
+// Basic lands are visible in the card list but excluded from grading totals and analytics (Issue #43)
+const isBasicLand = card => card.type_line?.toLowerCase().startsWith("basic land");
+
 function getColorKey(card) {
   const c = card.colors ?? card.card_faces?.[0]?.colors ?? [];
   if (!c.length) return card.type_line?.toLowerCase().includes("land") ? "L" : "C";
@@ -248,7 +251,7 @@ function ThreeWayDelta({ g }) {
         {rows.map(r => (
           <div key={r.key} title={`${r.title}: ${r.detail}`}
             style={{ display:"flex", alignItems:"center", gap:4, whiteSpace:"nowrap" }}>
-            <span style={{ fontSize:8, color:"var(--dimmer)", minWidth:16, letterSpacing:".02em" }}>{r.key}</span>
+            <span style={{ fontSize:8, color:"#5a5a7a", minWidth:16, letterSpacing:".02em" }}>{r.key}</span>
             <span style={{ fontSize:11, fontWeight:700, color: r.color }}>{r.symbol}</span>
           </div>
         ))}
@@ -259,7 +262,7 @@ function ThreeWayDelta({ g }) {
           background:"var(--s1)", border:"1px solid var(--b2)",
           padding:"10px 12px", boxShadow:"0 8px 24px rgba(0,0,0,.3)", minWidth:180
         }}>
-          <div style={{ fontSize:9, color:"var(--dimmer)", textTransform:"uppercase", letterSpacing:".1em", marginBottom:8 }}>Comparison</div>
+          <div style={{ fontSize:9, color:"#5a5a7a", textTransform:"uppercase", letterSpacing:".1em", marginBottom:8 }}>Comparison</div>
           {[
             { label:"My Grade",    val: me,   grade: g.myGrade },
             { label:"Expert",      val: exp,  grade: null },
@@ -337,7 +340,7 @@ function TagCell({ tags = [], onToggle }) {
             : null;
         })}
         {overflow > 0 && (
-          <span style={{ fontSize:8, color:"var(--dimmer)", whiteSpace:"nowrap" }}>+{overflow}</span>
+          <span style={{ fontSize:8, color:"#5a5a7a", whiteSpace:"nowrap" }}>+{overflow}</span>
         )}
         <button className="tag-add-btn" onClick={() => setOpen(v => !v)}>
           {open ? "✕" : tags.length ? "edit" : "+ tag"}
@@ -352,7 +355,7 @@ function TagCell({ tags = [], onToggle }) {
         }}>
           {TAG_GROUPS.map(({ label, ids }) => (
             <div key={label} style={{ marginBottom:8 }}>
-              <div style={{ fontSize:8, color:"var(--dimmer)", marginBottom:4, textTransform:"uppercase", letterSpacing:".1em" }}>{label}</div>
+              <div style={{ fontSize:8, color:"#5a5a7a", marginBottom:4, textTransform:"uppercase", letterSpacing:".1em" }}>{label}</div>
               <div className="tag-chips">
                 {ids.map(id => {
                   const tag = TAGS.find(t => t.id === id);
@@ -379,7 +382,7 @@ function TagFilterPanel({ filterTags, onToggle, onClear }) {
       <div className="tag-filter-hdr">Filter by tag — any of</div>
       {TAG_GROUPS.map(({ label, ids }) => (
         <div key={label}>
-          <div style={{ fontSize:8, color:"var(--dimmer)", marginBottom:4, textTransform:"uppercase", letterSpacing:".1em" }}>{label}</div>
+          <div style={{ fontSize:8, color:"#5a5a7a", marginBottom:4, textTransform:"uppercase", letterSpacing:".1em" }}>{label}</div>
           <div className="tag-chips">
             {ids.map(id => {
               const tag = TAGS.find(t => t.id === id);
@@ -513,6 +516,354 @@ function CardLightbox({ sorted, lightboxIndex, grades, onUpdate, onClose, onNav 
           </Field>
         </div>
       </div>
+    </div>
+  );
+}
+
+// ── Analytics helpers ────────────────────────────────────────────────────────
+const QUAD_COLORS = { CONSENSUS:"#32a050", MISS:"#e05030", SPOT:"#32a050", FORMAT:"#9c5ef5", VAR:"#e6c800" };
+
+function gradeToNumeric(grade) { return GRADE_NUMERIC[grade] ?? null; }
+
+// Deterministic jitter — same card always gets the same offset so chart is stable across re-renders
+function jitter(cardId, axis, range = 0.12) {
+  let h = 0;
+  const s = cardId + axis;
+  for (let i = 0; i < s.length; i++) h = Math.imul(31, h) + s.charCodeAt(i) | 0;
+  return ((h & 0xFFFF) / 0xFFFF - 0.5) * range * 2;
+}
+
+function classifyQuadrant(myNum, exp, perf, thresh=0.75) {
+  if (myNum == null || exp == null || perf == null) return null;
+  const mePerf  = Math.abs(myNum - perf)  <= thresh;
+  const meExp   = Math.abs(myNum - exp)   <= thresh;
+  const expPerf = Math.abs(exp   - perf)  <= thresh;
+  if (mePerf && meExp)   return "CONSENSUS";
+  if (meExp  && !expPerf) return "FORMAT";
+  if (!meExp && expPerf)  return "MISS";
+  if (mePerf && !meExp)   return "SPOT";
+  return "VAR";
+}
+
+// ── AnalyticsView ─────────────────────────────────────────────────────────────
+const GRADE_ORDER = ["A+","A","A-","B+","B","B-","C+","C","C-","D+","D","F"];
+const SCATTER_MODES = [
+  { id:"meVsPerf",  label:"Me vs Perf",   xKey:"perf",   yKey:"myNum", xLabel:"Performance", yLabel:"My Grade" },
+  { id:"meVsExp",   label:"Me vs Expert", xKey:"exp",    yKey:"myNum", xLabel:"Expert",       yLabel:"My Grade" },
+  { id:"expVsPerf", label:"Expert vs Perf",xKey:"perf",  yKey:"exp",   xLabel:"Performance", yLabel:"Expert" },
+];
+
+function AnalyticsView({ cards, grades, isMobile, onCardClick }) {
+  const [activeTab, setActiveTab]       = useState("distribution");
+  const [scatterMode, setScatterMode]   = useState("meVsPerf");
+  const [previewCard, setPreviewCard]   = useState(null);
+  const chartRef     = useRef(null);
+  const chartInstance = useRef(null);
+
+  // Build analytics dataset — exclude basic lands
+  const dataset = useMemo(() => {
+    return cards
+      .filter(c => !isBasicLand(c) && grades[c.id]?.myGrade)
+      .map(c => {
+        const g = grades[c.id] ?? {};
+        const myNum = gradeToNumeric(g.myGrade);
+        const perf  = g.performance_rating ?? null;
+        const exp   = g.expert_rating ?? null;
+        return { card: c, g, myNum, perf, exp,
+          quad: classifyQuadrant(myNum, exp, perf),
+          colorKey: getColorKey(c) };
+      })
+      .filter(d => d.myNum != null);
+  }, [cards, grades]);
+
+  const withPerf = useMemo(() => dataset.filter(d => d.perf != null), [dataset]);
+
+  // Summary stats
+  const stats = useMemo(() => {
+    if (!withPerf.length) return null;
+    const gaps      = withPerf.map(d => d.myNum - d.perf);
+    const avgGap    = gaps.reduce((a,b) => a+b, 0) / gaps.length;
+    const overrated = withPerf.filter(d => d.myNum > d.perf + 0.75).length;
+    const underrated= withPerf.filter(d => d.myNum < d.perf - 0.75).length;
+    const agreed    = withPerf.filter(d => Math.abs(d.myNum - d.perf) <= 0.5).length;
+    const quads     = { CONSENSUS:0, MISS:0, SPOT:0, FORMAT:0, VAR:0 };
+    withPerf.forEach(d => { if (d.quad) quads[d.quad]++; });
+    return { avgGap, overrated, underrated, agreed, quads, total: withPerf.length };
+  }, [withPerf]);
+
+  const RARITY_SIZE = isMobile
+    ? { common:3, uncommon:4, rare:5, mythic:7 }
+    : { common:4, uncommon:6, rare:9, mythic:12 };
+
+  const destroy = () => { if (chartInstance.current) { chartInstance.current.destroy(); chartInstance.current = null; } };
+
+  // Distribution chart (grade bell curve)
+  useEffect(() => {
+    if (activeTab !== "distribution" || !chartRef.current || !dataset.length) return;
+    destroy();
+    const myCounts  = GRADE_ORDER.map(g => dataset.filter(d => d.g.myGrade === g).length);
+    const perfCounts = GRADE_ORDER.map(g => {
+      const num = GRADE_NUMERIC[g];
+      return withPerf.filter(d => Math.abs(d.perf - num) < 0.4).length;
+    });
+    chartInstance.current = new Chart(chartRef.current.getContext("2d"), {
+      type: "bar",
+      data: {
+        labels: GRADE_ORDER,
+        datasets: [
+          { label:"My Grades", data: myCounts,
+            backgroundColor: GRADE_ORDER.map(g => (GRADE_COLOR[g] || "#888") + "cc"),
+            borderColor: GRADE_ORDER.map(g => GRADE_COLOR[g] || "#888"),
+            borderWidth: 1.5 },
+          { label:"Performance", data: perfCounts, type:"line",
+            borderColor: "rgba(200,168,75,0.7)", backgroundColor:"transparent",
+            borderWidth:2, pointRadius:3, pointBackgroundColor:"rgba(200,168,75,0.7)", tension:0.3 }
+        ]
+      },
+      options: {
+        responsive:true, maintainAspectRatio:true, animation:{duration:400},
+        plugins:{ legend:{ display:true, labels:{ color:"#9090b8", font:{size:10}, boxWidth:12, boxHeight:10 } },
+          tooltip:{ backgroundColor:"#0e0e1c", titleColor:"#d4aa50", bodyColor:"#9090b8",
+            borderColor:"#2e2e4a", borderWidth:1, boxHeight:10, boxWidth:10 } },
+        scales:{
+          x:{ ticks:{color:"#5a5a7a"}, grid:{color:"#22223a"} },
+          y:{ ticks:{color:"#5a5a7a"}, grid:{color:"#22223a"}, beginAtZero:true }
+        }
+      }
+    });
+    return destroy;
+  }, [activeTab, dataset, withPerf]);
+
+  // Scatter chart (three modes)
+  useEffect(() => {
+    if (activeTab !== "scatter" || !chartRef.current || !withPerf.length) return;
+    destroy();
+    const mode = SCATTER_MODES.find(m => m.id === scatterMode) ?? SCATTER_MODES[0];
+    const pts = withPerf.filter(d => d[mode.xKey] != null && d[mode.yKey] != null).map(d => ({
+      x: d[mode.xKey] + jitter(d.card.id, 'x'), y: d[mode.yKey] + jitter(d.card.id, 'y'),
+      card: d.card, g: d.g, quad: d.quad,
+      backgroundColor: (QUAD_COLORS[d.quad] ?? "#808098") + "bb",
+      borderColor: QUAD_COLORS[d.quad] ?? "#808098",
+      radius: RARITY_SIZE[d.card.rarity] ?? 5,
+    }));
+    const avgX = pts.reduce((a,p) => a + p.x, 0) / pts.length;
+    const avgY = pts.reduce((a,p) => a + p.y, 0) / pts.length;
+    const gradeLabel = v => Object.entries(GRADE_NUMERIC).find(([,n]) => Math.abs(n-v)<0.1)?.[0] ?? "";
+    chartInstance.current = new Chart(chartRef.current.getContext("2d"), {
+      type:"scatter",
+      data:{ datasets:[{
+        data: pts,
+        pointBackgroundColor: pts.map(p => p.backgroundColor),
+        pointBorderColor: pts.map(p => p.borderColor),
+        pointRadius: pts.map(p => p.radius),
+        pointHoverRadius: pts.map(p => p.radius + 3),
+        pointHitRadius: 10,
+        pointBorderWidth: 1,
+      }]},
+      options:{
+        responsive:true, maintainAspectRatio:!isMobile, aspectRatio: isMobile ? 1 : 1.5,
+        animation:{duration:400},
+        events: ['mousemove', 'mouseout', 'click', 'touchstart', 'touchmove'],
+        interaction:{ mode:'nearest', intersect:false },
+        layout:{ padding:{ top:20, right:20, bottom:20, left:20 } },
+        plugins:{
+          legend:{display:false},
+          tooltip:{ callbacks:{ label: ctx => {
+            const p = ctx.raw;
+            const xl = mode.xKey === "perf" ? `Perf:${p.x.toFixed(1)}` : mode.xKey === "exp" ? `Exp:${p.x.toFixed(1)}` : `Perf:${p.x.toFixed(1)}`;
+            const yl = mode.yKey === "myNum" ? `Me:${p.g.myGrade}` : `Exp:${p.y.toFixed(1)}`;
+            return [`${p.card.name}`, `${yl}  ${xl}  ${p.quad ?? ""}`];
+          }},
+          backgroundColor:"#0e0e1c", titleColor:"#d4aa50", bodyColor:"#9090b8",
+          borderColor:"#2e2e4a", borderWidth:1},
+        },
+        scales:{
+          x:{ min:0, max:5, title:{display:true, text:mode.xLabel, color:"#5a5a7a", font:{size:10}},
+              ticks:{color:"#5a5a7a", stepSize:0.5, callback: mode.xKey !== "perf" ? gradeLabel : undefined},
+              grid:{color:"#22223a"} },
+          y:{ min:0, max:5, title:{display:true, text:mode.yLabel, color:"#5a5a7a", font:{size:10}},
+              ticks:{color:"#5a5a7a", stepSize:0.5, callback: gradeLabel},
+              grid:{color:"#22223a"} },
+        },
+        onClick:(e, els) => {
+          if (!els.length) return;
+          const p = pts[els[0].index];
+          if (!p.card) return;
+          if (isMobile) setPreviewCard(p.card);
+          else if (onCardClick) onCardClick(p.card);
+        },
+      },
+      plugins:[{ id:"crosshairs", afterDatasetsDraw: chart => {
+        const { ctx:c, scales:{x:xs, y:ys} } = chart;
+        const px = xs.getPixelForValue(avgX), py = ys.getPixelForValue(avgY);
+        c.save();
+        c.setLineDash([4,4]); c.strokeStyle="rgba(200,168,75,0.5)"; c.lineWidth=1;
+        c.beginPath(); c.moveTo(px, ys.top); c.lineTo(px, ys.bottom); c.stroke();
+        c.beginPath(); c.moveTo(xs.left, py); c.lineTo(xs.right, py); c.stroke();
+        c.setLineDash([]); c.strokeStyle="rgba(200,168,75,0.4)"; c.lineWidth=1.5;
+        c.beginPath(); c.moveTo(xs.getPixelForValue(0),ys.getPixelForValue(0));
+        c.lineTo(xs.getPixelForValue(5),ys.getPixelForValue(5)); c.stroke();
+        c.restore();
+      }}]
+    });
+    return destroy;
+  }, [activeTab, withPerf]);
+
+  if (!dataset.length) return (
+    <div className="analytics-empty">
+      <div style={{ fontSize:32, marginBottom:12 }}>💡</div>
+      <div>Grade at least 50% of the cards and import community ratings<br/>to unlock analytics for this set.</div>
+    </div>
+  );
+
+  return (
+    <div className="analytics-wrap">
+      <div className="analytics-tabs">
+        {[["distribution","Distribution"],["scatter","Scatter"],["quadrants","Quadrants"]].map(([id, lbl]) => (
+          <button key={id} className={`analytics-tab${activeTab===id?" active":""}`} onClick={() => setActiveTab(id)}>{lbl}</button>
+        ))}
+      </div>
+
+      {activeTab === "distribution" && (
+        <div className="analytics-content" style={{gap:12}}>
+          <div className="analytics-chart-wrap">
+            <canvas ref={chartRef} />
+          </div>
+          <div className="analytics-panel">
+            {stats && (
+              <div className="analytics-stat-block">
+                <div className="analytics-stat-label">Calibration</div>
+                <div className="analytics-stat-row"><span>Cards compared</span><span className="analytics-stat-val">{stats.total}</span></div>
+                <div className="analytics-stat-row"><span>Avg gap</span><span className="analytics-stat-val" style={{ color: stats.avgGap > 0 ? "#e05030" : "#32a050" }}>{stats.avgGap > 0 ? "+" : ""}{stats.avgGap.toFixed(2)}</span></div>
+                <div className="analytics-stat-row"><span>Overrated</span><span className="analytics-stat-val">{stats.overrated} ({Math.round(100*stats.overrated/stats.total)}%)</span></div>
+                <div className="analytics-stat-row"><span>Underrated</span><span className="analytics-stat-val">{stats.underrated} ({Math.round(100*stats.underrated/stats.total)}%)</span></div>
+                <div className="analytics-stat-row"><span>Agreed</span><span className="analytics-stat-val">{stats.agreed} ({Math.round(100*stats.agreed/stats.total)}%)</span></div>
+              </div>
+            )}
+            <div className="analytics-stat-block" style={{ fontSize:10, color:"#5a5a7a", lineHeight:1.7 }}>
+              <div className="analytics-stat-label">How to read this</div>
+              <div><span style={{color:"var(--dim)"}}>Bars</span> — your grade distribution</div>
+              <div><span style={{color:"rgba(200,168,75,0.9)"}}>Gold line</span> — GIH Win Rate distribution</div>
+              <div style={{marginTop:4}}>If your bars peak <em>left</em> of the gold line (more A/B grades than the data supports), you overrated.</div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {activeTab === "scatter" && (
+        <div style={{ display:"flex", flexDirection:"column", gap:10 }}>
+        <div className="analytics-content">
+          <div className="analytics-chart-wrap">
+            <canvas ref={chartRef} />
+          </div>
+          {stats && (
+            <div className="analytics-panel">
+              <div className="analytics-stat-block">
+                <div className="analytics-stat-label">Quadrants</div>
+                {Object.entries(stats.quads).map(([q, n]) => (
+                  <div key={q} className="analytics-quad-row">
+                    <div className="analytics-quad-dot" style={{ background: QUAD_COLORS[q] }} />
+                    <span style={{ color:"var(--dim)", minWidth:80 }}>{q}</span>
+                    <span className="analytics-stat-val">{n}</span>
+                    <span style={{ color:"#5a5a7a", fontSize:9, marginLeft:4 }}>{Math.round(100*n/stats.total)}%</span>
+                  </div>
+                ))}
+              </div>
+              <div className="analytics-stat-block">
+                <div className="analytics-stat-label">Calibration</div>
+                <div className="analytics-stat-row"><span>Cards compared</span><span className="analytics-stat-val">{stats.total}</span></div>
+                <div className="analytics-stat-row"><span>Avg gap</span><span className="analytics-stat-val" style={{ color: stats.avgGap > 0 ? "#e05030" : "#32a050" }}>{stats.avgGap > 0 ? "+" : ""}{stats.avgGap.toFixed(2)}</span></div>
+                <div className="analytics-stat-row"><span>Overrated</span><span className="analytics-stat-val">{stats.overrated} ({Math.round(100*stats.overrated/stats.total)}%)</span></div>
+                <div className="analytics-stat-row"><span>Underrated</span><span className="analytics-stat-val">{stats.underrated} ({Math.round(100*stats.underrated/stats.total)}%)</span></div>
+                <div className="analytics-stat-row"><span>Agreed</span><span className="analytics-stat-val">{stats.agreed} ({Math.round(100*stats.agreed/stats.total)}%)</span></div>
+              </div>
+              <div className="analytics-stat-block" style={{ fontSize:10, color:"#5a5a7a", lineHeight:1.7 }}>
+                <div className="analytics-stat-label">How to read this</div>
+                <div><span style={{color:"var(--dim)"}}>Diagonal</span> — Perfect agreement</div>
+                <div><span style={{color:"#e05030"}}>Above</span> — You overrated</div>
+                <div><span style={{color:"#32a050"}}>Below</span> — You underrated</div>
+                <div><span style={{color:"var(--dim)"}}>Crosshairs</span> — Mean of each axis</div>
+                <div><span style={{color:"var(--dim)"}}>Color</span> — Quadrant classification</div>
+                <div><span style={{color:"var(--dim)"}}>Size</span> — Rarity (mythic largest)</div>
+                <div style={{marginTop:6}}>Hover to preview or click for detail</div>
+              </div>
+            </div>
+          )}
+        </div>
+        </div>
+      )}
+
+      {activeTab === "quadrants" && (
+        <div className="analytics-quads-wrap">
+          {[
+            { id:"MISS",      label:"Miss",       desc:"You overrated vs both sources" },
+            { id:"SPOT",      label:"Spot On",    desc:"You underrated vs both sources" },
+            { id:"CONSENSUS", label:"Consensus",  desc:"All three roughly agreed" },
+            { id:"FORMAT",    label:"Format Gem", desc:"Expert agreed; Performance didn't" },
+            { id:"VAR",       label:"Variable",   desc:"Mixed signals across sources" },
+          ].map(({ id, label, desc }) => {
+            const qs = withPerf.filter(d => d.quad === id).sort((a, b) => {
+              if (id === "MISS") return (b.myNum - b.perf) - (a.myNum - a.perf);
+              if (id === "SPOT") return (a.myNum - a.perf) - (b.myNum - b.perf);
+              return b.perf - a.perf;
+            });
+            if (!qs.length) return null;
+            return (
+              <div key={id} className="analytics-quad-section">
+                <div className="analytics-quad-header">
+                  <div className="analytics-quad-dot" style={{ background: QUAD_COLORS[id] }} />
+                  <span className="analytics-quad-title">{label}</span>
+                  <span className="analytics-quad-badge">{qs.length}</span>
+                  <span className="analytics-quad-desc">{desc}</span>
+                </div>
+                <div className="analytics-quad-list">
+                  {qs.map(d => {
+                    const gap = d.myNum - d.perf;
+                    return (
+                      <div key={d.card.id} className="analytics-quad-card" onClick={() => isMobile ? setPreviewCard(d.card) : (onCardClick && onCardClick(d.card))}>
+                        <span className="analytics-quad-card-name">{d.card.name}</span>
+                        <span style={{ color: GRADE_COLOR[d.g.myGrade] ?? "var(--dim)", display:"inline-block", width:"2ch", flexShrink:0 }}>{d.g.myGrade}</span>
+                        <span className="analytics-quad-card-gap" style={{ color: gap > 0 ? "#e05030" : gap < 0 ? "#32a050" : "#5a5a7a" }}>
+                          {gap > 0 ? "+" : ""}{gap.toFixed(1)}
+                        </span>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
+
+      {previewCard && (() => {
+        const pd = withPerf.find(d => d.card.id === previewCard.id);
+        const pg = grades[previewCard.id] ?? {};
+        const imgUrl = previewCard.card_faces?.[0]?.image_uris?.normal ?? previewCard.image_uris?.normal;
+        return React.createElement("div", { className:"analytics-preview-overlay", onClick:() => setPreviewCard(null) },
+          React.createElement("div", { className:"analytics-preview-card", onClick: e => e.stopPropagation() },
+            React.createElement("button", { className:"analytics-preview-close", onClick:() => setPreviewCard(null) }, "✕"),
+            imgUrl && React.createElement("img", { src:imgUrl, style:{ width:"100%", borderRadius:8, display:"block" } }),
+            React.createElement("div", { className:"analytics-preview-info" },
+              React.createElement("div", { className:"analytics-preview-name" }, previewCard.name),
+              React.createElement("div", { style:{ display:"flex", gap:16, justifyContent:"center", marginTop:10 } },
+                React.createElement("div", { style:{ textAlign:"center" } },
+                  React.createElement("div", { style:{ fontSize:9, color:"#5a5a7a", marginBottom:3 } }, "MY GRADE"),
+                  React.createElement("div", { style:{ fontSize:18, fontWeight:700, color: GRADE_COLOR[pg.myGrade] ?? "var(--dim)" } }, pg.myGrade || "—")
+                ),
+                pd?.perf != null && React.createElement("div", { style:{ textAlign:"center" } },
+                  React.createElement("div", { style:{ fontSize:9, color:"#5a5a7a", marginBottom:3 } }, "PERFORMANCE"),
+                  React.createElement("div", { style:{ fontSize:18, fontWeight:700, color:"#d4aa50" } }, pd.perf.toFixed(1))
+                ),
+                pd?.quad && React.createElement("div", { style:{ textAlign:"center" } },
+                  React.createElement("div", { style:{ fontSize:9, color:"#5a5a7a", marginBottom:3 } }, "QUADRANT"),
+                  React.createElement("div", { style:{ fontSize:11, fontWeight:600, color: QUAD_COLORS[pd.quad] ?? "#808098" } }, pd.quad)
+                )
+              )
+            )
+          )
+        );
+      })()}
     </div>
   );
 }
@@ -797,6 +1148,7 @@ function DraftLab({ user }) {
 
   // ── State ──
   const [theme, setTheme]           = useState(() => localStorage.getItem("draft-lab-theme") || "auto");
+  const [showAnalytics, setShowAnalytics] = useState(false);
   const [showImport, setShowImport] = useState(false);
   const [showExport, setShowExport] = useState(false);
   const [fmt17l, setFmt17l]         = useState("PremierDraft");
@@ -948,6 +1300,7 @@ function DraftLab({ user }) {
   const loadSet = async set => {
     store.set("draft-lab-last-set", set.code);
     setLightboxIndex(null);
+    setShowAnalytics(false);
     setSelectedSet(set);
     setCards([]);
     setLoading(true);
@@ -1069,10 +1422,12 @@ function DraftLab({ user }) {
   const clearFilters = () => { setFilterColor("all"); setFilterRarity("all"); setFilterSearch(""); setFilterGraded("all"); setFilterQuadrant("all"); setFilterTags([]); };
   const toggleFilterTag = id => setFilterTags(prev => prev.includes(id) ? prev.filter(t => t !== id) : [...prev, id]);
   const hasFilters   = filterColor !== "all" || filterRarity !== "all" || filterSearch || filterGraded !== "all" || filterQuadrant !== "all" || filterTags.length > 0;
-  const gradedCount  = cards.filter(c => grades[c.id]?.myGrade).length;
-  const gradeCounts  = {};
+  const gradableCards = useMemo(() => cards.filter(c => !isBasicLand(c)), [cards]);
+  const gradedCount   = gradableCards.filter(c => grades[c.id]?.myGrade).length;
+  const gradeCounts   = {};
   for (const g of Object.values(grades)) { if (g.myGrade) gradeCounts[g.myGrade] = (gradeCounts[g.myGrade] ?? 0) + 1; }
-  const pct = cards.length ? Math.round(gradedCount / cards.length * 100) : 0;
+  const pct = gradableCards.length ? Math.round(gradedCount / gradableCards.length * 100) : 0;
+  const analyticsUnlocked = pct >= 50 && (cards.some(c => grades[c.id]?.expert_rating != null) || cards.some(c => grades[c.id]?.performance_rating != null));
 
   const filtered = useMemo(() => cards.filter(c => {
     const ck = getColorKey(c);
@@ -1134,7 +1489,7 @@ function DraftLab({ user }) {
             <button className="set-btn" onClick={() => setShowSetDD(v => !v)}>
               <span className="set-btn-label">
                 {selectedSet
-                  ? <>{selectedSet.name} <span style={{ color:"var(--dimmer)", fontSize:9 }}>· {selectedSet.code.toUpperCase()}</span></>
+                  ? <>{selectedSet.name} <span style={{ color:"#5a5a7a", fontSize:9 }}>· {selectedSet.code.toUpperCase()}</span></>
                   : "Select a Set"}
               </span>
               <span style={{ color:"var(--dim)", fontSize:10, flexShrink:0 }}>▾</span>
@@ -1155,6 +1510,12 @@ function DraftLab({ user }) {
                   ))}
                 </div>
               </div>
+            )}
+            {selectedSet && (
+              <img src={`https://svgs.scryfall.io/sets/${selectedSet.code.toLowerCase()}.svg`}
+                alt="" onError={e => { e.target.style.display="none"; }}
+                style={{ height: isMobile ? 34 : 22, width: isMobile ? 34 : 22, flexShrink:0,
+                         filter:"brightness(0) saturate(100%) invert(72%) sepia(54%) saturate(421%) hue-rotate(3deg)", opacity:0.85 }} />
             )}
           </div>
         </div>
@@ -1201,7 +1562,7 @@ function DraftLab({ user }) {
           </div>
           {user && syncStatus && <span className="sync-dot desktop-only">{syncStatus === "syncing" ? "↑ Syncing…" : "✓ Synced"}</span>}
           {user && (
-            <button className="btn desktop-only" style={{ fontSize:9, color:"var(--dimmer)" }} title={user.email}
+            <button className="btn desktop-only" style={{ fontSize:9, color:"#5a5a7a" }} title={user.email}
               onClick={() => sb.auth.signOut()}>Sign Out</button>
           )}
           <div className="icon-bar">
@@ -1213,6 +1574,11 @@ function DraftLab({ user }) {
               </>
             )}
             <button className="icon-bar-btn" onClick={() => setShowGuide(true)} title="Grade guide">⚖</button>
+            <div className="icon-pipe" />
+            <button className={`icon-bar-btn${showAnalytics ? " active" : ""}${!analyticsUnlocked ? " faint" : ""}`}
+              onClick={() => analyticsUnlocked && setShowAnalytics(v => !v)}
+              title={analyticsUnlocked ? "Analytics" : "Grade 50%+ of cards and import community ratings to unlock"}
+              style={{ cursor: analyticsUnlocked ? "pointer" : "default" }}>💡</button>
             <div className="icon-pipe" />
             <button className="icon-bar-btn" onClick={toggleTheme} title="Toggle light/dark mode">
               {theme === "dark" ? "☀" : "🌙"}
@@ -1312,7 +1678,7 @@ function DraftLab({ user }) {
               </button>
             )}
             {user && (
-              <button className="l17-fetch" style={{ flex:1, borderColor:"var(--dimmer)", color:"var(--dimmer)" }}
+              <button className="l17-fetch" style={{ flex:1, borderColor:"var(--dimmer)", color:"#5a5a7a" }}
                 onClick={() => { sb.auth.signOut(); setShowMobF(false); }}>
                 Sign Out
               </button>
@@ -1346,7 +1712,7 @@ function DraftLab({ user }) {
       )}
 
       {/* ── Desktop filters ── */}
-      {cards.length > 0 && (
+      {!showAnalytics && cards.length > 0 && (
         <div className="filters-desktop desktop-only">
           <span className="fl">Color</span>
           {["all","W","U","B","R","G","M","C","L"].map(c => (
@@ -1398,8 +1764,22 @@ function DraftLab({ user }) {
         </div>
       )}
 
-      {/* ── Empty / loading / error ── */}
-      {(loading || error || cards.length === 0) && (
+      {/* ── Analytics view (replaces card table when active) ── */}
+      {showAnalytics && analyticsUnlocked && (
+        <AnalyticsView
+          cards={cards}
+          grades={grades}
+          isMobile={isMobile}
+          onCardClick={card => {
+            const idx = sorted.indexOf(card);
+            if (idx !== -1) setLightboxIndex(idx);
+            // Analytics stays open — lightbox overlays it
+          }}
+        />
+      )}
+
+      {/* ── Card view — hidden when analytics is active ── */}
+      {!showAnalytics && (loading || error || cards.length === 0) && (
         <div className="center">
           {loading
             ? <><div className="spin" /><span>{loadMsg}</span></>
@@ -1411,7 +1791,7 @@ function DraftLab({ user }) {
       )}
 
       {/* ── Desktop table ── */}
-      {!loading && !error && cards.length > 0 && (
+      {!showAnalytics && !loading && !error && cards.length > 0 && (
         <div className="tbl-wrap desktop-only">
           <table>
             <thead>
@@ -1490,7 +1870,7 @@ function DraftLab({ user }) {
       )}
 
       {/* ── Mobile card list ── */}
-      {!loading && !error && cards.length > 0 && (
+      {!showAnalytics && !loading && !error && cards.length > 0 && (
         <div className="card-list mobile-only">
           {sorted.map(card => (
             <MobileCardItem key={card.id} card={card} grade={grades[card.id] ?? {}}
@@ -1570,7 +1950,7 @@ function DraftLab({ user }) {
               guidelines. Pre-release ratings sourced from AetherHub and Nizzahon Magic for personal use.
             </div>
             <div className="guide-desc">This project is not affiliated with or endorsed by any of the above.</div>
-            <div className="guide-desc" style={{ marginTop:16, color:"var(--dimmer)", fontSize:10 }}>
+            <div className="guide-desc" style={{ marginTop:16, color:"#5a5a7a", fontSize:10 }}>
               Draft Lab source code is released under the MIT License.{" "}
               <a href="https://github.com/jason-norris/draft-lab" target="_blank" rel="noopener noreferrer"
                 style={{ color:"var(--gold2)", textDecoration:"none" }}>
