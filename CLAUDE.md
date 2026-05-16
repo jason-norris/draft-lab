@@ -99,7 +99,7 @@ Full details in `ROADMAP.md`. AI architecture for Phase 5 in `docs/phase-7-draft
 
 - **URL:** `https://wkzjwucjehztcpdycugc.supabase.co`
 - **Table:** `draft_grades` (user_id, set_code, data jsonb) with RLS
-- **Users:** Jason (owner) + Eamon (son, invited)
+- **Users:** Jason (owner) + family members (invited via Supabase dashboard)
 - **Signups:** Disabled — add users via Dashboard → Authentication → Invite user
 
 ---
