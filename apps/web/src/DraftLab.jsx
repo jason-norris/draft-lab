@@ -535,16 +535,18 @@ function GradeSelect({ cls, value, onChange }) {
 function MobileCardItem({ card, grade, onUpdate }) {
   const [expanded, setExpanded] = useState(false);
   const [bigImg, setBigImg]     = useState(false);
-  const ck  = getColorKey(card);
-  const img = getImageUrl(card);
-  const q   = calcQuadrant(grade);
+  const [face, setFace]         = useState(0);
+  const ck     = getColorKey(card);
+  const hasDFC = card.card_faces?.length >= 2 && card.card_faces[1]?.image_uris;
+  const img    = hasDFC ? card.card_faces[face]?.image_uris?.normal : getImageUrl(card);
+  const q      = calcQuadrant(grade);
 
   return (
     <div className={`mc mobile-only c${ck}`}>
       <div style={{ display:"flex" }}>
         <div className="mc-stripe" />
         <div className="mc-body">
-          <div className="mc-top" onClick={() => { setExpanded(v => !v); setBigImg(false); }}>
+          <div className="mc-top" onClick={() => { setExpanded(v => !v); setBigImg(false); setFace(0); }}>
             <div className="mc-info">
               <div className="mc-name">
                 {card.name}
@@ -574,7 +576,16 @@ function MobileCardItem({ card, grade, onUpdate }) {
                   <div className="mc-exp-inner">
                     {img && (
                       <div className="mc-img-wrap">
-                        <img src={img} alt={card.name} className="mc-img" onClick={() => setBigImg(true)} />
+                        <img src={img} alt={card.name} className="mc-img"
+                          onClick={() => hasDFC ? setFace(f => f === 0 ? 1 : 0) : setBigImg(true)} />
+                        {hasDFC && (
+                          <button onClick={() => setFace(f => f === 0 ? 1 : 0)}
+                            style={{ display:"block", width:"100%", marginTop:4, background:"transparent",
+                              border:"1px solid var(--b2)", color:"var(--dim)", fontFamily:"'IBM Plex Mono',monospace",
+                              fontSize:10, padding:"3px 0", cursor:"pointer", borderRadius:3 }}>
+                            ↻ Flip
+                          </button>
+                        )}
                       </div>
                     )}
                     <div className="mc-controls">
