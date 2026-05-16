@@ -656,11 +656,13 @@ function AnalyticsView({ cards, grades, isMobile, onCardClick }) {
         pointBorderColor: pts.map(p => p.borderColor),
         pointRadius: pts.map(p => p.radius),
         pointHoverRadius: pts.map(p => p.radius + 3),
+        pointHitRadius: 10,
         pointBorderWidth: 1,
       }]},
       options:{
         responsive:true, maintainAspectRatio:!isMobile, aspectRatio: isMobile ? 1 : 1.5,
         animation:{duration:400},
+        events: ['mousemove', 'mouseout', 'click', 'touchstart', 'touchmove'],
         layout:{ padding:{ top:14, right:14, bottom:4, left:4 } },
         plugins:{
           legend:{display:false},
@@ -779,7 +781,7 @@ function AnalyticsView({ cards, grades, isMobile, onCardClick }) {
                 <div><span style={{color:"var(--dim)"}}>Crosshairs</span> — Mean of each axis</div>
                 <div><span style={{color:"var(--dim)"}}>Color</span> — Quadrant classification</div>
                 <div><span style={{color:"var(--dim)"}}>Size</span> — Rarity (mythic largest)</div>
-                <div style={{marginTop:6}}>Hover to preview · click for detail.</div>
+                <div style={{marginTop:6}}>Hover to preview or click for detail</div>
               </div>
             </div>
           )}
@@ -788,7 +790,46 @@ function AnalyticsView({ cards, grades, isMobile, onCardClick }) {
       )}
 
       {activeTab === "quadrants" && (
-        <div className="analytics-empty">Quadrant card lists — coming in session 2</div>
+        <div className="analytics-quads-wrap">
+          {[
+            { id:"MISS",      label:"Miss",       desc:"You overrated vs both sources" },
+            { id:"SPOT",      label:"Spot On",    desc:"You underrated vs both sources" },
+            { id:"CONSENSUS", label:"Consensus",  desc:"All three roughly agreed" },
+            { id:"FORMAT",    label:"Format Gem", desc:"You matched Expert but Performance differed" },
+            { id:"VAR",       label:"Variable",   desc:"Mixed signals across sources" },
+          ].map(({ id, label, desc }) => {
+            const qs = withPerf.filter(d => d.quad === id).sort((a, b) => {
+              if (id === "MISS") return (b.myNum - b.perf) - (a.myNum - a.perf);
+              if (id === "SPOT") return (a.myNum - a.perf) - (b.myNum - b.perf);
+              return b.perf - a.perf;
+            });
+            if (!qs.length) return null;
+            return (
+              <div key={id} className="analytics-quad-section">
+                <div className="analytics-quad-header">
+                  <div className="analytics-quad-dot" style={{ background: QUAD_COLORS[id] }} />
+                  <span className="analytics-quad-title">{label}</span>
+                  <span className="analytics-quad-badge">{qs.length}</span>
+                  <span className="analytics-quad-desc">{desc}</span>
+                </div>
+                <div className="analytics-quad-list">
+                  {qs.map(d => {
+                    const gap = d.myNum - d.perf;
+                    return (
+                      <div key={d.card.id} className="analytics-quad-card" onClick={() => onCardClick && onCardClick(d.card)}>
+                        <span className="analytics-quad-card-name">{d.card.name}</span>
+                        <span style={{ color: GRADE_COLOR[d.g.myGrade] ?? "var(--dim)", minWidth:28, textAlign:"right" }}>{d.g.myGrade}</span>
+                        <span className="analytics-quad-card-gap" style={{ color: gap > 0 ? "#e05030" : gap < 0 ? "#32a050" : "#5a5a7a" }}>
+                          {gap > 0 ? "+" : ""}{gap.toFixed(1)}
+                        </span>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            );
+          })}
+        </div>
       )}
     </div>
   );
