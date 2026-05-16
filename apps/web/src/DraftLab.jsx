@@ -622,9 +622,9 @@ function AnalyticsView({ cards, grades, isMobile, onCardClick }) {
       },
       options: {
         responsive:true, maintainAspectRatio:true, animation:{duration:400},
-        plugins:{ legend:{ display:true, labels:{ color:"var(--dim)", font:{size:10}, boxWidth:12 } },
-          tooltip:{ backgroundColor:"var(--s1)", titleColor:"var(--gold)", bodyColor:"var(--dim)",
-            borderColor:"var(--b2)", borderWidth:1 } },
+        plugins:{ legend:{ display:true, labels:{ color:"#9090b8", font:{size:10}, boxWidth:12, boxHeight:10 } },
+          tooltip:{ backgroundColor:"#0e0e1c", titleColor:"#d4aa50", bodyColor:"#9090b8",
+            borderColor:"#2e2e4a", borderWidth:1, boxHeight:10, boxWidth:10 } },
         scales:{
           x:{ ticks:{color:"#5a5a7a"}, grid:{color:"#22223a"} },
           y:{ ticks:{color:"#5a5a7a"}, grid:{color:"#22223a"}, beginAtZero:true }
