@@ -1910,8 +1910,9 @@ function AnalyticsView(_ref12) {
       }, d.card.name), React.createElement("span", {
         style: {
           color: GRADE_COLOR[d.g.myGrade] ?? "var(--dim)",
-          minWidth: 28,
-          textAlign: "right"
+          display: "inline-block",
+          width: "2ch",
+          flexShrink: 0
         }
       }, d.g.myGrade), React.createElement("span", {
         className: "analytics-quad-card-gap",
@@ -2954,7 +2955,21 @@ function DraftLab(_ref31) {
   }, React.createElement("button", {
     className: "set-btn",
     onClick: () => setShowSetDD(v => !v)
-  }, React.createElement("span", {
+  }, selectedSet && !isMobile && React.createElement("img", {
+    src: `https://svgs.scryfall.io/sets/${selectedSet.code.toLowerCase()}.svg`,
+    alt: "",
+    onError: e => {
+      e.target.style.display = "none";
+    },
+    style: {
+      height: 15,
+      width: 15,
+      flexShrink: 0,
+      marginRight: 7,
+      filter: "brightness(0) saturate(100%) invert(72%) sepia(54%) saturate(421%) hue-rotate(3deg)",
+      opacity: 0.9
+    }
+  }), React.createElement("span", {
     className: "set-btn-label"
   }, selectedSet ? React.createElement(React.Fragment, null, selectedSet.name, " ", React.createElement("span", {
     style: {
@@ -3075,7 +3090,21 @@ function DraftLab(_ref31) {
     },
     title: user.email,
     onClick: () => sb.auth.signOut()
-  }, "Sign Out"), React.createElement("div", {
+  }, "Sign Out"), selectedSet && isMobile && React.createElement("img", {
+    src: `https://svgs.scryfall.io/sets/${selectedSet.code.toLowerCase()}.svg`,
+    alt: "",
+    onError: e => {
+      e.target.style.display = "none";
+    },
+    style: {
+      height: 26,
+      width: 26,
+      flexShrink: 0,
+      marginRight: 6,
+      filter: "brightness(0) saturate(100%) invert(72%) sepia(54%) saturate(421%) hue-rotate(3deg)",
+      opacity: 0.85
+    }
+  }), React.createElement("div", {
     className: "icon-bar"
   }, isMobile && React.createElement(React.Fragment, null, React.createElement("button", {
     className: `icon-bar-btn mobile-only${showMobF ? " active" : ""}`,
