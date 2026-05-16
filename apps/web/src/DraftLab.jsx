@@ -100,6 +100,9 @@ function migrateGrades(grades) {
 }
 
 // ── Utility functions ────────────────────────────────────────────────────────
+// Basic lands are visible in the card list but excluded from grading totals and analytics (Issue #43)
+const isBasicLand = card => card.type_line?.toLowerCase().startsWith("basic land");
+
 function getColorKey(card) {
   const c = card.colors ?? card.card_faces?.[0]?.colors ?? [];
   if (!c.length) return card.type_line?.toLowerCase().includes("land") ? "L" : "C";
@@ -517,6 +520,205 @@ function CardLightbox({ sorted, lightboxIndex, grades, onUpdate, onClose, onNav 
   );
 }
 
+// ── Analytics helpers ────────────────────────────────────────────────────────
+const QUAD_COLORS = { CONSENSUS:"#32a050", MISS:"#e05030", SPOT:"#32a050", FORMAT:"#9c5ef5", VAR:"#e6c800" };
+
+function gradeToNumeric(grade) { return GRADE_NUMERIC[grade] ?? null; }
+
+function classifyQuadrant(myNum, exp, perf, thresh=0.75) {
+  if (myNum == null || exp == null || perf == null) return null;
+  const mePerf  = Math.abs(myNum - perf)  <= thresh;
+  const meExp   = Math.abs(myNum - exp)   <= thresh;
+  const expPerf = Math.abs(exp   - perf)  <= thresh;
+  if (mePerf && meExp)   return "CONSENSUS";
+  if (meExp  && !expPerf) return "FORMAT";
+  if (!meExp && expPerf)  return "MISS";
+  if (mePerf && !meExp)   return "SPOT";
+  return "VAR";
+}
+
+// ── AnalyticsView ─────────────────────────────────────────────────────────────
+function AnalyticsView({ cards, grades, onCardClick }) {
+  const [activeTab, setActiveTab] = useState("scatter");
+  const chartRef = useRef(null);
+  const chartInstance = useRef(null);
+
+  // Build analytics dataset — exclude basic lands
+  const dataset = useMemo(() => {
+    return cards
+      .filter(c => !isBasicLand(c) && grades[c.id]?.myGrade)
+      .map(c => {
+        const g = grades[c.id] ?? {};
+        const myNum = gradeToNumeric(g.myGrade);
+        const perf  = g.performance_rating ?? null;
+        const exp   = g.expert_rating ?? null;
+        return { card: c, g, myNum, perf, exp,
+          quad: classifyQuadrant(myNum, exp, perf),
+          colorKey: getColorKey(c) };
+      })
+      .filter(d => d.myNum != null);
+  }, [cards, grades]);
+
+  const withPerf = useMemo(() => dataset.filter(d => d.perf != null), [dataset]);
+
+  // Summary stats
+  const stats = useMemo(() => {
+    if (!withPerf.length) return null;
+    const gaps      = withPerf.map(d => d.myNum - d.perf);
+    const avgGap    = gaps.reduce((a,b) => a+b, 0) / gaps.length;
+    const overrated = withPerf.filter(d => d.myNum > d.perf + 0.75).length;
+    const underrated= withPerf.filter(d => d.myNum < d.perf - 0.75).length;
+    const agreed    = withPerf.filter(d => Math.abs(d.myNum - d.perf) <= 0.5).length;
+    const quads     = { CONSENSUS:0, MISS:0, SPOT:0, FORMAT:0, VAR:0 };
+    withPerf.forEach(d => { if (d.quad) quads[d.quad]++; });
+    return { avgGap, overrated, underrated, agreed, quads, total: withPerf.length };
+  }, [withPerf]);
+
+  // Color map for scatter dots
+  const DOT_COLORS = { W:"#c8a030", U:"#3a7abf", B:"#9050c0", R:"#c83030", G:"#309030", M:"#b08020", C:"#808098", L:"#907040" };
+  const RARITY_SIZE = { common:4, uncommon:6, rare:9, mythic:12 };
+
+  // Build/rebuild scatter chart
+  useEffect(() => {
+    if (activeTab !== "scatter" || !chartRef.current || !withPerf.length) return;
+    if (chartInstance.current) { chartInstance.current.destroy(); chartInstance.current = null; }
+
+    const ctx = chartRef.current.getContext("2d");
+    const points = withPerf.map(d => ({
+      x: d.perf, y: d.myNum,
+      card: d.card, g: d.g, quad: d.quad,
+      backgroundColor: DOT_COLORS[d.colorKey] + "cc",
+      borderColor: DOT_COLORS[d.colorKey],
+      radius: RARITY_SIZE[d.card.rarity] ?? 5,
+    }));
+
+    const avgPerf = withPerf.reduce((a,d) => a + d.perf, 0) / withPerf.length;
+    const avgMy   = withPerf.reduce((a,d) => a + d.myNum, 0) / withPerf.length;
+
+    chartInstance.current = new Chart(ctx, {
+      type: "scatter",
+      data: {
+        datasets: [{
+          data: points,
+          pointBackgroundColor: points.map(p => p.backgroundColor),
+          pointBorderColor: points.map(p => p.borderColor),
+          pointRadius: points.map(p => p.radius),
+          pointHoverRadius: points.map(p => p.radius + 3),
+          pointBorderWidth: 1,
+        }]
+      },
+      options: {
+        responsive: true, maintainAspectRatio: true,
+        animation: { duration: 400 },
+        plugins: {
+          legend: { display: false },
+          tooltip: {
+            callbacks: {
+              label: ctx => {
+                const p = ctx.raw;
+                return [`${p.card.name}`, `Me: ${p.g.myGrade}  Perf: ${p.x.toFixed(1)}  ${p.quad ?? ""}`];
+              }
+            },
+            backgroundColor: "var(--s1)", titleColor: "var(--gold)",
+            bodyColor: "var(--dim)", borderColor: "var(--b2)", borderWidth: 1,
+          },
+          annotation: undefined,
+        },
+        scales: {
+          x: { min:0, max:5, title:{ display:true, text:"Performance Rating", color:"var(--dimmer)", font:{size:10} },
+               ticks:{ color:"var(--dimmer)", stepSize:0.5 }, grid:{ color:"var(--b1)" } },
+          y: { min:0, max:5, title:{ display:true, text:"My Grade", color:"var(--dimmer)", font:{size:10} },
+               ticks:{ color:"var(--dimmer)", stepSize:0.5,
+                 callback: v => Object.entries(GRADE_NUMERIC).find(([,n]) => Math.abs(n-v)<0.1)?.[0] ?? "" },
+               grid:{ color:"var(--b1)" } },
+        },
+        onClick: (e, els) => {
+          if (!els.length) return;
+          const p = points[els[0].index];
+          if (onCardClick && p.card) onCardClick(p.card);
+        },
+      },
+      plugins: [{
+        id: "crosshairs",
+        afterDraw: chart => {
+          const { ctx: c, scales: { x: xs, y: ys } } = chart;
+          const px = xs.getPixelForValue(avgPerf), py = ys.getPixelForValue(avgMy);
+          const left = xs.left, right = xs.right, top = ys.top, bottom = ys.bottom;
+          c.save();
+          c.setLineDash([4, 4]);
+          c.strokeStyle = "rgba(200,168,75,0.3)";
+          c.lineWidth = 1;
+          c.beginPath(); c.moveTo(px, top); c.lineTo(px, bottom); c.stroke();
+          c.beginPath(); c.moveTo(left, py); c.lineTo(right, py); c.stroke();
+          // diagonal
+          c.setLineDash([]);
+          c.strokeStyle = "rgba(200,168,75,0.15)";
+          c.beginPath(); c.moveTo(xs.getPixelForValue(0), ys.getPixelForValue(0));
+          c.lineTo(xs.getPixelForValue(5), ys.getPixelForValue(5)); c.stroke();
+          c.restore();
+        }
+      }]
+    });
+    return () => { if (chartInstance.current) { chartInstance.current.destroy(); chartInstance.current = null; } };
+  }, [activeTab, withPerf]);
+
+  if (!dataset.length) return (
+    <div className="analytics-empty">
+      <div style={{ fontSize:32, marginBottom:12 }}>💡</div>
+      <div>Grade at least 50% of the cards and import community ratings<br/>to unlock analytics for this set.</div>
+    </div>
+  );
+
+  return (
+    <div className="analytics-wrap">
+      <div className="analytics-tabs">
+        {[["scatter","Scatter Plot"],["calibration","Calibration"],["quadrants","Quadrants"]].map(([id, lbl]) => (
+          <button key={id} className={`analytics-tab${activeTab===id?" active":""}`} onClick={() => setActiveTab(id)}>{lbl}</button>
+        ))}
+      </div>
+
+      {activeTab === "scatter" && (
+        <div className="analytics-content">
+          <div className="analytics-chart-wrap">
+            <canvas ref={chartRef} />
+          </div>
+          {stats && (
+            <div className="analytics-panel">
+              <div className="analytics-stat-block">
+                <div className="analytics-stat-label">Calibration</div>
+                <div className="analytics-stat-row"><span>Cards compared</span><span className="analytics-stat-val">{stats.total}</span></div>
+                <div className="analytics-stat-row"><span>Avg gap</span><span className="analytics-stat-val" style={{ color: stats.avgGap > 0 ? "#e05030" : "#32a050" }}>{stats.avgGap > 0 ? "+" : ""}{stats.avgGap.toFixed(2)}</span></div>
+                <div className="analytics-stat-row"><span>Overrated</span><span className="analytics-stat-val">{stats.overrated} ({Math.round(100*stats.overrated/stats.total)}%)</span></div>
+                <div className="analytics-stat-row"><span>Underrated</span><span className="analytics-stat-val">{stats.underrated} ({Math.round(100*stats.underrated/stats.total)}%)</span></div>
+                <div className="analytics-stat-row"><span>Agreed</span><span className="analytics-stat-val">{stats.agreed} ({Math.round(100*stats.agreed/stats.total)}%)</span></div>
+              </div>
+              <div className="analytics-stat-block">
+                <div className="analytics-stat-label">Quadrants</div>
+                {Object.entries(stats.quads).map(([q, n]) => (
+                  <div key={q} className="analytics-quad-row">
+                    <div className="analytics-quad-dot" style={{ background: QUAD_COLORS[q] }} />
+                    <span style={{ color:"var(--dim)", minWidth:80 }}>{q}</span>
+                    <span className="analytics-stat-val">{n}</span>
+                    <span style={{ color:"var(--dimmer)", fontSize:9, marginLeft:4 }}>{Math.round(100*n/stats.total)}%</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
+      {activeTab === "calibration" && (
+        <div className="analytics-empty">Calibration histogram — coming in session 2</div>
+      )}
+
+      {activeTab === "quadrants" && (
+        <div className="analytics-empty">Quadrant card lists — coming in session 2</div>
+      )}
+    </div>
+  );
+}
+
 // ── GradeSelect ───────────────────────────────────────────────────────────────
 function GradeSelect({ cls, value, onChange }) {
   return (
@@ -797,6 +999,7 @@ function DraftLab({ user }) {
 
   // ── State ──
   const [theme, setTheme]           = useState(() => localStorage.getItem("draft-lab-theme") || "auto");
+  const [showAnalytics, setShowAnalytics] = useState(false);
   const [showImport, setShowImport] = useState(false);
   const [showExport, setShowExport] = useState(false);
   const [fmt17l, setFmt17l]         = useState("PremierDraft");
@@ -1069,10 +1272,12 @@ function DraftLab({ user }) {
   const clearFilters = () => { setFilterColor("all"); setFilterRarity("all"); setFilterSearch(""); setFilterGraded("all"); setFilterQuadrant("all"); setFilterTags([]); };
   const toggleFilterTag = id => setFilterTags(prev => prev.includes(id) ? prev.filter(t => t !== id) : [...prev, id]);
   const hasFilters   = filterColor !== "all" || filterRarity !== "all" || filterSearch || filterGraded !== "all" || filterQuadrant !== "all" || filterTags.length > 0;
-  const gradedCount  = cards.filter(c => grades[c.id]?.myGrade).length;
-  const gradeCounts  = {};
+  const gradableCards = useMemo(() => cards.filter(c => !isBasicLand(c)), [cards]);
+  const gradedCount   = gradableCards.filter(c => grades[c.id]?.myGrade).length;
+  const gradeCounts   = {};
   for (const g of Object.values(grades)) { if (g.myGrade) gradeCounts[g.myGrade] = (gradeCounts[g.myGrade] ?? 0) + 1; }
-  const pct = cards.length ? Math.round(gradedCount / cards.length * 100) : 0;
+  const pct = gradableCards.length ? Math.round(gradedCount / gradableCards.length * 100) : 0;
+  const analyticsUnlocked = pct >= 50 && (cards.some(c => grades[c.id]?.expert_rating != null) || cards.some(c => grades[c.id]?.performance_rating != null));
 
   const filtered = useMemo(() => cards.filter(c => {
     const ck = getColorKey(c);
@@ -1213,6 +1418,11 @@ function DraftLab({ user }) {
               </>
             )}
             <button className="icon-bar-btn" onClick={() => setShowGuide(true)} title="Grade guide">⚖</button>
+            <div className="icon-pipe" />
+            <button className={`icon-bar-btn${showAnalytics ? " active" : ""}${!analyticsUnlocked ? " faint" : ""}`}
+              onClick={() => analyticsUnlocked && setShowAnalytics(v => !v)}
+              title={analyticsUnlocked ? "Analytics" : "Grade 50%+ of cards and import community ratings to unlock"}
+              style={{ cursor: analyticsUnlocked ? "pointer" : "default" }}>💡</button>
             <div className="icon-pipe" />
             <button className="icon-bar-btn" onClick={toggleTheme} title="Toggle light/dark mode">
               {theme === "dark" ? "☀" : "🌙"}
@@ -1396,6 +1606,18 @@ function DraftLab({ user }) {
           {hasFilters && <button className="btn" onClick={clearFilters}>Clear</button>}
           <span className="fl" style={{ marginLeft:"auto" }}>{sorted.length} shown</span>
         </div>
+      )}
+
+      {/* ── Analytics view (replaces card table when active) ── */}
+      {showAnalytics && analyticsUnlocked && (
+        <AnalyticsView
+          cards={cards}
+          grades={grades}
+          onCardClick={card => {
+            const idx = sorted.indexOf(card);
+            if (idx !== -1) { setShowAnalytics(false); setLightboxIndex(idx); }
+          }}
+        />
       )}
 
       {/* ── Empty / loading / error ── */}
