@@ -525,6 +525,14 @@ const QUAD_COLORS = { CONSENSUS:"#32a050", MISS:"#e05030", SPOT:"#32a050", FORMA
 
 function gradeToNumeric(grade) { return GRADE_NUMERIC[grade] ?? null; }
 
+// Deterministic jitter — same card always gets the same offset so chart is stable across re-renders
+function jitter(cardId, axis, range = 0.12) {
+  let h = 0;
+  const s = cardId + axis;
+  for (let i = 0; i < s.length; i++) h = Math.imul(31, h) + s.charCodeAt(i) | 0;
+  return ((h & 0xFFFF) / 0xFFFF - 0.5) * range * 2;
+}
+
 function classifyQuadrant(myNum, exp, perf, thresh=0.75) {
   if (myNum == null || exp == null || perf == null) return null;
   const mePerf  = Math.abs(myNum - perf)  <= thresh;
@@ -631,7 +639,7 @@ function AnalyticsView({ cards, grades, isMobile, onCardClick }) {
     destroy();
     const mode = SCATTER_MODES.find(m => m.id === scatterMode) ?? SCATTER_MODES[0];
     const pts = withPerf.filter(d => d[mode.xKey] != null && d[mode.yKey] != null).map(d => ({
-      x: d[mode.xKey], y: d[mode.yKey],
+      x: d[mode.xKey] + jitter(d.card.id, 'x'), y: d[mode.yKey] + jitter(d.card.id, 'y'),
       card: d.card, g: d.g, quad: d.quad,
       backgroundColor: (QUAD_COLORS[d.quad] ?? "#808098") + "bb",
       borderColor: QUAD_COLORS[d.quad] ?? "#808098",
@@ -745,10 +753,7 @@ function AnalyticsView({ cards, grades, isMobile, onCardClick }) {
             ))}
           </div>
         <div className="analytics-content">
-          <div className="analytics-chart-wrap" style={{ minHeight: isMobile ? 320 : undefined }}>
-            <div className="analytics-chart-title">
-              {SCATTER_MODES.find(m => m.id === scatterMode)?.label ?? ""} — color = quadrant · size = rarity
-            </div>
+          <div className="analytics-chart-wrap">
             <canvas ref={chartRef} />
           </div>
           {stats && (

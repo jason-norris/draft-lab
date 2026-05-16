@@ -327,7 +327,8 @@
     .analytics-content { display:flex; gap:20px; align-items:flex-start; flex-wrap:wrap; }
     .analytics-chart-wrap { flex:1; min-width:300px; position:relative; }
     .analytics-panel { flex-shrink:0; width:240px; display:flex; flex-direction:column; gap:14px; }
-    .analytics-chart-title { font-size:11px; color:var(--dim); text-align:center; margin-bottom:4px; letter-spacing:.06em; text-transform:uppercase; }
+    @media (orientation:portrait) and (max-width:767px) { .analytics-chart-wrap { min-height:300px; } }
+    @media (orientation:landscape) and (max-width:900px) { .analytics-chart-wrap { min-height:220px; } }
     .analytics-stat-block { background:var(--s2); border:1px solid var(--b1); padding:12px 14px; }
     .analytics-stat-label { font-size:9px; color:var(--dimmer); text-transform:uppercase; letter-spacing:.12em; margin-bottom:6px; }
     .analytics-stat-row { display:flex; justify-content:space-between; font-size:11px; margin-bottom:3px; }
@@ -1280,6 +1281,13 @@ const QUAD_COLORS = {
 function gradeToNumeric(grade) {
   return GRADE_NUMERIC[grade] ?? null;
 }
+function jitter(cardId, axis) {
+  let range = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : 0.12;
+  let h = 0;
+  const s = cardId + axis;
+  for (let i = 0; i < s.length; i++) h = Math.imul(31, h) + s.charCodeAt(i) | 0;
+  return ((h & 0xFFFF) / 0xFFFF - 0.5) * range * 2;
+}
 function classifyQuadrant(myNum, exp, perf) {
   let thresh = arguments.length > 3 && arguments[3] !== undefined ? arguments[3] : 0.75;
   if (myNum == null || exp == null || perf == null) return null;
@@ -1316,7 +1324,6 @@ const SCATTER_MODES = [{
   yLabel: "Expert"
 }];
 function AnalyticsView(_ref12) {
-  var _SCATTER_MODES$find;
   let cards = _ref12.cards,
     grades = _ref12.grades,
     isMobile = _ref12.isMobile,
@@ -1478,8 +1485,8 @@ function AnalyticsView(_ref12) {
     destroy();
     const mode = SCATTER_MODES.find(m => m.id === scatterMode) ?? SCATTER_MODES[0];
     const pts = withPerf.filter(d => d[mode.xKey] != null && d[mode.yKey] != null).map(d => ({
-      x: d[mode.xKey],
-      y: d[mode.yKey],
+      x: d[mode.xKey] + jitter(d.card.id, 'x'),
+      y: d[mode.yKey] + jitter(d.card.id, 'y'),
       card: d.card,
       g: d.g,
       quad: d.quad,
@@ -1712,13 +1719,8 @@ function AnalyticsView(_ref12) {
   }, m.label))), React.createElement("div", {
     className: "analytics-content"
   }, React.createElement("div", {
-    className: "analytics-chart-wrap",
-    style: {
-      minHeight: isMobile ? 320 : undefined
-    }
-  }, React.createElement("div", {
-    className: "analytics-chart-title"
-  }, ((_SCATTER_MODES$find = SCATTER_MODES.find(m => m.id === scatterMode)) === null || _SCATTER_MODES$find === void 0 ? void 0 : _SCATTER_MODES$find.label) ?? "", " \u2014 color = quadrant \xB7 size = rarity"), React.createElement("canvas", {
+    className: "analytics-chart-wrap"
+  }, React.createElement("canvas", {
     ref: chartRef
   })), stats && React.createElement("div", {
     className: "analytics-panel"
