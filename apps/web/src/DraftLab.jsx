@@ -800,6 +800,20 @@ function DraftLab({ user }) {
   const [showImport, setShowImport] = useState(false);
   const [showExport, setShowExport] = useState(false);
   const [fmt17l, setFmt17l]         = useState("PremierDraft");
+  const importRef = useRef(null);
+  const exportRef = useRef(null);
+  useEffect(() => {
+    if (!showImport) return;
+    const h = e => { if (importRef.current && !importRef.current.contains(e.target)) setShowImport(false); };
+    document.addEventListener("mousedown", h);
+    return () => document.removeEventListener("mousedown", h);
+  }, [showImport]);
+  useEffect(() => {
+    if (!showExport) return;
+    const h = e => { if (exportRef.current && !exportRef.current.contains(e.target)) setShowExport(false); };
+    document.addEventListener("mousedown", h);
+    return () => document.removeEventListener("mousedown", h);
+  }, [showExport]);
   const [importMeta, setImportMeta] = useState(null); // { expert: {...}, performance: {...} }
   const [sets, setSets]             = useState([]);
   const [selectedSet, setSelectedSet] = useState(null);
@@ -1130,7 +1144,7 @@ function DraftLab({ user }) {
           {/* Mobile header: ⚙ ? 🌙 © — ordered left to right */}
           {/* Gear lives inside icon-bar on mobile — see below */}
           {selectedSet && !isMobile && (
-            <div className="l17-wrap" onClick={e => e.stopPropagation()}>
+            <div className="l17-wrap" ref={importRef}>
               <button className={`btn${showImport ? " active" : ""}`}
                 onClick={() => { setShowExport(false); setShowImport(v => !v); }}>Import ▾</button>
               {showImport && (
@@ -1144,7 +1158,7 @@ function DraftLab({ user }) {
               )}
             </div>
           )}
-          <div className="l17-wrap desktop-only" onClick={e => e.stopPropagation()}>
+          <div className="l17-wrap desktop-only" ref={exportRef}>
             <button className={`btn${showExport ? " active" : ""}`}
               onClick={() => { setShowImport(false); setShowExport(v => !v); }}>Export ▾</button>
             {showExport && (

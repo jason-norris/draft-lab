@@ -1696,6 +1696,24 @@ function DraftLab(_ref23) {
     _useState26 = _slicedToArray(_useState25, 2),
     fmt17l = _useState26[0],
     setFmt17l = _useState26[1];
+  const importRef = useRef(null);
+  const exportRef = useRef(null);
+  useEffect(() => {
+    if (!showImport) return;
+    const h = e => {
+      if (importRef.current && !importRef.current.contains(e.target)) setShowImport(false);
+    };
+    document.addEventListener("mousedown", h);
+    return () => document.removeEventListener("mousedown", h);
+  }, [showImport]);
+  useEffect(() => {
+    if (!showExport) return;
+    const h = e => {
+      if (exportRef.current && !exportRef.current.contains(e.target)) setShowExport(false);
+    };
+    document.addEventListener("mousedown", h);
+    return () => document.removeEventListener("mousedown", h);
+  }, [showExport]);
   const _useState27 = useState(null),
     _useState28 = _slicedToArray(_useState27, 2),
     importMeta = _useState28[0],
@@ -2189,7 +2207,7 @@ function DraftLab(_ref23) {
     className: "hdr-right"
   }, selectedSet && !isMobile && React.createElement("div", {
     className: "l17-wrap",
-    onClick: e => e.stopPropagation()
+    ref: importRef
   }, React.createElement("button", {
     className: `btn${showImport ? " active" : ""}`,
     onClick: () => {
@@ -2213,7 +2231,7 @@ function DraftLab(_ref23) {
     mobile: false
   }))), React.createElement("div", {
     className: "l17-wrap desktop-only",
-    onClick: e => e.stopPropagation()
+    ref: exportRef
   }, React.createElement("button", {
     className: `btn${showExport ? " active" : ""}`,
     onClick: () => {
