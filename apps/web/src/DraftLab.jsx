@@ -1483,12 +1483,6 @@ function DraftLab({ user }) {
               <div className="logo">DRAFT LAB</div>
             </a>
             <div className="logo-sub">MTG · <span style={{ textTransform:"none" }}>{VERSION}</span></div>
-            {selectedSet && (
-              <img src={`https://svgs.scryfall.io/sets/${selectedSet.code.toLowerCase()}.svg`}
-                alt="" onError={e => { e.target.style.display="none"; }}
-                style={{ height:20, width:20, flexShrink:0, alignSelf:"center", marginLeft:4,
-                         filter:"brightness(0) saturate(100%) invert(72%) sepia(54%) saturate(421%) hue-rotate(3deg)", opacity:0.85 }} />
-            )}
           </div>
           <div className="set-wrap">
             <button className="set-btn" onClick={() => setShowSetDD(v => !v)}>
@@ -1515,6 +1509,12 @@ function DraftLab({ user }) {
                   ))}
                 </div>
               </div>
+            )}
+            {selectedSet && (
+              <img src={`https://svgs.scryfall.io/sets/${selectedSet.code.toLowerCase()}.svg`}
+                alt="" onError={e => { e.target.style.display="none"; }}
+                style={{ height: isMobile ? 34 : 22, width: isMobile ? 34 : 22, flexShrink:0,
+                         filter:"brightness(0) saturate(100%) invert(72%) sepia(54%) saturate(421%) hue-rotate(3deg)", opacity:0.85 }} />
             )}
           </div>
         </div>
