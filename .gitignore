@@ -42,5 +42,6 @@ Desktop.ini
 # JSX source (compiled into apps/web/index.html — not needed for deployment)
 apps/web/*.jsx
 
-# Local data files (17Lands .gz downloads, generated CSVs)
+# Local data files (17Lands .gz downloads, generated CSVs, backups)
 apps/web/data/
+data/

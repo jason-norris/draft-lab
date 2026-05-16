@@ -114,6 +114,7 @@ print(f"  {len(text)/1024/1024:.1f} MB uncompressed in {time.time()-t0:.0f}s")
 
 # ── Identify card columns ─────────────────────────────────────────────────────
 print("\nScanning column headers...")
+text       = text.replace('\x00', '')  # strip NUL bytes present in some older 17Lands files
 reader     = csv.DictReader(io.StringIO(text))
 fieldnames = reader.fieldnames or []
 
