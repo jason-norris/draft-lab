@@ -538,9 +538,17 @@ function classifyQuadrant(myNum, exp, perf, thresh=0.75) {
 }
 
 // ── AnalyticsView ─────────────────────────────────────────────────────────────
+const GRADE_ORDER = ["A+","A","A-","B+","B","B-","C+","C","C-","D+","D","F"];
+const SCATTER_MODES = [
+  { id:"meVsPerf",  label:"Me vs Perf",   xKey:"perf",   yKey:"myNum", xLabel:"Performance", yLabel:"My Grade" },
+  { id:"meVsExp",   label:"Me vs Expert", xKey:"exp",    yKey:"myNum", xLabel:"Expert",       yLabel:"My Grade" },
+  { id:"expVsPerf", label:"Expert vs Perf",xKey:"perf",  yKey:"exp",   xLabel:"Performance", yLabel:"Expert" },
+];
+
 function AnalyticsView({ cards, grades, isMobile, onCardClick }) {
-  const [activeTab, setActiveTab] = useState("scatter");
-  const chartRef = useRef(null);
+  const [activeTab, setActiveTab]       = useState("distribution");
+  const [scatterMode, setScatterMode]   = useState("meVsPerf");
+  const chartRef     = useRef(null);
   const chartInstance = useRef(null);
 
   // Build analytics dataset — exclude basic lands
@@ -574,94 +582,116 @@ function AnalyticsView({ cards, grades, isMobile, onCardClick }) {
     return { avgGap, overrated, underrated, agreed, quads, total: withPerf.length };
   }, [withPerf]);
 
-  // Color map for scatter dots
-  const DOT_COLORS = { W:"#c8a030", U:"#3a7abf", B:"#9050c0", R:"#c83030", G:"#309030", M:"#b08020", C:"#808098", L:"#907040" };
   const RARITY_SIZE = isMobile
-    ? { common:3, uncommon:4, rare:6, mythic:8 }
+    ? { common:3, uncommon:4, rare:5, mythic:7 }
     : { common:4, uncommon:6, rare:9, mythic:12 };
 
-  // Build/rebuild scatter chart
+  const destroy = () => { if (chartInstance.current) { chartInstance.current.destroy(); chartInstance.current = null; } };
+
+  // Distribution chart (grade bell curve)
   useEffect(() => {
-    if (activeTab !== "scatter" || !chartRef.current || !withPerf.length) return;
-    if (chartInstance.current) { chartInstance.current.destroy(); chartInstance.current = null; }
-
-    const ctx = chartRef.current.getContext("2d");
-    const points = withPerf.map(d => ({
-      x: d.perf, y: d.myNum,
-      card: d.card, g: d.g, quad: d.quad,
-      backgroundColor: DOT_COLORS[d.colorKey] + "cc",
-      borderColor: DOT_COLORS[d.colorKey],
-      radius: RARITY_SIZE[d.card.rarity] ?? 5,
-    }));
-
-    const avgPerf = withPerf.reduce((a,d) => a + d.perf, 0) / withPerf.length;
-    const avgMy   = withPerf.reduce((a,d) => a + d.myNum, 0) / withPerf.length;
-
-    chartInstance.current = new Chart(ctx, {
-      type: "scatter",
+    if (activeTab !== "distribution" || !chartRef.current || !dataset.length) return;
+    destroy();
+    const myCounts  = GRADE_ORDER.map(g => dataset.filter(d => d.g.myGrade === g).length);
+    const perfCounts = GRADE_ORDER.map(g => {
+      const num = GRADE_NUMERIC[g];
+      return withPerf.filter(d => Math.abs(d.perf - num) < 0.4).length;
+    });
+    chartInstance.current = new Chart(chartRef.current.getContext("2d"), {
+      type: "bar",
       data: {
-        datasets: [{
-          data: points,
-          pointBackgroundColor: points.map(p => p.backgroundColor),
-          pointBorderColor: points.map(p => p.borderColor),
-          pointRadius: points.map(p => p.radius),
-          pointHoverRadius: points.map(p => p.radius + 3),
-          pointBorderWidth: 1,
-        }]
+        labels: GRADE_ORDER,
+        datasets: [
+          { label:"My Grades", data: myCounts,
+            backgroundColor: GRADE_ORDER.map(g => (GRADE_COLOR[g] || "#888") + "cc"),
+            borderColor: GRADE_ORDER.map(g => GRADE_COLOR[g] || "#888"),
+            borderWidth: 1.5 },
+          { label:"Performance", data: perfCounts, type:"line",
+            borderColor: "rgba(200,168,75,0.7)", backgroundColor:"transparent",
+            borderWidth:2, pointRadius:3, pointBackgroundColor:"rgba(200,168,75,0.7)", tension:0.3 }
+        ]
       },
       options: {
-        responsive: true, maintainAspectRatio: true,
-        animation: { duration: 400 },
-        plugins: {
-          legend: { display: false },
-          tooltip: {
-            callbacks: {
-              label: ctx => {
-                const p = ctx.raw;
-                return [`${p.card.name}`, `Me: ${p.g.myGrade}  Perf: ${p.x.toFixed(1)}  ${p.quad ?? ""}`];
-              }
-            },
-            backgroundColor: "var(--s1)", titleColor: "var(--gold)",
-            bodyColor: "var(--dim)", borderColor: "var(--b2)", borderWidth: 1,
-          },
-          annotation: undefined,
+        responsive:true, maintainAspectRatio:true, animation:{duration:400},
+        plugins:{ legend:{ display:true, labels:{ color:"var(--dim)", font:{size:10}, boxWidth:12 } },
+          tooltip:{ backgroundColor:"var(--s1)", titleColor:"var(--gold)", bodyColor:"var(--dim)",
+            borderColor:"var(--b2)", borderWidth:1 } },
+        scales:{
+          x:{ ticks:{color:"var(--dimmer)"}, grid:{color:"var(--b1)"} },
+          y:{ ticks:{color:"var(--dimmer)"}, grid:{color:"var(--b1)"}, beginAtZero:true }
+        }
+      }
+    });
+    return destroy;
+  }, [activeTab, dataset, withPerf]);
+
+  // Scatter chart (three modes)
+  useEffect(() => {
+    if (activeTab !== "scatter" || !chartRef.current || !withPerf.length) return;
+    destroy();
+    const mode = SCATTER_MODES.find(m => m.id === scatterMode) ?? SCATTER_MODES[0];
+    const pts = withPerf.filter(d => d[mode.xKey] != null && d[mode.yKey] != null).map(d => ({
+      x: d[mode.xKey], y: d[mode.yKey],
+      card: d.card, g: d.g, quad: d.quad,
+      backgroundColor: (QUAD_COLORS[d.quad] ?? "#808098") + "bb",
+      borderColor: QUAD_COLORS[d.quad] ?? "#808098",
+      radius: RARITY_SIZE[d.card.rarity] ?? 5,
+    }));
+    const avgX = pts.reduce((a,p) => a + p.x, 0) / pts.length;
+    const avgY = pts.reduce((a,p) => a + p.y, 0) / pts.length;
+    const gradeLabel = v => Object.entries(GRADE_NUMERIC).find(([,n]) => Math.abs(n-v)<0.1)?.[0] ?? "";
+    chartInstance.current = new Chart(chartRef.current.getContext("2d"), {
+      type:"scatter",
+      data:{ datasets:[{
+        data: pts,
+        pointBackgroundColor: pts.map(p => p.backgroundColor),
+        pointBorderColor: pts.map(p => p.borderColor),
+        pointRadius: pts.map(p => p.radius),
+        pointHoverRadius: pts.map(p => p.radius + 3),
+        pointBorderWidth: 1,
+      }]},
+      options:{
+        responsive:true, maintainAspectRatio:!isMobile, aspectRatio: isMobile ? 1 : 1.5,
+        animation:{duration:400},
+        plugins:{
+          legend:{display:false},
+          tooltip:{ callbacks:{ label: ctx => {
+            const p = ctx.raw;
+            const xl = mode.xKey === "perf" ? `Perf:${p.x.toFixed(1)}` : mode.xKey === "exp" ? `Exp:${p.x.toFixed(1)}` : `Perf:${p.x.toFixed(1)}`;
+            const yl = mode.yKey === "myNum" ? `Me:${p.g.myGrade}` : `Exp:${p.y.toFixed(1)}`;
+            return [`${p.card.name}`, `${yl}  ${xl}  ${p.quad ?? ""}`];
+          }},
+          backgroundColor:"var(--s1)", titleColor:"var(--gold)", bodyColor:"var(--dim)",
+          borderColor:"var(--b2)", borderWidth:1 },
         },
-        scales: {
-          x: { min:0, max:5, title:{ display:true, text:"Performance Rating", color:"var(--dimmer)", font:{size:10} },
-               ticks:{ color:"var(--dimmer)", stepSize:0.5 }, grid:{ color:"var(--b1)" } },
-          y: { min:0, max:5, title:{ display:true, text:"My Grade", color:"var(--dimmer)", font:{size:10} },
-               ticks:{ color:"var(--dimmer)", stepSize:0.5,
-                 callback: v => Object.entries(GRADE_NUMERIC).find(([,n]) => Math.abs(n-v)<0.1)?.[0] ?? "" },
-               grid:{ color:"var(--b1)" } },
+        scales:{
+          x:{ min:0, max:5, title:{display:true, text:mode.xLabel, color:"var(--dimmer)", font:{size:10}},
+              ticks:{color:"var(--dimmer)", stepSize:0.5, callback: mode.xKey !== "perf" ? gradeLabel : undefined},
+              grid:{color:"var(--b1)"} },
+          y:{ min:0, max:5, title:{display:true, text:mode.yLabel, color:"var(--dimmer)", font:{size:10}},
+              ticks:{color:"var(--dimmer)", stepSize:0.5, callback: gradeLabel},
+              grid:{color:"var(--b1)"} },
         },
-        onClick: (e, els) => {
+        onClick:(e, els) => {
           if (!els.length) return;
-          const p = points[els[0].index];
+          const p = pts[els[0].index];
           if (onCardClick && p.card) onCardClick(p.card);
         },
       },
-      plugins: [{
-        id: "crosshairs",
-        afterDraw: chart => {
-          const { ctx: c, scales: { x: xs, y: ys } } = chart;
-          const px = xs.getPixelForValue(avgPerf), py = ys.getPixelForValue(avgMy);
-          const left = xs.left, right = xs.right, top = ys.top, bottom = ys.bottom;
-          c.save();
-          c.setLineDash([4, 4]);
-          c.strokeStyle = "rgba(200,168,75,0.3)";
-          c.lineWidth = 1;
-          c.beginPath(); c.moveTo(px, top); c.lineTo(px, bottom); c.stroke();
-          c.beginPath(); c.moveTo(left, py); c.lineTo(right, py); c.stroke();
-          // diagonal
-          c.setLineDash([]);
-          c.strokeStyle = "rgba(200,168,75,0.15)";
-          c.beginPath(); c.moveTo(xs.getPixelForValue(0), ys.getPixelForValue(0));
-          c.lineTo(xs.getPixelForValue(5), ys.getPixelForValue(5)); c.stroke();
-          c.restore();
-        }
-      }]
+      plugins:[{ id:"crosshairs", afterDraw: chart => {
+        const { ctx:c, scales:{x:xs, y:ys} } = chart;
+        const px = xs.getPixelForValue(avgX), py = ys.getPixelForValue(avgY);
+        c.save();
+        c.setLineDash([4,4]); c.strokeStyle="rgba(200,168,75,0.3)"; c.lineWidth=1;
+        c.beginPath(); c.moveTo(px, ys.top); c.lineTo(px, ys.bottom); c.stroke();
+        c.beginPath(); c.moveTo(xs.left, py); c.lineTo(xs.right, py); c.stroke();
+        c.setLineDash([]); c.strokeStyle="rgba(200,168,75,0.15)";
+        c.beginPath(); c.moveTo(xs.getPixelForValue(0),ys.getPixelForValue(0));
+        c.lineTo(xs.getPixelForValue(5),ys.getPixelForValue(5)); c.stroke();
+        c.restore();
+      }}]
     });
-    return () => { if (chartInstance.current) { chartInstance.current.destroy(); chartInstance.current = null; } };
+    return destroy;
   }, [activeTab, withPerf]);
 
   if (!dataset.length) return (
@@ -674,14 +704,48 @@ function AnalyticsView({ cards, grades, isMobile, onCardClick }) {
   return (
     <div className="analytics-wrap">
       <div className="analytics-tabs">
-        {[["scatter","Scatter Plot"],["calibration","Calibration"],["quadrants","Quadrants"]].map(([id, lbl]) => (
-          <button key={id} className={`analytics-tab${activeTab===id?" active":""}`} onClick={() => setActiveTab(id)}>{lbl}</button>
+        {[["distribution","Distribution"],["scatter","Scatter"],["quadrants","Quadrants"]].map(([id, lbl]) => (
+          <button key={id} className={`analytics-tab${activeTab===id?" active":""}`} onClick={() => { setActiveTab(id); destroy(); }}>{lbl}</button>
         ))}
       </div>
 
-      {activeTab === "scatter" && (
+      {activeTab === "distribution" && (
         <div className="analytics-content">
           <div className="analytics-chart-wrap">
+            <canvas ref={chartRef} />
+          </div>
+          <div className="analytics-panel">
+            {stats && (
+              <div className="analytics-stat-block">
+                <div className="analytics-stat-label">Calibration</div>
+                <div className="analytics-stat-row"><span>Cards compared</span><span className="analytics-stat-val">{stats.total}</span></div>
+                <div className="analytics-stat-row"><span>Avg gap</span><span className="analytics-stat-val" style={{ color: stats.avgGap > 0 ? "#e05030" : "#32a050" }}>{stats.avgGap > 0 ? "+" : ""}{stats.avgGap.toFixed(2)}</span></div>
+                <div className="analytics-stat-row"><span>Overrated</span><span className="analytics-stat-val">{stats.overrated} ({Math.round(100*stats.overrated/stats.total)}%)</span></div>
+                <div className="analytics-stat-row"><span>Underrated</span><span className="analytics-stat-val">{stats.underrated} ({Math.round(100*stats.underrated/stats.total)}%)</span></div>
+                <div className="analytics-stat-row"><span>Agreed</span><span className="analytics-stat-val">{stats.agreed} ({Math.round(100*stats.agreed/stats.total)}%)</span></div>
+              </div>
+            )}
+            <div className="analytics-stat-block" style={{ fontSize:10, color:"var(--dimmer)", lineHeight:1.7 }}>
+              <div className="analytics-stat-label">How to read this</div>
+              <div><span style={{color:"var(--dim)"}}>Bars</span> — your grade distribution</div>
+              <div><span style={{color:"rgba(200,168,75,0.9)"}}>Gold line</span> — GIH Win Rate distribution</div>
+              <div>Bars skewed right = you overrated the format. Aligned = well-calibrated.</div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {activeTab === "scatter" && (
+        <div style={{ display:"flex", flexDirection:"column", gap:10 }}>
+          <div style={{ display:"flex", gap:6 }}>
+            {SCATTER_MODES.map(m => (
+              <button key={m.id} className={`analytics-tab${scatterMode===m.id?" active":""}`}
+                style={{ fontSize:9, padding:"3px 10px" }}
+                onClick={() => { destroy(); setScatterMode(m.id); }}>{m.label}</button>
+            ))}
+          </div>
+        <div className="analytics-content">
+          <div className="analytics-chart-wrap" style={{ minHeight: isMobile ? 280 : undefined }}>
             <canvas ref={chartRef} />
           </div>
           {stats && (
@@ -707,23 +771,18 @@ function AnalyticsView({ cards, grades, isMobile, onCardClick }) {
               </div>
               <div className="analytics-stat-block" style={{ fontSize:10, color:"var(--dimmer)", lineHeight:1.7 }}>
                 <div className="analytics-stat-label">How to read this</div>
-                <div><span style={{ color:"var(--dim)" }}>X axis</span> — Performance (17Lands GIH WR, 0–5)</div>
-                <div><span style={{ color:"var(--dim)" }}>Y axis</span> — Your pre-format grade (numeric)</div>
-                <div><span style={{ color:"var(--dim)" }}>Diagonal</span> — Perfect agreement with data</div>
-                <div><span style={{ color:"#e05030" }}>Above diagonal</span> — You overrated</div>
-                <div><span style={{ color:"#32a050" }}>Below diagonal</span> — You underrated</div>
-                <div><span style={{ color:"var(--dim)" }}>Crosshairs</span> — Mean of each axis</div>
-                <div><span style={{ color:"var(--dim)" }}>Color</span> — MTG color identity</div>
-                <div><span style={{ color:"var(--dim)" }}>Size</span> — Rarity (mythic largest)</div>
-                <div style={{ marginTop:6 }}>Hover a dot to see the card. Click to open card detail.</div>
+                <div><span style={{color:"var(--dim)"}}>Diagonal</span> — Perfect agreement</div>
+                <div><span style={{color:"#e05030"}}>Above</span> — You overrated</div>
+                <div><span style={{color:"#32a050"}}>Below</span> — You underrated</div>
+                <div><span style={{color:"var(--dim)"}}>Crosshairs</span> — Mean of each axis</div>
+                <div><span style={{color:"var(--dim)"}}>Color</span> — Quadrant classification</div>
+                <div><span style={{color:"var(--dim)"}}>Size</span> — Rarity (mythic largest)</div>
+                <div style={{marginTop:6}}>Hover to see card. Tap/click to open detail.</div>
               </div>
             </div>
           )}
         </div>
-      )}
-
-      {activeTab === "calibration" && (
-        <div className="analytics-empty">Calibration histogram — coming in session 2</div>
+        </div>
       )}
 
       {activeTab === "quadrants" && (

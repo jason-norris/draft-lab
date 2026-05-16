@@ -1290,15 +1290,42 @@ function classifyQuadrant(myNum, exp, perf) {
   if (mePerf && !meExp) return "SPOT";
   return "VAR";
 }
+const GRADE_ORDER = ["A+", "A", "A-", "B+", "B", "B-", "C+", "C", "C-", "D+", "D", "F"];
+const SCATTER_MODES = [{
+  id: "meVsPerf",
+  label: "Me vs Perf",
+  xKey: "perf",
+  yKey: "myNum",
+  xLabel: "Performance",
+  yLabel: "My Grade"
+}, {
+  id: "meVsExp",
+  label: "Me vs Expert",
+  xKey: "exp",
+  yKey: "myNum",
+  xLabel: "Expert",
+  yLabel: "My Grade"
+}, {
+  id: "expVsPerf",
+  label: "Expert vs Perf",
+  xKey: "perf",
+  yKey: "exp",
+  xLabel: "Performance",
+  yLabel: "Expert"
+}];
 function AnalyticsView(_ref12) {
   let cards = _ref12.cards,
     grades = _ref12.grades,
     isMobile = _ref12.isMobile,
     onCardClick = _ref12.onCardClick;
-  const _useState9 = useState("scatter"),
+  const _useState9 = useState("distribution"),
     _useState0 = _slicedToArray(_useState9, 2),
     activeTab = _useState0[0],
     setActiveTab = _useState0[1];
+  const _useState1 = useState("meVsPerf"),
+    _useState10 = _slicedToArray(_useState1, 2),
+    scatterMode = _useState10[0],
+    setScatterMode = _useState10[1];
   const chartRef = useRef(null);
   const chartInstance = useRef(null);
   const dataset = useMemo(() => {
@@ -1348,61 +1375,141 @@ function AnalyticsView(_ref12) {
       total: withPerf.length
     };
   }, [withPerf]);
-  const DOT_COLORS = {
-    W: "#c8a030",
-    U: "#3a7abf",
-    B: "#9050c0",
-    R: "#c83030",
-    G: "#309030",
-    M: "#b08020",
-    C: "#808098",
-    L: "#907040"
-  };
   const RARITY_SIZE = isMobile ? {
     common: 3,
     uncommon: 4,
-    rare: 6,
-    mythic: 8
+    rare: 5,
+    mythic: 7
   } : {
     common: 4,
     uncommon: 6,
     rare: 9,
     mythic: 12
   };
-  useEffect(() => {
-    if (activeTab !== "scatter" || !chartRef.current || !withPerf.length) return;
+  const destroy = () => {
     if (chartInstance.current) {
       chartInstance.current.destroy();
       chartInstance.current = null;
     }
-    const ctx = chartRef.current.getContext("2d");
-    const points = withPerf.map(d => ({
-      x: d.perf,
-      y: d.myNum,
-      card: d.card,
-      g: d.g,
-      quad: d.quad,
-      backgroundColor: DOT_COLORS[d.colorKey] + "cc",
-      borderColor: DOT_COLORS[d.colorKey],
-      radius: RARITY_SIZE[d.card.rarity] ?? 5
-    }));
-    const avgPerf = withPerf.reduce((a, d) => a + d.perf, 0) / withPerf.length;
-    const avgMy = withPerf.reduce((a, d) => a + d.myNum, 0) / withPerf.length;
-    chartInstance.current = new Chart(ctx, {
-      type: "scatter",
+  };
+  useEffect(() => {
+    if (activeTab !== "distribution" || !chartRef.current || !dataset.length) return;
+    destroy();
+    const myCounts = GRADE_ORDER.map(g => dataset.filter(d => d.g.myGrade === g).length);
+    const perfCounts = GRADE_ORDER.map(g => {
+      const num = GRADE_NUMERIC[g];
+      return withPerf.filter(d => Math.abs(d.perf - num) < 0.4).length;
+    });
+    chartInstance.current = new Chart(chartRef.current.getContext("2d"), {
+      type: "bar",
       data: {
+        labels: GRADE_ORDER,
         datasets: [{
-          data: points,
-          pointBackgroundColor: points.map(p => p.backgroundColor),
-          pointBorderColor: points.map(p => p.borderColor),
-          pointRadius: points.map(p => p.radius),
-          pointHoverRadius: points.map(p => p.radius + 3),
-          pointBorderWidth: 1
+          label: "My Grades",
+          data: myCounts,
+          backgroundColor: GRADE_ORDER.map(g => (GRADE_COLOR[g] || "#888") + "cc"),
+          borderColor: GRADE_ORDER.map(g => GRADE_COLOR[g] || "#888"),
+          borderWidth: 1.5
+        }, {
+          label: "Performance",
+          data: perfCounts,
+          type: "line",
+          borderColor: "rgba(200,168,75,0.7)",
+          backgroundColor: "transparent",
+          borderWidth: 2,
+          pointRadius: 3,
+          pointBackgroundColor: "rgba(200,168,75,0.7)",
+          tension: 0.3
         }]
       },
       options: {
         responsive: true,
         maintainAspectRatio: true,
+        animation: {
+          duration: 400
+        },
+        plugins: {
+          legend: {
+            display: true,
+            labels: {
+              color: "var(--dim)",
+              font: {
+                size: 10
+              },
+              boxWidth: 12
+            }
+          },
+          tooltip: {
+            backgroundColor: "var(--s1)",
+            titleColor: "var(--gold)",
+            bodyColor: "var(--dim)",
+            borderColor: "var(--b2)",
+            borderWidth: 1
+          }
+        },
+        scales: {
+          x: {
+            ticks: {
+              color: "var(--dimmer)"
+            },
+            grid: {
+              color: "var(--b1)"
+            }
+          },
+          y: {
+            ticks: {
+              color: "var(--dimmer)"
+            },
+            grid: {
+              color: "var(--b1)"
+            },
+            beginAtZero: true
+          }
+        }
+      }
+    });
+    return destroy;
+  }, [activeTab, dataset, withPerf]);
+  useEffect(() => {
+    if (activeTab !== "scatter" || !chartRef.current || !withPerf.length) return;
+    destroy();
+    const mode = SCATTER_MODES.find(m => m.id === scatterMode) ?? SCATTER_MODES[0];
+    const pts = withPerf.filter(d => d[mode.xKey] != null && d[mode.yKey] != null).map(d => ({
+      x: d[mode.xKey],
+      y: d[mode.yKey],
+      card: d.card,
+      g: d.g,
+      quad: d.quad,
+      backgroundColor: (QUAD_COLORS[d.quad] ?? "#808098") + "bb",
+      borderColor: QUAD_COLORS[d.quad] ?? "#808098",
+      radius: RARITY_SIZE[d.card.rarity] ?? 5
+    }));
+    const avgX = pts.reduce((a, p) => a + p.x, 0) / pts.length;
+    const avgY = pts.reduce((a, p) => a + p.y, 0) / pts.length;
+    const gradeLabel = v => {
+      var _Object$entries$find;
+      return ((_Object$entries$find = Object.entries(GRADE_NUMERIC).find(_ref13 => {
+        let _ref14 = _slicedToArray(_ref13, 2),
+          n = _ref14[1];
+        return Math.abs(n - v) < 0.1;
+      })) === null || _Object$entries$find === void 0 ? void 0 : _Object$entries$find[0]) ?? "";
+    };
+    chartInstance.current = new Chart(chartRef.current.getContext("2d"), {
+      type: "scatter",
+      data: {
+        datasets: [{
+          data: pts,
+          pointBackgroundColor: pts.map(p => p.backgroundColor),
+          pointBorderColor: pts.map(p => p.borderColor),
+          pointRadius: pts.map(p => p.radius),
+          pointHoverRadius: pts.map(p => p.radius + 3),
+          pointBorderWidth: 1
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: !isMobile,
+        aspectRatio: isMobile ? 1 : 1.5,
         animation: {
           duration: 400
         },
@@ -1414,7 +1521,9 @@ function AnalyticsView(_ref12) {
             callbacks: {
               label: ctx => {
                 const p = ctx.raw;
-                return [`${p.card.name}`, `Me: ${p.g.myGrade}  Perf: ${p.x.toFixed(1)}  ${p.quad ?? ""}`];
+                const xl = mode.xKey === "perf" ? `Perf:${p.x.toFixed(1)}` : mode.xKey === "exp" ? `Exp:${p.x.toFixed(1)}` : `Perf:${p.x.toFixed(1)}`;
+                const yl = mode.yKey === "myNum" ? `Me:${p.g.myGrade}` : `Exp:${p.y.toFixed(1)}`;
+                return [`${p.card.name}`, `${yl}  ${xl}  ${p.quad ?? ""}`];
               }
             },
             backgroundColor: "var(--s1)",
@@ -1422,8 +1531,7 @@ function AnalyticsView(_ref12) {
             bodyColor: "var(--dim)",
             borderColor: "var(--b2)",
             borderWidth: 1
-          },
-          annotation: undefined
+          }
         },
         scales: {
           x: {
@@ -1431,7 +1539,7 @@ function AnalyticsView(_ref12) {
             max: 5,
             title: {
               display: true,
-              text: "Performance Rating",
+              text: mode.xLabel,
               color: "var(--dimmer)",
               font: {
                 size: 10
@@ -1439,7 +1547,8 @@ function AnalyticsView(_ref12) {
             },
             ticks: {
               color: "var(--dimmer)",
-              stepSize: 0.5
+              stepSize: 0.5,
+              callback: mode.xKey !== "perf" ? gradeLabel : undefined
             },
             grid: {
               color: "var(--b1)"
@@ -1450,7 +1559,7 @@ function AnalyticsView(_ref12) {
             max: 5,
             title: {
               display: true,
-              text: "My Grade",
+              text: mode.yLabel,
               color: "var(--dimmer)",
               font: {
                 size: 10
@@ -1459,14 +1568,7 @@ function AnalyticsView(_ref12) {
             ticks: {
               color: "var(--dimmer)",
               stepSize: 0.5,
-              callback: v => {
-                var _Object$entries$find;
-                return ((_Object$entries$find = Object.entries(GRADE_NUMERIC).find(_ref13 => {
-                  let _ref14 = _slicedToArray(_ref13, 2),
-                    n = _ref14[1];
-                  return Math.abs(n - v) < 0.1;
-                })) === null || _Object$entries$find === void 0 ? void 0 : _Object$entries$find[0]) ?? "";
-              }
+              callback: gradeLabel
             },
             grid: {
               color: "var(--b1)"
@@ -1475,7 +1577,7 @@ function AnalyticsView(_ref12) {
         },
         onClick: (e, els) => {
           if (!els.length) return;
-          const p = points[els[0].index];
+          const p = pts[els[0].index];
           if (onCardClick && p.card) onCardClick(p.card);
         }
       },
@@ -1486,23 +1588,19 @@ function AnalyticsView(_ref12) {
             _chart$scales = chart.scales,
             xs = _chart$scales.x,
             ys = _chart$scales.y;
-          const px = xs.getPixelForValue(avgPerf),
-            py = ys.getPixelForValue(avgMy);
-          const left = xs.left,
-            right = xs.right,
-            top = ys.top,
-            bottom = ys.bottom;
+          const px = xs.getPixelForValue(avgX),
+            py = ys.getPixelForValue(avgY);
           c.save();
           c.setLineDash([4, 4]);
           c.strokeStyle = "rgba(200,168,75,0.3)";
           c.lineWidth = 1;
           c.beginPath();
-          c.moveTo(px, top);
-          c.lineTo(px, bottom);
+          c.moveTo(px, ys.top);
+          c.lineTo(px, ys.bottom);
           c.stroke();
           c.beginPath();
-          c.moveTo(left, py);
-          c.lineTo(right, py);
+          c.moveTo(xs.left, py);
+          c.lineTo(xs.right, py);
           c.stroke();
           c.setLineDash([]);
           c.strokeStyle = "rgba(200,168,75,0.15)";
@@ -1514,12 +1612,7 @@ function AnalyticsView(_ref12) {
         }
       }]
     });
-    return () => {
-      if (chartInstance.current) {
-        chartInstance.current.destroy();
-        chartInstance.current = null;
-      }
-    };
+    return destroy;
   }, [activeTab, withPerf]);
   if (!dataset.length) return React.createElement("div", {
     className: "analytics-empty"
@@ -1533,19 +1626,99 @@ function AnalyticsView(_ref12) {
     className: "analytics-wrap"
   }, React.createElement("div", {
     className: "analytics-tabs"
-  }, [["scatter", "Scatter Plot"], ["calibration", "Calibration"], ["quadrants", "Quadrants"]].map(_ref15 => {
+  }, [["distribution", "Distribution"], ["scatter", "Scatter"], ["quadrants", "Quadrants"]].map(_ref15 => {
     let _ref16 = _slicedToArray(_ref15, 2),
       id = _ref16[0],
       lbl = _ref16[1];
     return React.createElement("button", {
       key: id,
       className: `analytics-tab${activeTab === id ? " active" : ""}`,
-      onClick: () => setActiveTab(id)
+      onClick: () => {
+        setActiveTab(id);
+        destroy();
+      }
     }, lbl);
-  })), activeTab === "scatter" && React.createElement("div", {
+  })), activeTab === "distribution" && React.createElement("div", {
     className: "analytics-content"
   }, React.createElement("div", {
     className: "analytics-chart-wrap"
+  }, React.createElement("canvas", {
+    ref: chartRef
+  })), React.createElement("div", {
+    className: "analytics-panel"
+  }, stats && React.createElement("div", {
+    className: "analytics-stat-block"
+  }, React.createElement("div", {
+    className: "analytics-stat-label"
+  }, "Calibration"), React.createElement("div", {
+    className: "analytics-stat-row"
+  }, React.createElement("span", null, "Cards compared"), React.createElement("span", {
+    className: "analytics-stat-val"
+  }, stats.total)), React.createElement("div", {
+    className: "analytics-stat-row"
+  }, React.createElement("span", null, "Avg gap"), React.createElement("span", {
+    className: "analytics-stat-val",
+    style: {
+      color: stats.avgGap > 0 ? "#e05030" : "#32a050"
+    }
+  }, stats.avgGap > 0 ? "+" : "", stats.avgGap.toFixed(2))), React.createElement("div", {
+    className: "analytics-stat-row"
+  }, React.createElement("span", null, "Overrated"), React.createElement("span", {
+    className: "analytics-stat-val"
+  }, stats.overrated, " (", Math.round(100 * stats.overrated / stats.total), "%)")), React.createElement("div", {
+    className: "analytics-stat-row"
+  }, React.createElement("span", null, "Underrated"), React.createElement("span", {
+    className: "analytics-stat-val"
+  }, stats.underrated, " (", Math.round(100 * stats.underrated / stats.total), "%)")), React.createElement("div", {
+    className: "analytics-stat-row"
+  }, React.createElement("span", null, "Agreed"), React.createElement("span", {
+    className: "analytics-stat-val"
+  }, stats.agreed, " (", Math.round(100 * stats.agreed / stats.total), "%)"))), React.createElement("div", {
+    className: "analytics-stat-block",
+    style: {
+      fontSize: 10,
+      color: "var(--dimmer)",
+      lineHeight: 1.7
+    }
+  }, React.createElement("div", {
+    className: "analytics-stat-label"
+  }, "How to read this"), React.createElement("div", null, React.createElement("span", {
+    style: {
+      color: "var(--dim)"
+    }
+  }, "Bars"), " \u2014 your grade distribution"), React.createElement("div", null, React.createElement("span", {
+    style: {
+      color: "rgba(200,168,75,0.9)"
+    }
+  }, "Gold line"), " \u2014 GIH Win Rate distribution"), React.createElement("div", null, "Bars skewed right = you overrated the format. Aligned = well-calibrated.")))), activeTab === "scatter" && React.createElement("div", {
+    style: {
+      display: "flex",
+      flexDirection: "column",
+      gap: 10
+    }
+  }, React.createElement("div", {
+    style: {
+      display: "flex",
+      gap: 6
+    }
+  }, SCATTER_MODES.map(m => React.createElement("button", {
+    key: m.id,
+    className: `analytics-tab${scatterMode === m.id ? " active" : ""}`,
+    style: {
+      fontSize: 9,
+      padding: "3px 10px"
+    },
+    onClick: () => {
+      destroy();
+      setScatterMode(m.id);
+    }
+  }, m.label))), React.createElement("div", {
+    className: "analytics-content"
+  }, React.createElement("div", {
+    className: "analytics-chart-wrap",
+    style: {
+      minHeight: isMobile ? 280 : undefined
+    }
   }, React.createElement("canvas", {
     ref: chartRef
   })), stats && React.createElement("div", {
@@ -1620,23 +1793,15 @@ function AnalyticsView(_ref12) {
     style: {
       color: "var(--dim)"
     }
-  }, "X axis"), " \u2014 Performance (17Lands GIH WR, 0\u20135)"), React.createElement("div", null, React.createElement("span", {
-    style: {
-      color: "var(--dim)"
-    }
-  }, "Y axis"), " \u2014 Your pre-format grade (numeric)"), React.createElement("div", null, React.createElement("span", {
-    style: {
-      color: "var(--dim)"
-    }
-  }, "Diagonal"), " \u2014 Perfect agreement with data"), React.createElement("div", null, React.createElement("span", {
+  }, "Diagonal"), " \u2014 Perfect agreement"), React.createElement("div", null, React.createElement("span", {
     style: {
       color: "#e05030"
     }
-  }, "Above diagonal"), " \u2014 You overrated"), React.createElement("div", null, React.createElement("span", {
+  }, "Above"), " \u2014 You overrated"), React.createElement("div", null, React.createElement("span", {
     style: {
       color: "#32a050"
     }
-  }, "Below diagonal"), " \u2014 You underrated"), React.createElement("div", null, React.createElement("span", {
+  }, "Below"), " \u2014 You underrated"), React.createElement("div", null, React.createElement("span", {
     style: {
       color: "var(--dim)"
     }
@@ -1644,7 +1809,7 @@ function AnalyticsView(_ref12) {
     style: {
       color: "var(--dim)"
     }
-  }, "Color"), " \u2014 MTG color identity"), React.createElement("div", null, React.createElement("span", {
+  }, "Color"), " \u2014 Quadrant classification"), React.createElement("div", null, React.createElement("span", {
     style: {
       color: "var(--dim)"
     }
@@ -1652,9 +1817,7 @@ function AnalyticsView(_ref12) {
     style: {
       marginTop: 6
     }
-  }, "Hover a dot to see the card. Click to open card detail.")))), activeTab === "calibration" && React.createElement("div", {
-    className: "analytics-empty"
-  }, "Calibration histogram \u2014 coming in session 2"), activeTab === "quadrants" && React.createElement("div", {
+  }, "Hover to see card. Tap/click to open detail."))))), activeTab === "quadrants" && React.createElement("div", {
     className: "analytics-empty"
   }, "Quadrant card lists \u2014 coming in session 2"));
 }
@@ -1682,18 +1845,18 @@ function MobileCardItem(_ref20) {
   let card = _ref20.card,
     grade = _ref20.grade,
     onUpdate = _ref20.onUpdate;
-  const _useState1 = useState(false),
-    _useState10 = _slicedToArray(_useState1, 2),
-    expanded = _useState10[0],
-    setExpanded = _useState10[1];
   const _useState11 = useState(false),
     _useState12 = _slicedToArray(_useState11, 2),
-    bigImg = _useState12[0],
-    setBigImg = _useState12[1];
-  const _useState13 = useState(0),
+    expanded = _useState12[0],
+    setExpanded = _useState12[1];
+  const _useState13 = useState(false),
     _useState14 = _slicedToArray(_useState13, 2),
-    face = _useState14[0],
-    setFace = _useState14[1];
+    bigImg = _useState14[0],
+    setBigImg = _useState14[1];
+  const _useState15 = useState(0),
+    _useState16 = _slicedToArray(_useState15, 2),
+    face = _useState16[0],
+    setFace = _useState16[1];
   const ck = getColorKey(card);
   const hasDFC = ((_card$card_faces4 = card.card_faces) === null || _card$card_faces4 === void 0 ? void 0 : _card$card_faces4.length) >= 2 && ((_card$card_faces$2 = card.card_faces[1]) === null || _card$card_faces$2 === void 0 ? void 0 : _card$card_faces$2.image_uris);
   const img = hasDFC ? (_card$card_faces$face3 = card.card_faces[face]) === null || _card$card_faces$face3 === void 0 || (_card$card_faces$face3 = _card$card_faces$face3.image_uris) === null || _card$card_faces$face3 === void 0 ? void 0 : _card$card_faces$face3.normal : getImageUrl(card);
@@ -1882,18 +2045,18 @@ function ImportPanel(_ref21) {
     setMeta = _ref21.setMeta,
     onGradesUpdate = _ref21.onGradesUpdate,
     mobile = _ref21.mobile;
-  const _useState15 = useState(""),
-    _useState16 = _slicedToArray(_useState15, 2),
-    msg = _useState16[0],
-    setMsg = _useState16[1];
-  const _useState17 = useState("17lands"),
+  const _useState17 = useState(""),
     _useState18 = _slicedToArray(_useState17, 2),
-    source = _useState18[0],
-    setSource = _useState18[1];
-  const _useState19 = useState("auto"),
+    msg = _useState18[0],
+    setMsg = _useState18[1];
+  const _useState19 = useState("17lands"),
     _useState20 = _slicedToArray(_useState19, 2),
-    target = _useState20[0],
-    setTarget = _useState20[1];
+    source = _useState20[0],
+    setSource = _useState20[1];
+  const _useState21 = useState("auto"),
+    _useState22 = _slicedToArray(_useState21, 2),
+    target = _useState22[0],
+    setTarget = _useState22[1];
   const resolvedTarget = target === "auto" ? source === "17lands" ? "performance" : "expert" : target;
   const importCSV = text => {
     const lines = text.trim().split("\n").filter(l => l.trim());
@@ -2098,26 +2261,26 @@ function DraftLab(_ref30) {
   let user = _ref30.user;
   const isMobile = useIsMobile();
   const didFirstSync = useRef(false);
-  const _useState21 = useState(() => localStorage.getItem("draft-lab-theme") || "auto"),
-    _useState22 = _slicedToArray(_useState21, 2),
-    theme = _useState22[0],
-    setTheme = _useState22[1];
-  const _useState23 = useState(false),
+  const _useState23 = useState(() => localStorage.getItem("draft-lab-theme") || "auto"),
     _useState24 = _slicedToArray(_useState23, 2),
-    showAnalytics = _useState24[0],
-    setShowAnalytics = _useState24[1];
+    theme = _useState24[0],
+    setTheme = _useState24[1];
   const _useState25 = useState(false),
     _useState26 = _slicedToArray(_useState25, 2),
-    showImport = _useState26[0],
-    setShowImport = _useState26[1];
+    showAnalytics = _useState26[0],
+    setShowAnalytics = _useState26[1];
   const _useState27 = useState(false),
     _useState28 = _slicedToArray(_useState27, 2),
-    showExport = _useState28[0],
-    setShowExport = _useState28[1];
-  const _useState29 = useState("PremierDraft"),
+    showImport = _useState28[0],
+    setShowImport = _useState28[1];
+  const _useState29 = useState(false),
     _useState30 = _slicedToArray(_useState29, 2),
-    fmt17l = _useState30[0],
-    setFmt17l = _useState30[1];
+    showExport = _useState30[0],
+    setShowExport = _useState30[1];
+  const _useState31 = useState("PremierDraft"),
+    _useState32 = _slicedToArray(_useState31, 2),
+    fmt17l = _useState32[0],
+    setFmt17l = _useState32[1];
   const importRef = useRef(null);
   const exportRef = useRef(null);
   useEffect(() => {
@@ -2136,117 +2299,117 @@ function DraftLab(_ref30) {
     document.addEventListener("mousedown", h);
     return () => document.removeEventListener("mousedown", h);
   }, [showExport]);
-  const _useState31 = useState(null),
-    _useState32 = _slicedToArray(_useState31, 2),
-    importMeta = _useState32[0],
-    setImportMeta = _useState32[1];
-  const _useState33 = useState([]),
+  const _useState33 = useState(null),
     _useState34 = _slicedToArray(_useState33, 2),
-    sets = _useState34[0],
-    setSets = _useState34[1];
-  const _useState35 = useState(null),
+    importMeta = _useState34[0],
+    setImportMeta = _useState34[1];
+  const _useState35 = useState([]),
     _useState36 = _slicedToArray(_useState35, 2),
-    selectedSet = _useState36[0],
-    setSelectedSet = _useState36[1];
-  const _useState37 = useState([]),
+    sets = _useState36[0],
+    setSets = _useState36[1];
+  const _useState37 = useState(null),
     _useState38 = _slicedToArray(_useState37, 2),
-    cards = _useState38[0],
-    setCards = _useState38[1];
-  const _useState39 = useState({}),
+    selectedSet = _useState38[0],
+    setSelectedSet = _useState38[1];
+  const _useState39 = useState([]),
     _useState40 = _slicedToArray(_useState39, 2),
-    grades = _useState40[0],
-    setGrades = _useState40[1];
-  const _useState41 = useState(false),
+    cards = _useState40[0],
+    setCards = _useState40[1];
+  const _useState41 = useState({}),
     _useState42 = _slicedToArray(_useState41, 2),
-    loading = _useState42[0],
-    setLoading = _useState42[1];
-  const _useState43 = useState(""),
+    grades = _useState42[0],
+    setGrades = _useState42[1];
+  const _useState43 = useState(false),
     _useState44 = _slicedToArray(_useState43, 2),
-    loadMsg = _useState44[0],
-    setLoadMsg = _useState44[1];
-  const _useState45 = useState(null),
+    loading = _useState44[0],
+    setLoading = _useState44[1];
+  const _useState45 = useState(""),
     _useState46 = _slicedToArray(_useState45, 2),
-    error = _useState46[0],
-    setError = _useState46[1];
-  const _useState47 = useState("color"),
+    loadMsg = _useState46[0],
+    setLoadMsg = _useState46[1];
+  const _useState47 = useState(null),
     _useState48 = _slicedToArray(_useState47, 2),
-    sortCol = _useState48[0],
-    setSortCol = _useState48[1];
-  const _useState49 = useState("asc"),
+    error = _useState48[0],
+    setError = _useState48[1];
+  const _useState49 = useState("color"),
     _useState50 = _slicedToArray(_useState49, 2),
-    sortDir = _useState50[0],
-    setSortDir = _useState50[1];
-  const _useState51 = useState("color"),
+    sortCol = _useState50[0],
+    setSortCol = _useState50[1];
+  const _useState51 = useState("asc"),
     _useState52 = _slicedToArray(_useState51, 2),
-    mobileSort = _useState52[0],
-    setMobileSort = _useState52[1];
-  const _useState53 = useState("all"),
+    sortDir = _useState52[0],
+    setSortDir = _useState52[1];
+  const _useState53 = useState("color"),
     _useState54 = _slicedToArray(_useState53, 2),
-    filterColor = _useState54[0],
-    setFilterColor = _useState54[1];
+    mobileSort = _useState54[0],
+    setMobileSort = _useState54[1];
   const _useState55 = useState("all"),
     _useState56 = _slicedToArray(_useState55, 2),
-    filterRarity = _useState56[0],
-    setFilterRarity = _useState56[1];
-  const _useState57 = useState(""),
+    filterColor = _useState56[0],
+    setFilterColor = _useState56[1];
+  const _useState57 = useState("all"),
     _useState58 = _slicedToArray(_useState57, 2),
-    filterSearch = _useState58[0],
-    setFilterSearch = _useState58[1];
-  const _useState59 = useState("all"),
+    filterRarity = _useState58[0],
+    setFilterRarity = _useState58[1];
+  const _useState59 = useState(""),
     _useState60 = _slicedToArray(_useState59, 2),
-    filterGraded = _useState60[0],
-    setFilterGraded = _useState60[1];
+    filterSearch = _useState60[0],
+    setFilterSearch = _useState60[1];
   const _useState61 = useState("all"),
     _useState62 = _slicedToArray(_useState61, 2),
-    filterQuadrant = _useState62[0],
-    setFilterQuadrant = _useState62[1];
-  const _useState63 = useState([]),
+    filterGraded = _useState62[0],
+    setFilterGraded = _useState62[1];
+  const _useState63 = useState("all"),
     _useState64 = _slicedToArray(_useState63, 2),
-    filterTags = _useState64[0],
-    setFilterTags = _useState64[1];
-  const _useState65 = useState(false),
+    filterQuadrant = _useState64[0],
+    setFilterQuadrant = _useState64[1];
+  const _useState65 = useState([]),
     _useState66 = _slicedToArray(_useState65, 2),
-    showTagFilter = _useState66[0],
-    setShowTagFilter = _useState66[1];
+    filterTags = _useState66[0],
+    setFilterTags = _useState66[1];
   const _useState67 = useState(false),
     _useState68 = _slicedToArray(_useState67, 2),
-    showMobF = _useState68[0],
-    setShowMobF = _useState68[1];
-  const _useState69 = useState(null),
+    showTagFilter = _useState68[0],
+    setShowTagFilter = _useState68[1];
+  const _useState69 = useState(false),
     _useState70 = _slicedToArray(_useState69, 2),
-    lightboxIndex = _useState70[0],
-    setLightboxIndex = _useState70[1];
-  const _useState71 = useState(false),
+    showMobF = _useState70[0],
+    setShowMobF = _useState70[1];
+  const _useState71 = useState(null),
     _useState72 = _slicedToArray(_useState71, 2),
-    showGuide = _useState72[0],
-    setShowGuide = _useState72[1];
-  const _useState73 = useState(""),
+    lightboxIndex = _useState72[0],
+    setLightboxIndex = _useState72[1];
+  const _useState73 = useState(false),
     _useState74 = _slicedToArray(_useState73, 2),
-    syncStatus = _useState74[0],
-    setSyncStatus = _useState74[1];
-  const _useState75 = useState(false),
+    showGuide = _useState74[0],
+    setShowGuide = _useState74[1];
+  const _useState75 = useState(""),
     _useState76 = _slicedToArray(_useState75, 2),
-    showLegal = _useState76[0],
-    setShowLegal = _useState76[1];
-  const _useState77 = useState(null),
+    syncStatus = _useState76[0],
+    setSyncStatus = _useState76[1];
+  const _useState77 = useState(false),
     _useState78 = _slicedToArray(_useState77, 2),
-    hovered = _useState78[0],
-    setHovered = _useState78[1];
-  const _useState79 = useState({
+    showLegal = _useState78[0],
+    setShowLegal = _useState78[1];
+  const _useState79 = useState(null),
+    _useState80 = _slicedToArray(_useState79, 2),
+    hovered = _useState80[0],
+    setHovered = _useState80[1];
+  const _useState81 = useState({
       x: 0,
       y: 0
     }),
-    _useState80 = _slicedToArray(_useState79, 2),
-    hoverPos = _useState80[0],
-    setHoverPos = _useState80[1];
-  const _useState81 = useState(""),
     _useState82 = _slicedToArray(_useState81, 2),
-    setSearch = _useState82[0],
-    setSetSearch = _useState82[1];
-  const _useState83 = useState(false),
+    hoverPos = _useState82[0],
+    setHoverPos = _useState82[1];
+  const _useState83 = useState(""),
     _useState84 = _slicedToArray(_useState83, 2),
-    showSetDD = _useState84[0],
-    setShowSetDD = _useState84[1];
+    setSearch = _useState84[0],
+    setSetSearch = _useState84[1];
+  const _useState85 = useState(false),
+    _useState86 = _slicedToArray(_useState85, 2),
+    showSetDD = _useState86[0],
+    setShowSetDD = _useState86[1];
   useEffect(() => {
     if (theme === "auto") document.documentElement.removeAttribute("data-theme");else document.documentElement.setAttribute("data-theme", theme);
   }, [theme]);
@@ -3276,14 +3439,14 @@ function DraftLab(_ref30) {
 function LoginScreen(_ref40) {
   let onSignIn = _ref40.onSignIn,
     loading = _ref40.loading;
-  const _useState85 = useState(() => {
+  const _useState87 = useState(() => {
       const saved = localStorage.getItem("draft-lab-theme");
       if (saved && saved !== "auto") return saved;
       return window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
     }),
-    _useState86 = _slicedToArray(_useState85, 2),
-    theme = _useState86[0],
-    setTheme = _useState86[1];
+    _useState88 = _slicedToArray(_useState87, 2),
+    theme = _useState88[0],
+    setTheme = _useState88[1];
   useEffect(() => {
     document.documentElement.setAttribute("data-theme", theme);
     localStorage.setItem("draft-lab-theme", theme);
@@ -3345,18 +3508,18 @@ function LoginScreen(_ref40) {
   })), "Sign in with Google"))));
 }
 function AuthGate() {
-  const _useState87 = useState(null),
-    _useState88 = _slicedToArray(_useState87, 2),
-    user = _useState88[0],
-    setUser = _useState88[1];
-  const _useState89 = useState(true),
+  const _useState89 = useState(null),
     _useState90 = _slicedToArray(_useState89, 2),
-    authLoading = _useState90[0],
-    setAuthLoading = _useState90[1];
-  const _useState91 = useState(false),
+    user = _useState90[0],
+    setUser = _useState90[1];
+  const _useState91 = useState(true),
     _useState92 = _slicedToArray(_useState91, 2),
-    signing = _useState92[0],
-    setSigning = _useState92[1];
+    authLoading = _useState92[0],
+    setAuthLoading = _useState92[1];
+  const _useState93 = useState(false),
+    _useState94 = _slicedToArray(_useState93, 2),
+    signing = _useState94[0],
+    setSigning = _useState94[1];
   useEffect(() => {
     if (!SUPABASE_CONFIGURED) {
       setAuthLoading(false);
