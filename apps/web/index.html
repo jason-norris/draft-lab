@@ -327,6 +327,7 @@
     .analytics-content { display:flex; gap:20px; align-items:flex-start; flex-wrap:wrap; }
     .analytics-chart-wrap { flex:1; min-width:300px; position:relative; }
     .analytics-panel { flex-shrink:0; width:240px; display:flex; flex-direction:column; gap:14px; }
+    .analytics-chart-title { font-size:11px; color:var(--dim); text-align:center; margin-bottom:4px; letter-spacing:.06em; text-transform:uppercase; }
     .analytics-stat-block { background:var(--s2); border:1px solid var(--b1); padding:12px 14px; }
     .analytics-stat-label { font-size:9px; color:var(--dimmer); text-transform:uppercase; letter-spacing:.12em; margin-bottom:6px; }
     .analytics-stat-row { display:flex; justify-content:space-between; font-size:11px; margin-bottom:3px; }
@@ -336,8 +337,9 @@
     .analytics-quad-dot { width:8px; height:8px; border-radius:50%; flex-shrink:0; }
     .analytics-empty { color:var(--dimmer); font-size:11px; text-align:center; padding:40px; line-height:1.7; }
     @media (max-width:767px) {
-      .analytics-wrap { padding:12px 14px; }
+      .analytics-wrap { padding:10px 10px; }
       .analytics-content { flex-direction:column; }
+      .analytics-chart-wrap { min-width:0; width:100%; }
       .analytics-panel { width:100%; }
     }
 
@@ -1314,6 +1316,7 @@ const SCATTER_MODES = [{
   yLabel: "Expert"
 }];
 function AnalyticsView(_ref12) {
+  var _SCATTER_MODES$find;
   let cards = _ref12.cards,
     grades = _ref12.grades,
     isMobile = _ref12.isMobile,
@@ -1711,9 +1714,11 @@ function AnalyticsView(_ref12) {
   }, React.createElement("div", {
     className: "analytics-chart-wrap",
     style: {
-      minHeight: isMobile ? 280 : undefined
+      minHeight: isMobile ? 320 : undefined
     }
-  }, React.createElement("canvas", {
+  }, React.createElement("div", {
+    className: "analytics-chart-title"
+  }, ((_SCATTER_MODES$find = SCATTER_MODES.find(m => m.id === scatterMode)) === null || _SCATTER_MODES$find === void 0 ? void 0 : _SCATTER_MODES$find.label) ?? "", " \u2014 color = quadrant \xB7 size = rarity"), React.createElement("canvas", {
     ref: chartRef
   })), stats && React.createElement("div", {
     className: "analytics-panel"

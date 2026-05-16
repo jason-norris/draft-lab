@@ -745,7 +745,10 @@ function AnalyticsView({ cards, grades, isMobile, onCardClick }) {
             ))}
           </div>
         <div className="analytics-content">
-          <div className="analytics-chart-wrap" style={{ minHeight: isMobile ? 280 : undefined }}>
+          <div className="analytics-chart-wrap" style={{ minHeight: isMobile ? 320 : undefined }}>
+            <div className="analytics-chart-title">
+              {SCATTER_MODES.find(m => m.id === scatterMode)?.label ?? ""} — color = quadrant · size = rarity
+            </div>
             <canvas ref={chartRef} />
           </div>
           {stats && (
