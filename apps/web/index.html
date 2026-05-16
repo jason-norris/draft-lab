@@ -105,9 +105,18 @@
 
     .hdr { display:flex; align-items:center; justify-content:space-between; gap:10px; padding:12px 16px; background:var(--s1); border-bottom:1px solid var(--b2); flex-shrink:0; flex-wrap:wrap; }
     .hdr-left { display:flex; align-items:center; gap:12px; }
-    .hdr-right { display:flex; align-items:center; gap:8px; }
-    .logo     { font-family:'Cinzel',serif; font-size:17px; color:var(--gold); letter-spacing:.18em; white-space:nowrap; }
-    .logo-sub { font-size:8px; color:var(--dimmer); letter-spacing:.25em; text-transform:uppercase; margin-top:1px; }
+    .hdr-right { display:flex; align-items:center; }
+    .logo        { font-family:'Cinzel',serif; font-size:19px; color:var(--gold); letter-spacing:.18em; white-space:nowrap; }
+    .logo-sub    { font-size:8px; color:var(--dimmer); letter-spacing:.2em; text-transform:uppercase; margin-top:1px; }
+    .logo-inline { display:flex; align-items:baseline; gap:10px; }
+    .logo-inline .logo-sub { margin-top:0; }
+    /* Icon bar — no boxes, pipe separators */
+    .icon-bar { display:flex; align-items:center; }
+    .icon-bar-btn { background:transparent; border:none; color:var(--dim); font-size:16px; padding:6px 11px; cursor:pointer; transition:color .15s; -webkit-tap-highlight-color:transparent; display:flex; align-items:center; line-height:1; }
+    .icon-bar-btn:hover,.icon-bar-btn:active,.icon-bar-btn.active { color:var(--gold); }
+    .icon-bar-btn.faint { color:var(--dimmer); font-size:12px; opacity:0.65; }
+    .icon-bar-btn.faint:hover { color:var(--dim); opacity:1; }
+    .icon-pipe { width:1px; height:16px; background:var(--b2); flex-shrink:0; }
 
     .set-wrap { position:relative; }
     .set-btn  { display:flex; align-items:center; gap:8px; background:var(--s2); border:1px solid var(--b2); color:var(--txt); font-family:'IBM Plex Mono',monospace; font-size:12px; padding:7px 11px; cursor:pointer; transition:border-color .2s; min-width:150px; max-width:230px; }
@@ -337,9 +346,11 @@
 
     @media (max-width:767px) {
       .desktop-only { display:none !important; }
-      .hdr { padding:10px 12px; }
-      .logo { font-size:15px; }
-      .set-btn { font-size:11px; padding:6px 10px; min-width:0; max-width:160px; }
+      /* Mobile header: 3-row layout */
+      .hdr { padding:8px 12px; gap:6px; }
+      .hdr-left { flex-direction:column; align-items:flex-start; gap:4px; width:100%; }
+      .hdr-right { width:100%; border-top:1px solid var(--b1); padding-top:6px; }
+      .set-btn { font-size:12px; padding:6px 10px; min-width:0; max-width:100%; width:100%; }
       .stats { padding:6px 12px; gap:8px; }
       /* Prevent iOS Safari auto-zoom on input focus (requires font-size >= 16px) */
       .mc-gsel, .mc-sel, .mc-num, .mc-note, .fm-srch, .fm-sort, .auth-input { font-size:16px !important; }
@@ -2091,7 +2102,9 @@ function DraftLab(_ref23) {
     onClick: e => e.stopPropagation()
   }, React.createElement("div", {
     className: "hdr-left"
-  }, React.createElement("div", null, React.createElement("a", {
+  }, React.createElement("div", {
+    className: "logo-inline"
+  }, React.createElement("a", {
     href: "https://github.com/jason-norris/draft-lab",
     target: "_blank",
     rel: "noopener noreferrer",
@@ -2153,10 +2166,7 @@ function DraftLab(_ref23) {
     }, (_s$released_at = s.released_at) === null || _s$released_at === void 0 ? void 0 : _s$released_at.slice(0, 7)));
   }))))), React.createElement("div", {
     className: "hdr-right"
-  }, selectedSet && isMobile && React.createElement("button", {
-    className: `icon-btn mobile-only${showMobF ? " active" : ""}`,
-    onClick: () => setShowMobF(v => !v)
-  }, "\u2699"), selectedSet && !isMobile && React.createElement("div", {
+  }, selectedSet && !isMobile && React.createElement("div", {
     className: "l17-wrap",
     onClick: e => e.stopPropagation()
   }, React.createElement("button", {
@@ -2235,32 +2245,31 @@ function DraftLab(_ref23) {
     },
     title: user.email,
     onClick: () => sb.auth.signOut()
-  }, "Sign Out"), React.createElement("button", {
-    className: "icon-btn",
+  }, "Sign Out"), React.createElement("div", {
+    className: "icon-bar"
+  }, isMobile && React.createElement(React.Fragment, null, React.createElement("button", {
+    className: `icon-bar-btn mobile-only${showMobF ? " active" : ""}`,
+    onClick: () => setShowMobF(v => !v),
+    title: "Filters & settings"
+  }, "\u2699"), React.createElement("div", {
+    className: "icon-pipe"
+  })), React.createElement("button", {
+    className: "icon-bar-btn",
     onClick: () => setShowGuide(true),
-    title: "Grade guide",
-    style: {
-      fontSize: 13,
-      fontWeight: 700
-    }
-  }, "?"), React.createElement("button", {
-    className: "icon-btn",
+    title: "Grade guide"
+  }, "\u2696"), React.createElement("div", {
+    className: "icon-pipe"
+  }), React.createElement("button", {
+    className: "icon-bar-btn",
     onClick: toggleTheme,
-    title: "Toggle light/dark mode",
-    style: {
-      fontSize: 16,
-      padding: "6px 10px"
-    }
-  }, theme === "dark" ? "☀" : "🌙"), React.createElement("button", {
-    className: "icon-btn",
+    title: "Toggle light/dark mode"
+  }, theme === "dark" ? "☀" : "🌙"), React.createElement("div", {
+    className: "icon-pipe"
+  }), React.createElement("button", {
+    className: "icon-bar-btn faint",
     onClick: () => setShowLegal(true),
-    title: "Legal & Attribution",
-    style: {
-      fontSize: 11,
-      color: "var(--dimmer)",
-      opacity: 0.6
-    }
-  }, "\xA9"))), React.createElement("div", {
+    title: "Legal & Attribution"
+  }, "\xA9")))), React.createElement("div", {
     className: "filters-mobile mobile-only",
     style: {
       maxHeight: showMobF ? "70vh" : "0"
