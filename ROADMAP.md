@@ -168,33 +168,33 @@
 
 ---
 
-## Phase 6 — Native App (Future)
+## Phase 6 — Additional Community Sources (Lower Priority)
 
-Converts GitHub Pages app to native mobile via Capacitor. Prerequisites: Phases 1–5 stable, Apple Developer account ($99/yr) for iOS.
+### 6.1 MTGA Personal Data
+- [ ] 17Lands personal card stats (requires user token)
+- [ ] Stored as `personal_performance_rating` separate from community data
+
+### 6.2 Draftsim Integration
+- [ ] Investigate Draftsim JSON endpoint via DevTools; add `draftsim-prep.py` if accessible
+
+### 6.3 AetherHub Scraper Robustness
+- [ ] Fallback: if DOM walk yields <10 results, try JSON-LD structured data
+- [ ] Version check: warn if card count significantly below set size
+
+### 6.4 Restore from CSV Export
+**Decision: won't implement.** JSON backup is the canonical restore path. CSV is for external analysis only.
+
+---
+
+## Phase 7 — Native App (Final Phase)
+
+Converts GitHub Pages app to native mobile via Capacitor. The most expensive phase — requires an Apple Developer account ($99/yr) for iOS distribution. Tackle only after Phases 1–6 are stable and the app has proven long-term value.
 
 - [ ] Capacitor scaffold, iOS + Android targets
 - [ ] Replace FileReader CSV import with Capacitor Filesystem plugin (iOS requirement)
 - [ ] App icon + splash screen
 - [ ] Deep linking for Google OAuth redirect
 - [ ] Android: signed APK for sideloading · iOS: TestFlight (up to 100 testers)
-
----
-
-## Phase 7 — Additional Community Sources (Lower Priority)
-
-### 7.1 MTGA Personal Data
-- [ ] 17Lands personal card stats (requires user token)
-- [ ] Stored as `personal_performance_rating` separate from community data
-
-### 7.2 Draftsim Integration
-- [ ] Investigate Draftsim JSON endpoint via DevTools; add `draftsim-prep.py` if accessible
-
-### 7.3 AetherHub Scraper Robustness
-- [ ] Fallback: if DOM walk yields <10 results, try JSON-LD structured data
-- [ ] Version check: warn if card count significantly below set size
-
-### 7.4 Restore from CSV Export
-**Decision: won't implement.** JSON backup is the canonical restore path. CSV is for external analysis only.
 
 ---
 
