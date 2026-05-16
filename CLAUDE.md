@@ -40,6 +40,25 @@ GitHub Actions runs `npm ci && node compile.js` automatically before each Pages 
 
 ---
 
+## Supabase Branching — Revisit at Phase 5
+
+The Supabase GitHub integration is connected and shows a PR check, but it is currently decorative — we have no migration files, so there is nothing for it to validate. Supabase branching (isolated DB per PR) is a paid feature and not worth enabling yet.
+
+**At Phase 5 (draft simulator):** Three new tables (`draft_sessions`, `draft_picks`, `draft_decks`) will be added to Supabase. That is the right moment to:
+1. Start tracking schema as migration files in `supabase/migrations/`
+2. Commit migration files alongside code changes in the same PR
+3. Evaluate whether Supabase branching is worth enabling (Pro plan ~$25/month)
+
+Until then, the PR check can be ignored.
+
+---
+
+## Known Technical Debt
+
+**`DraftLab` is a god component** (~1,300 lines, ~30 useState, ~10 useEffect). It works but will become a problem when Phase 5 (draft simulator) adds its own complex state. Plan a refactor pass between Phase 4 and Phase 5 — split into `GradeTable`, `FilterBar`, `MobileDrawer`, and `AnalyticsView` sub-components. See ROADMAP Polish Queue for the entry.
+
+---
+
 ## Key Architecture
 
 - **Single-file web app** — React UMD (no bundler), compiled from JSX via Babel
