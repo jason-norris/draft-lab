@@ -399,7 +399,8 @@ const _React = React,
   useState = _React.useState,
   useEffect = _React.useEffect,
   useCallback = _React.useCallback,
-  useRef = _React.useRef;
+  useRef = _React.useRef,
+  useMemo = _React.useMemo;
 const VERSION = "v2.3";
 const MTG_LABELS = {
   W: "White",
@@ -1696,6 +1697,24 @@ function DraftLab(_ref23) {
     _useState26 = _slicedToArray(_useState25, 2),
     fmt17l = _useState26[0],
     setFmt17l = _useState26[1];
+  const importRef = useRef(null);
+  const exportRef = useRef(null);
+  useEffect(() => {
+    if (!showImport) return;
+    const h = e => {
+      if (importRef.current && !importRef.current.contains(e.target)) setShowImport(false);
+    };
+    document.addEventListener("mousedown", h);
+    return () => document.removeEventListener("mousedown", h);
+  }, [showImport]);
+  useEffect(() => {
+    if (!showExport) return;
+    const h = e => {
+      if (exportRef.current && !exportRef.current.contains(e.target)) setShowExport(false);
+    };
+    document.addEventListener("mousedown", h);
+    return () => document.removeEventListener("mousedown", h);
+  }, [showExport]);
   const _useState27 = useState(null),
     _useState28 = _slicedToArray(_useState27, 2),
     importMeta = _useState28[0],
@@ -1859,6 +1878,18 @@ function DraftLab(_ref23) {
     const set = sets.find(s => s.code === saved.value);
     if (set) loadSet(set);
   }, [sets.length]);
+  useEffect(() => {
+    if (!selectedSet) return;
+    store.set(`draft-lab-session-${selectedSet.code}`, JSON.stringify({
+      sortCol,
+      sortDir,
+      mobileSort,
+      filterColor,
+      filterRarity,
+      filterGraded,
+      filterQuadrant
+    }));
+  }, [selectedSet === null || selectedSet === void 0 ? void 0 : selectedSet.code, sortCol, sortDir, mobileSort, filterColor, filterRarity, filterGraded, filterQuadrant]);
   const toggleTheme = () => {
     setTheme(prev => {
       const sysDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
@@ -1893,12 +1924,17 @@ function DraftLab(_ref23) {
     setCards([]);
     setLoading(true);
     setError(null);
-    setFilterColor("all");
-    setFilterRarity("all");
+    const saved = store.get(`draft-lab-session-${set.code}`);
+    const sess = saved ? JSON.parse(saved.value) : null;
+    setFilterColor((sess === null || sess === void 0 ? void 0 : sess.filterColor) ?? "all");
+    setFilterRarity((sess === null || sess === void 0 ? void 0 : sess.filterRarity) ?? "all");
     setFilterSearch("");
-    setFilterGraded("all");
-    setFilterQuadrant("all");
+    setFilterGraded((sess === null || sess === void 0 ? void 0 : sess.filterGraded) ?? "all");
+    setFilterQuadrant((sess === null || sess === void 0 ? void 0 : sess.filterQuadrant) ?? "all");
     setFilterTags([]);
+    setSortCol((sess === null || sess === void 0 ? void 0 : sess.sortCol) ?? "color");
+    setSortDir((sess === null || sess === void 0 ? void 0 : sess.sortDir) ?? "asc");
+    setMobileSort((sess === null || sess === void 0 ? void 0 : sess.mobileSort) ?? "color");
     loadGrades(set.code);
     let url = `https://api.scryfall.com/cards/search?q=set:${set.code}+game:paper&order=color&unique=cards`,
       all = [];
@@ -2042,7 +2078,7 @@ function DraftLab(_ref23) {
     if (g.myGrade) gradeCounts[g.myGrade] = (gradeCounts[g.myGrade] ?? 0) + 1;
   }
   const pct = cards.length ? Math.round(gradedCount / cards.length * 100) : 0;
-  const filtered = cards.filter(c => {
+  const filtered = useMemo(() => cards.filter(c => {
     const ck = getColorKey(c);
     const g = grades[c.id] ?? {};
     if (filterColor !== "all" && ck !== filterColor) return false;
@@ -2060,8 +2096,8 @@ function DraftLab(_ref23) {
       if (!filterTags.some(t => cardTags.includes(t))) return false;
     }
     return true;
-  });
-  const sorted = [...filtered].sort((a, b) => {
+  }), [cards, grades, filterColor, filterRarity, filterSearch, filterGraded, filterQuadrant, filterTags]);
+  const sorted = useMemo(() => [...filtered].sort((a, b) => {
     const ga = grades[a.id] ?? {},
       gb = grades[b.id] ?? {};
     let av, bv;
@@ -2101,7 +2137,7 @@ function DraftLab(_ref23) {
     if (av < bv) return dir === "asc" ? -1 : 1;
     if (av > bv) return dir === "asc" ? 1 : -1;
     return 0;
-  });
+  }), [filtered, grades, activeSort, sortDir, isMobile]);
   const hasExpertData = cards.some(c => {
     var _grades$c$id2;
     return ((_grades$c$id2 = grades[c.id]) === null || _grades$c$id2 === void 0 ? void 0 : _grades$c$id2.expert_rating) != null;
@@ -2189,7 +2225,7 @@ function DraftLab(_ref23) {
     className: "hdr-right"
   }, selectedSet && !isMobile && React.createElement("div", {
     className: "l17-wrap",
-    onClick: e => e.stopPropagation()
+    ref: importRef
   }, React.createElement("button", {
     className: `btn${showImport ? " active" : ""}`,
     onClick: () => {
@@ -2213,7 +2249,7 @@ function DraftLab(_ref23) {
     mobile: false
   }))), React.createElement("div", {
     className: "l17-wrap desktop-only",
-    onClick: e => e.stopPropagation()
+    ref: exportRef
   }, React.createElement("button", {
     className: `btn${showExport ? " active" : ""}`,
     onClick: () => {

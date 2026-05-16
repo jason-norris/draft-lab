@@ -158,173 +158,43 @@
 
 ---
 
-## Phase 5 — Additional Community Sources (Lower Priority)
+## Phase 5 — Draft Simulator (High Value, After Analytics)
 
-### 5.1 MTGA Personal Data
+**Goal:** A full 8-player draft simulator with bot opponents, live signal tracking, deck construction, and retroactive pick review. Built on top of the existing card grading infrastructure — My Grade, Expert, and Performance ratings are visible on every card during the draft.
+
+**Prerequisites:** Phase 4 (Analytics) stable, Supabase schema extensions deployed.
+
+> **AI Architecture:** See [`docs/phase-7-draft-ai.md`](docs/phase-7-draft-ai.md) for the full technical design — four-layer bot system (card value function, Bayesian belief state, mistake injection, optional LLM), the signal accuracy training loop, and implementation guidance for Claude Code.
+
+---
+
+## Phase 6 — Additional Community Sources (Lower Priority)
+
+### 6.1 MTGA Personal Data
 - [ ] 17Lands personal card stats (requires user token)
 - [ ] Stored as `personal_performance_rating` separate from community data
 
-### 5.2 Draftsim Integration
+### 6.2 Draftsim Integration
 - [ ] Investigate Draftsim JSON endpoint via DevTools; add `draftsim-prep.py` if accessible
 
-### 5.3 AetherHub Scraper Robustness
+### 6.3 AetherHub Scraper Robustness
 - [ ] Fallback: if DOM walk yields <10 results, try JSON-LD structured data
 - [ ] Version check: warn if card count significantly below set size
 
-### 5.4 Restore from CSV Export
+### 6.4 Restore from CSV Export
 **Decision: won't implement.** JSON backup is the canonical restore path. CSV is for external analysis only.
 
 ---
 
-## Phase 6 — Native App (Future)
+## Phase 7 — Native App (Final Phase)
 
-Converts GitHub Pages app to native mobile via Capacitor. Prerequisites: Phases 1–4 stable, Apple Developer account ($99/yr) for iOS.
+Converts GitHub Pages app to native mobile via Capacitor. The most expensive phase — requires an Apple Developer account ($99/yr) for iOS distribution. Tackle only after Phases 1–6 are stable and the app has proven long-term value.
 
 - [ ] Capacitor scaffold, iOS + Android targets
 - [ ] Replace FileReader CSV import with Capacitor Filesystem plugin (iOS requirement)
 - [ ] App icon + splash screen
 - [ ] Deep linking for Google OAuth redirect
 - [ ] Android: signed APK for sideloading · iOS: TestFlight (up to 100 testers)
-
----
-
-## Phase 7 — Draft Simulator (High Value, Long Term)
-
-**Goal:** A full 8-player draft simulator with bot opponents, live signal tracking, deck construction, and retroactive pick review. Built on top of the existing card grading infrastructure — My Grade, Expert, and Performance ratings are visible on every card during the draft, making this a genuine practice tool.
-
-**Prerequisites:** Phase 4 (Analytics) stable, Supabase schema extensions deployed.
-
-> **AI Architecture:** See [`docs/phase-7-draft-ai.md`](docs/phase-7-draft-ai.md) for the full technical design — four-layer bot system (card value function, Bayesian belief state, mistake injection, optional LLM), the signal accuracy training loop, and implementation guidance for Claude Code.
-
-### 7.1 Data Model
-
-Three new Supabase tables, completely separate from existing grade tables:
-
-```sql
-draft_sessions  — one row per draft (set, date, seat, format, status)
-draft_picks     — one row per pick (session_id, pack_number, pick_number, card_id, passed_cards[])
-draft_decks     — post-draft deck construction result (session_id, maindeck[], sideboard[])
-```
-
-- All tables use `user_id` RLS (same pattern as `draft_grades`)
-- `passed_cards[]` array on each pick is what enables retroactive pack review
-- Sessions can be `in_progress` or `completed`
-
-### 7.2 Pack Generation
-
-- Generate packs using correct rarity distribution: 1 rare/mythic, 3 uncommons, 10–11 commons
-- Check Scryfall `booster` field per set — non-standard sets (Commander, Masters) may require custom logic
-- Mythic rate: approximately 1 in 7 rare slots
-- Exclude basic lands from draft packs
-- Seed the RNG per session so packs are reproducible for review
-
-### 7.3 Pick Interface
-
-- Show the current pack as a card grid with hover preview and My Grade badges visible
-- Two-tap mobile pick UX: tap to select (highlight), tap again to confirm pick
-- Desktop: single click to pick
-- Pack passes left (or right for seats 5–8) after each pick
-- Grade badges and delta indicators visible on every card in the pack — the whole point
-
-### 7.4 Bot Drafters
-
-Three milestones, implemented in sequence:
-
-**Milestone 1 — Greedy archetype bots**
-- Each bot assigned a color pair archetype at draft start
-- Always picks the highest-rated card in their archetype
-- Creates realistic signal patterns immediately (cards in other archetypes pass through)
-
-**Milestone 2 — Signal-aware pivot logic**
-- Bots track what's been passed to them (wheel analysis)
-- If consistently high-quality cards in a non-assigned archetype are passing, bot pivots
-- Mimics real drafters responding to what's open at the table
-
-**Milestone 3 — Personality profiles**
-- **Spike:** Maximizes win rate, ignores archetype, pure grade optimization
-- **Grinder:** Consistent, drafts synergy archetypes, avoids variance
-- **Timmy:** Prioritizes high-CMC bombs regardless of practicality
-- **Johnny:** Drafts build-arounds and synergy pieces even below-curve
-- **Casual:** Low skill, random-weighted selection with slight grade preference
-- Each profile parameterized so difficulty can be adjusted
-
-### 7.5 Signal Dashboard
-
-- Live panel showing color signal strength per pick (hidden by default — reading signals unassisted is the practice)
-- Toggle to reveal: shows estimated card counts passed per color, implied open lanes
-- Available at any point during the draft
-- Post-draft: full signal reconstruction showing exactly what signals were available at each pick
-
-### 7.6 Deck Construction
-
-- Post-draft phase: arrange picks into maindeck (23 spells + 17 lands) and sideboard
-- Auto-land suggestions based on color pip analysis
-- Mana curve visualization (creature curve + spell curve)
-- Save deck as `draft_decks` row; link to `draft_sessions`
-- Optional: basic land pool auto-filled to 40 cards
-
-### 7.7 Retroactive Pack Review
-
-**The most analytically valuable feature.** After completing a draft:
-
-- Reconstruct every pack as it appeared at each pick
-- For every card you passed, show: My Grade / Expert Rating / Performance Rating / Δ indicators
-- Highlight picks where you diverged significantly from grade consensus
-- Flag cards you passed that had higher grades than what you picked
-- Summary: "You had 4 picks where a higher-graded card was available — pick 3 (pack 1) was your biggest miss"
-
-Only possible because every passed card is stored in `draft_picks.passed_cards[]` and the full grade data is already in the system.
-
-### 7.8 AI Table (Bot Intelligence)
-
-Three implementation options; **Option C (Hybrid) is recommended:**
-
-**Option A — Rules-based only**
-- Pure archetype + grade logic, no LLM
-- Fast, free, deterministic
-- Limitation: bots feel mechanical, can't reason about synergy or context
-
-**Option B — Full LLM per pick**
-- Claude called for every bot pick (294 calls per 8-player draft)
-- Highest quality decisions but expensive and slow (~$0.30–0.50 per draft)
-
-**Option C — Hybrid (recommended)**
-- Rules-based logic handles routine picks (card clearly better or clearly worse)
-- LLM called only on contested picks where grade difference is within 0.5 and archetype fit is ambiguous
-- Estimated 30–60 API calls per draft (~$0.03–0.08 per draft)
-- Prompt structure: pass current pack, bot's pick history, archetype, personality profile → receive pick + brief reasoning
-
-### 7.9 Draft History
-
-- List of completed sessions with date, set, record (if tracked), and link to retroactive review
-- Filter by set, date range
-- Quick stats: average pick grade, biggest misses, archetype frequency
-
-### 7.10 Draft Statistics
-
-Aggregate across all sessions:
-
-- Pick accuracy by color (which colors do you over/under-value?)
-- Pack 1 vs Pack 2 vs Pack 3 accuracy (do you improve as signals emerge?)
-- Correlation between draft grades and actual game performance (requires 17Lands personal data — Phase 5.1)
-- Most commonly missed cards by set
-
-### 7.11 Implementation Sequence
-
-Recommended ten-step build order:
-
-1. Supabase schema: create `draft_sessions`, `draft_picks`, `draft_decks` tables + RLS
-2. Pack generation engine (rarity distribution, Scryfall booster field check)
-3. Seat assignment and rotation direction logic
-4. Pick interface — desktop first (single click)
-5. Milestone 1 bots: greedy archetype selection
-6. Session save/resume (in_progress status)
-7. Mobile pick UX (two-tap confirm)
-8. Deck construction phase
-9. Retroactive pack review (requires pick history from step 3)
-10. Milestone 2 bots + signal dashboard
-
-LLM integration (7.8 Option C) added after step 5 is stable.
 
 ---
 
@@ -346,6 +216,11 @@ LLM integration (7.8 Option C) added after step 5 is stable.
 - [x] Grade guide icon — replaced ? with ⚖ (scales)
 - [ ] Tags filter dropdown overflows screen on right side on desktop — reposition to open left-aligned or use viewport boundary detection
 - [ ] Set selector width inconsistency — desktop set name can feel truncated compared to mobile full-width version; consider consistent max-width treatment
+- [ ] Source badge visual weight inconsistency — AH (blue) border reads lighter than 17L (gold) border against the parchment background; same CSS but different perceived weight due to color. Consider normalizing border opacity or using a neutral border color for all badges
+- [ ] **Performance: useMemo for sorted/filtered** — both arrays recompute on every render regardless of what changed; wrap in `useMemo` with proper dependency arrays for a real win on 300-card sets
+- [ ] **Performance: debounce Supabase sync on note input** — every keystroke in a notes field triggers a Supabase upsert; debounce `persistGrades` 400–500ms for text fields
+- [ ] **Refactor DraftLab god component** — ~30 useState, ~10 useEffect, ~15 handlers all in one function; split into logical sub-components (GradeTable, FilterBar, DrawerPanel, etc.) before Phase 5 adds draft simulator state
+- [ ] **Session state persistence per set** — save sort column/direction and active filter buttons (color, rarity, graded, quadrant) to localStorage per set; restore on set load so returning to a set picks up exactly where you left off; extend the existing `draft-lab-last-set` pattern
 - [x] DFC image flip — ↻ button in lightbox toggles between card faces
 - [x] iOS input zoom — fixed with `font-size: 16px` minimum on all mobile inputs and selects
 - [x] GitHub project link inside the app — added as "View on GitHub →" in the © modal

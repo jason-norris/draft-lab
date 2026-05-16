@@ -1,5 +1,5 @@
 // Globals provided by template.html: SUPABASE_CONFIGURED, ALLOWED_EMAIL, sb, syncGrades, fetchGrades
-const { useState, useEffect, useCallback, useRef } = React;
+const { useState, useEffect, useCallback, useRef, useMemo } = React;
 const VERSION = "v2.3";
 
 // ── Constants ────────────────────────────────────────────────────────────────
@@ -800,6 +800,20 @@ function DraftLab({ user }) {
   const [showImport, setShowImport] = useState(false);
   const [showExport, setShowExport] = useState(false);
   const [fmt17l, setFmt17l]         = useState("PremierDraft");
+  const importRef = useRef(null);
+  const exportRef = useRef(null);
+  useEffect(() => {
+    if (!showImport) return;
+    const h = e => { if (importRef.current && !importRef.current.contains(e.target)) setShowImport(false); };
+    document.addEventListener("mousedown", h);
+    return () => document.removeEventListener("mousedown", h);
+  }, [showImport]);
+  useEffect(() => {
+    if (!showExport) return;
+    const h = e => { if (exportRef.current && !exportRef.current.contains(e.target)) setShowExport(false); };
+    document.addEventListener("mousedown", h);
+    return () => document.removeEventListener("mousedown", h);
+  }, [showExport]);
   const [importMeta, setImportMeta] = useState(null); // { expert: {...}, performance: {...} }
   const [sets, setSets]             = useState([]);
   const [selectedSet, setSelectedSet] = useState(null);
@@ -888,6 +902,15 @@ function DraftLab({ user }) {
     if (set) loadSet(set);
   }, [sets.length]);
 
+  // Persist sort + filter session state per set (excludes search and tag filter — too ephemeral)
+  useEffect(() => {
+    if (!selectedSet) return;
+    store.set(`draft-lab-session-${selectedSet.code}`, JSON.stringify({
+      sortCol, sortDir, mobileSort,
+      filterColor, filterRarity, filterGraded, filterQuadrant
+    }));
+  }, [selectedSet?.code, sortCol, sortDir, mobileSort, filterColor, filterRarity, filterGraded, filterQuadrant]);
+
   // ── Helpers ──
   const toggleTheme = () => {
     setTheme(prev => {
@@ -929,7 +952,17 @@ function DraftLab({ user }) {
     setCards([]);
     setLoading(true);
     setError(null);
-    setFilterColor("all"); setFilterRarity("all"); setFilterSearch(""); setFilterGraded("all"); setFilterQuadrant("all"); setFilterTags([]);
+    const saved = store.get(`draft-lab-session-${set.code}`);
+    const sess  = saved ? JSON.parse(saved.value) : null;
+    setFilterColor(sess?.filterColor ?? "all");
+    setFilterRarity(sess?.filterRarity ?? "all");
+    setFilterSearch("");
+    setFilterGraded(sess?.filterGraded ?? "all");
+    setFilterQuadrant(sess?.filterQuadrant ?? "all");
+    setFilterTags([]);
+    setSortCol(sess?.sortCol ?? "color");
+    setSortDir(sess?.sortDir ?? "asc");
+    setMobileSort(sess?.mobileSort ?? "color");
     loadGrades(set.code);
     let url = `https://api.scryfall.com/cards/search?q=set:${set.code}+game:paper&order=color&unique=cards`, all = [];
     try {
@@ -1041,7 +1074,7 @@ function DraftLab({ user }) {
   for (const g of Object.values(grades)) { if (g.myGrade) gradeCounts[g.myGrade] = (gradeCounts[g.myGrade] ?? 0) + 1; }
   const pct = cards.length ? Math.round(gradedCount / cards.length * 100) : 0;
 
-  const filtered = cards.filter(c => {
+  const filtered = useMemo(() => cards.filter(c => {
     const ck = getColorKey(c);
     const g  = grades[c.id] ?? {};
     if (filterColor    !== "all" && ck !== filterColor) return false;
@@ -1059,9 +1092,9 @@ function DraftLab({ user }) {
       if (!filterTags.some(t => cardTags.includes(t))) return false;
     }
     return true;
-  });
+  }), [cards, grades, filterColor, filterRarity, filterSearch, filterGraded, filterQuadrant, filterTags]);
 
-  const sorted = [...filtered].sort((a, b) => {
+  const sorted = useMemo(() => [...filtered].sort((a, b) => {
     const ga = grades[a.id] ?? {}, gb = grades[b.id] ?? {};
     let av, bv;
     switch (activeSort) {
@@ -1078,7 +1111,7 @@ function DraftLab({ user }) {
     if (av < bv) return dir === "asc" ? -1 :  1;
     if (av > bv) return dir === "asc" ?  1 : -1;
     return 0;
-  });
+  }), [filtered, grades, activeSort, sortDir, isMobile]);
 
   const hasExpertData      = cards.some(c => grades[c.id]?.expert_rating != null);
   const hasPerformanceData = cards.some(c => grades[c.id]?.performance_rating != null);
@@ -1130,7 +1163,7 @@ function DraftLab({ user }) {
           {/* Mobile header: ⚙ ? 🌙 © — ordered left to right */}
           {/* Gear lives inside icon-bar on mobile — see below */}
           {selectedSet && !isMobile && (
-            <div className="l17-wrap" onClick={e => e.stopPropagation()}>
+            <div className="l17-wrap" ref={importRef}>
               <button className={`btn${showImport ? " active" : ""}`}
                 onClick={() => { setShowExport(false); setShowImport(v => !v); }}>Import ▾</button>
               {showImport && (
@@ -1144,7 +1177,7 @@ function DraftLab({ user }) {
               )}
             </div>
           )}
-          <div className="l17-wrap desktop-only" onClick={e => e.stopPropagation()}>
+          <div className="l17-wrap desktop-only" ref={exportRef}>
             <button className={`btn${showExport ? " active" : ""}`}
               onClick={() => { setShowImport(false); setShowExport(v => !v); }}>Export ▾</button>
             {showExport && (
