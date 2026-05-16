@@ -399,7 +399,8 @@ const _React = React,
   useState = _React.useState,
   useEffect = _React.useEffect,
   useCallback = _React.useCallback,
-  useRef = _React.useRef;
+  useRef = _React.useRef,
+  useMemo = _React.useMemo;
 const VERSION = "v2.3";
 const MTG_LABELS = {
   W: "White",
@@ -2060,7 +2061,7 @@ function DraftLab(_ref23) {
     if (g.myGrade) gradeCounts[g.myGrade] = (gradeCounts[g.myGrade] ?? 0) + 1;
   }
   const pct = cards.length ? Math.round(gradedCount / cards.length * 100) : 0;
-  const filtered = cards.filter(c => {
+  const filtered = useMemo(() => cards.filter(c => {
     const ck = getColorKey(c);
     const g = grades[c.id] ?? {};
     if (filterColor !== "all" && ck !== filterColor) return false;
@@ -2078,8 +2079,8 @@ function DraftLab(_ref23) {
       if (!filterTags.some(t => cardTags.includes(t))) return false;
     }
     return true;
-  });
-  const sorted = [...filtered].sort((a, b) => {
+  }), [cards, grades, filterColor, filterRarity, filterSearch, filterGraded, filterQuadrant, filterTags]);
+  const sorted = useMemo(() => [...filtered].sort((a, b) => {
     const ga = grades[a.id] ?? {},
       gb = grades[b.id] ?? {};
     let av, bv;
@@ -2119,7 +2120,7 @@ function DraftLab(_ref23) {
     if (av < bv) return dir === "asc" ? -1 : 1;
     if (av > bv) return dir === "asc" ? 1 : -1;
     return 0;
-  });
+  }), [filtered, grades, activeSort, sortDir, isMobile]);
   const hasExpertData = cards.some(c => {
     var _grades$c$id2;
     return ((_grades$c$id2 = grades[c.id]) === null || _grades$c$id2 === void 0 ? void 0 : _grades$c$id2.expert_rating) != null;

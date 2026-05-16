@@ -217,6 +217,10 @@ Converts GitHub Pages app to native mobile via Capacitor. The most expensive pha
 - [ ] Tags filter dropdown overflows screen on right side on desktop — reposition to open left-aligned or use viewport boundary detection
 - [ ] Set selector width inconsistency — desktop set name can feel truncated compared to mobile full-width version; consider consistent max-width treatment
 - [ ] Source badge visual weight inconsistency — AH (blue) border reads lighter than 17L (gold) border against the parchment background; same CSS but different perceived weight due to color. Consider normalizing border opacity or using a neutral border color for all badges
+- [ ] **Performance: useMemo for sorted/filtered** — both arrays recompute on every render regardless of what changed; wrap in `useMemo` with proper dependency arrays for a real win on 300-card sets
+- [ ] **Performance: debounce Supabase sync on note input** — every keystroke in a notes field triggers a Supabase upsert; debounce `persistGrades` 400–500ms for text fields
+- [ ] **Refactor DraftLab god component** — ~30 useState, ~10 useEffect, ~15 handlers all in one function; split into logical sub-components (GradeTable, FilterBar, DrawerPanel, etc.) before Phase 5 adds draft simulator state
+- [ ] **Session state persistence per set** — save sort column/direction and active filter buttons (color, rarity, graded, quadrant) to localStorage per set; restore on set load so returning to a set picks up exactly where you left off; extend the existing `draft-lab-last-set` pattern
 - [x] DFC image flip — ↻ button in lightbox toggles between card faces
 - [x] iOS input zoom — fixed with `font-size: 16px` minimum on all mobile inputs and selects
 - [x] GitHub project link inside the app — added as "View on GitHub →" in the © modal

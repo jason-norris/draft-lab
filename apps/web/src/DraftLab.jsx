@@ -1,5 +1,5 @@
 // Globals provided by template.html: SUPABASE_CONFIGURED, ALLOWED_EMAIL, sb, syncGrades, fetchGrades
-const { useState, useEffect, useCallback, useRef } = React;
+const { useState, useEffect, useCallback, useRef, useMemo } = React;
 const VERSION = "v2.3";
 
 // ── Constants ────────────────────────────────────────────────────────────────
@@ -1055,7 +1055,7 @@ function DraftLab({ user }) {
   for (const g of Object.values(grades)) { if (g.myGrade) gradeCounts[g.myGrade] = (gradeCounts[g.myGrade] ?? 0) + 1; }
   const pct = cards.length ? Math.round(gradedCount / cards.length * 100) : 0;
 
-  const filtered = cards.filter(c => {
+  const filtered = useMemo(() => cards.filter(c => {
     const ck = getColorKey(c);
     const g  = grades[c.id] ?? {};
     if (filterColor    !== "all" && ck !== filterColor) return false;
@@ -1073,9 +1073,9 @@ function DraftLab({ user }) {
       if (!filterTags.some(t => cardTags.includes(t))) return false;
     }
     return true;
-  });
+  }), [cards, grades, filterColor, filterRarity, filterSearch, filterGraded, filterQuadrant, filterTags]);
 
-  const sorted = [...filtered].sort((a, b) => {
+  const sorted = useMemo(() => [...filtered].sort((a, b) => {
     const ga = grades[a.id] ?? {}, gb = grades[b.id] ?? {};
     let av, bv;
     switch (activeSort) {
@@ -1092,7 +1092,7 @@ function DraftLab({ user }) {
     if (av < bv) return dir === "asc" ? -1 :  1;
     if (av > bv) return dir === "asc" ?  1 : -1;
     return 0;
-  });
+  }), [filtered, grades, activeSort, sortDir, isMobile]);
 
   const hasExpertData      = cards.some(c => grades[c.id]?.expert_rating != null);
   const hasPerformanceData = cards.some(c => grades[c.id]?.performance_rating != null);
