@@ -577,7 +577,7 @@ function MobileCardItem({ card, grade, onUpdate }) {
                     {img && (
                       <div className="mc-img-wrap">
                         <img src={img} alt={card.name} className="mc-img"
-                          onClick={() => hasDFC ? setFace(f => f === 0 ? 1 : 0) : setBigImg(true)} />
+                          onClick={() => setBigImg(true)} />
                         {hasDFC && (
                           <button onClick={() => setFace(f => f === 0 ? 1 : 0)}
                             style={{ display:"block", width:"100%", marginTop:4, background:"transparent",

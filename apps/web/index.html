@@ -1339,7 +1339,7 @@ function MobileCardItem(_ref13) {
     src: img,
     alt: card.name,
     className: "mc-img",
-    onClick: () => hasDFC ? setFace(f => f === 0 ? 1 : 0) : setBigImg(true)
+    onClick: () => setBigImg(true)
   }), hasDFC && React.createElement("button", {
     onClick: () => setFace(f => f === 0 ? 1 : 0),
     style: {
