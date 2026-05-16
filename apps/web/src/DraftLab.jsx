@@ -718,7 +718,7 @@ function AnalyticsView({ cards, grades, isMobile, onCardClick }) {
       </div>
 
       {activeTab === "distribution" && (
-        <div className="analytics-content">
+        <div className="analytics-content" style={{gap:12}}>
           <div className="analytics-chart-wrap">
             <canvas ref={chartRef} />
           </div>
@@ -737,7 +737,7 @@ function AnalyticsView({ cards, grades, isMobile, onCardClick }) {
               <div className="analytics-stat-label">How to read this</div>
               <div><span style={{color:"var(--dim)"}}>Bars</span> — your grade distribution</div>
               <div><span style={{color:"rgba(200,168,75,0.9)"}}>Gold line</span> — GIH Win Rate distribution</div>
-              <div>Bars skewed right = you overrated the format. Aligned = well-calibrated.</div>
+              <div style={{marginTop:4}}>If your bars peak <em>left</em> of the gold line (more A/B grades than the data supports), you overrated.</div>
             </div>
           </div>
         </div>
@@ -745,13 +745,6 @@ function AnalyticsView({ cards, grades, isMobile, onCardClick }) {
 
       {activeTab === "scatter" && (
         <div style={{ display:"flex", flexDirection:"column", gap:10 }}>
-          <div style={{ display:"flex", gap:6 }}>
-            {SCATTER_MODES.map(m => (
-              <button key={m.id} className={`analytics-tab${scatterMode===m.id?" active":""}`}
-                style={{ fontSize:9, padding:"3px 10px" }}
-                onClick={() => setScatterMode(m.id)}>{m.label}</button>
-            ))}
-          </div>
         <div className="analytics-content">
           <div className="analytics-chart-wrap">
             <canvas ref={chartRef} />
