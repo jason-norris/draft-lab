@@ -1523,6 +1523,14 @@ function AnalyticsView(_ref12) {
         animation: {
           duration: 400
         },
+        layout: {
+          padding: {
+            top: 14,
+            right: 14,
+            bottom: 4,
+            left: 4
+          }
+        },
         plugins: {
           legend: {
             display: false
@@ -1810,9 +1818,10 @@ function AnalyticsView(_ref12) {
     }
   }, "Size"), " \u2014 Rarity (mythic largest)"), React.createElement("div", {
     style: {
-      marginTop: 6
+      marginTop: 6,
+      whiteSpace: "nowrap"
     }
-  }, "Hover to see card. Tap/click to open detail."))))), activeTab === "quadrants" && React.createElement("div", {
+  }, "Hover to preview \xB7 click to open detail."))))), activeTab === "quadrants" && React.createElement("div", {
     className: "analytics-empty"
   }, "Quadrant card lists \u2014 coming in session 2"));
 }

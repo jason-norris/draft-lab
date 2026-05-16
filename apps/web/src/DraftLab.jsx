@@ -661,6 +661,7 @@ function AnalyticsView({ cards, grades, isMobile, onCardClick }) {
       options:{
         responsive:true, maintainAspectRatio:!isMobile, aspectRatio: isMobile ? 1 : 1.5,
         animation:{duration:400},
+        layout:{ padding:{ top:14, right:14, bottom:4, left:4 } },
         plugins:{
           legend:{display:false},
           tooltip:{ callbacks:{ label: ctx => {
@@ -778,7 +779,7 @@ function AnalyticsView({ cards, grades, isMobile, onCardClick }) {
                 <div><span style={{color:"var(--dim)"}}>Crosshairs</span> — Mean of each axis</div>
                 <div><span style={{color:"var(--dim)"}}>Color</span> — Quadrant classification</div>
                 <div><span style={{color:"var(--dim)"}}>Size</span> — Rarity (mythic largest)</div>
-                <div style={{marginTop:6}}>Hover to see card. Tap/click to open detail.</div>
+                <div style={{marginTop:6, whiteSpace:"nowrap"}}>Hover to preview · click to open detail.</div>
               </div>
             </div>
           )}
