@@ -1633,10 +1633,7 @@ function AnalyticsView(_ref12) {
     return React.createElement("button", {
       key: id,
       className: `analytics-tab${activeTab === id ? " active" : ""}`,
-      onClick: () => {
-        setActiveTab(id);
-        destroy();
-      }
+      onClick: () => setActiveTab(id)
     }, lbl);
   })), activeTab === "distribution" && React.createElement("div", {
     className: "analytics-content"
@@ -1708,10 +1705,7 @@ function AnalyticsView(_ref12) {
       fontSize: 9,
       padding: "3px 10px"
     },
-    onClick: () => {
-      destroy();
-      setScatterMode(m.id);
-    }
+    onClick: () => setScatterMode(m.id)
   }, m.label))), React.createElement("div", {
     className: "analytics-content"
   }, React.createElement("div", {

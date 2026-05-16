@@ -705,7 +705,7 @@ function AnalyticsView({ cards, grades, isMobile, onCardClick }) {
     <div className="analytics-wrap">
       <div className="analytics-tabs">
         {[["distribution","Distribution"],["scatter","Scatter"],["quadrants","Quadrants"]].map(([id, lbl]) => (
-          <button key={id} className={`analytics-tab${activeTab===id?" active":""}`} onClick={() => { setActiveTab(id); destroy(); }}>{lbl}</button>
+          <button key={id} className={`analytics-tab${activeTab===id?" active":""}`} onClick={() => setActiveTab(id)}>{lbl}</button>
         ))}
       </div>
 
@@ -741,7 +741,7 @@ function AnalyticsView({ cards, grades, isMobile, onCardClick }) {
             {SCATTER_MODES.map(m => (
               <button key={m.id} className={`analytics-tab${scatterMode===m.id?" active":""}`}
                 style={{ fontSize:9, padding:"3px 10px" }}
-                onClick={() => { destroy(); setScatterMode(m.id); }}>{m.label}</button>
+                onClick={() => setScatterMode(m.id)}>{m.label}</button>
             ))}
           </div>
         <div className="analytics-content">
