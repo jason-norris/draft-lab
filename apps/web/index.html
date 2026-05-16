@@ -1759,33 +1759,6 @@ function AnalyticsView(_ref12) {
     className: "analytics-stat-block"
   }, React.createElement("div", {
     className: "analytics-stat-label"
-  }, "Calibration"), React.createElement("div", {
-    className: "analytics-stat-row"
-  }, React.createElement("span", null, "Cards compared"), React.createElement("span", {
-    className: "analytics-stat-val"
-  }, stats.total)), React.createElement("div", {
-    className: "analytics-stat-row"
-  }, React.createElement("span", null, "Avg gap"), React.createElement("span", {
-    className: "analytics-stat-val",
-    style: {
-      color: stats.avgGap > 0 ? "#e05030" : "#32a050"
-    }
-  }, stats.avgGap > 0 ? "+" : "", stats.avgGap.toFixed(2))), React.createElement("div", {
-    className: "analytics-stat-row"
-  }, React.createElement("span", null, "Overrated"), React.createElement("span", {
-    className: "analytics-stat-val"
-  }, stats.overrated, " (", Math.round(100 * stats.overrated / stats.total), "%)")), React.createElement("div", {
-    className: "analytics-stat-row"
-  }, React.createElement("span", null, "Underrated"), React.createElement("span", {
-    className: "analytics-stat-val"
-  }, stats.underrated, " (", Math.round(100 * stats.underrated / stats.total), "%)")), React.createElement("div", {
-    className: "analytics-stat-row"
-  }, React.createElement("span", null, "Agreed"), React.createElement("span", {
-    className: "analytics-stat-val"
-  }, stats.agreed, " (", Math.round(100 * stats.agreed / stats.total), "%)"))), React.createElement("div", {
-    className: "analytics-stat-block"
-  }, React.createElement("div", {
-    className: "analytics-stat-label"
   }, "Quadrants"), Object.entries(stats.quads).map(_ref17 => {
     let _ref18 = _slicedToArray(_ref17, 2),
       q = _ref18[0],
@@ -1813,6 +1786,33 @@ function AnalyticsView(_ref12) {
       }
     }, Math.round(100 * n / stats.total), "%"));
   })), React.createElement("div", {
+    className: "analytics-stat-block"
+  }, React.createElement("div", {
+    className: "analytics-stat-label"
+  }, "Calibration"), React.createElement("div", {
+    className: "analytics-stat-row"
+  }, React.createElement("span", null, "Cards compared"), React.createElement("span", {
+    className: "analytics-stat-val"
+  }, stats.total)), React.createElement("div", {
+    className: "analytics-stat-row"
+  }, React.createElement("span", null, "Avg gap"), React.createElement("span", {
+    className: "analytics-stat-val",
+    style: {
+      color: stats.avgGap > 0 ? "#e05030" : "#32a050"
+    }
+  }, stats.avgGap > 0 ? "+" : "", stats.avgGap.toFixed(2))), React.createElement("div", {
+    className: "analytics-stat-row"
+  }, React.createElement("span", null, "Overrated"), React.createElement("span", {
+    className: "analytics-stat-val"
+  }, stats.overrated, " (", Math.round(100 * stats.overrated / stats.total), "%)")), React.createElement("div", {
+    className: "analytics-stat-row"
+  }, React.createElement("span", null, "Underrated"), React.createElement("span", {
+    className: "analytics-stat-val"
+  }, stats.underrated, " (", Math.round(100 * stats.underrated / stats.total), "%)")), React.createElement("div", {
+    className: "analytics-stat-row"
+  }, React.createElement("span", null, "Agreed"), React.createElement("span", {
+    className: "analytics-stat-val"
+  }, stats.agreed, " (", Math.round(100 * stats.agreed / stats.total), "%)"))), React.createElement("div", {
     className: "analytics-stat-block",
     style: {
       fontSize: 10,

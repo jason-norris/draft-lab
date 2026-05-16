@@ -759,14 +759,6 @@ function AnalyticsView({ cards, grades, isMobile, onCardClick }) {
           {stats && (
             <div className="analytics-panel">
               <div className="analytics-stat-block">
-                <div className="analytics-stat-label">Calibration</div>
-                <div className="analytics-stat-row"><span>Cards compared</span><span className="analytics-stat-val">{stats.total}</span></div>
-                <div className="analytics-stat-row"><span>Avg gap</span><span className="analytics-stat-val" style={{ color: stats.avgGap > 0 ? "#e05030" : "#32a050" }}>{stats.avgGap > 0 ? "+" : ""}{stats.avgGap.toFixed(2)}</span></div>
-                <div className="analytics-stat-row"><span>Overrated</span><span className="analytics-stat-val">{stats.overrated} ({Math.round(100*stats.overrated/stats.total)}%)</span></div>
-                <div className="analytics-stat-row"><span>Underrated</span><span className="analytics-stat-val">{stats.underrated} ({Math.round(100*stats.underrated/stats.total)}%)</span></div>
-                <div className="analytics-stat-row"><span>Agreed</span><span className="analytics-stat-val">{stats.agreed} ({Math.round(100*stats.agreed/stats.total)}%)</span></div>
-              </div>
-              <div className="analytics-stat-block">
                 <div className="analytics-stat-label">Quadrants</div>
                 {Object.entries(stats.quads).map(([q, n]) => (
                   <div key={q} className="analytics-quad-row">
@@ -776,6 +768,14 @@ function AnalyticsView({ cards, grades, isMobile, onCardClick }) {
                     <span style={{ color:"#5a5a7a", fontSize:9, marginLeft:4 }}>{Math.round(100*n/stats.total)}%</span>
                   </div>
                 ))}
+              </div>
+              <div className="analytics-stat-block">
+                <div className="analytics-stat-label">Calibration</div>
+                <div className="analytics-stat-row"><span>Cards compared</span><span className="analytics-stat-val">{stats.total}</span></div>
+                <div className="analytics-stat-row"><span>Avg gap</span><span className="analytics-stat-val" style={{ color: stats.avgGap > 0 ? "#e05030" : "#32a050" }}>{stats.avgGap > 0 ? "+" : ""}{stats.avgGap.toFixed(2)}</span></div>
+                <div className="analytics-stat-row"><span>Overrated</span><span className="analytics-stat-val">{stats.overrated} ({Math.round(100*stats.overrated/stats.total)}%)</span></div>
+                <div className="analytics-stat-row"><span>Underrated</span><span className="analytics-stat-val">{stats.underrated} ({Math.round(100*stats.underrated/stats.total)}%)</span></div>
+                <div className="analytics-stat-row"><span>Agreed</span><span className="analytics-stat-val">{stats.agreed} ({Math.round(100*stats.agreed/stats.total)}%)</span></div>
               </div>
               <div className="analytics-stat-block" style={{ fontSize:10, color:"#5a5a7a", lineHeight:1.7 }}>
                 <div className="analytics-stat-label">How to read this</div>
