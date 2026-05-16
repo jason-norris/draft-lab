@@ -251,7 +251,7 @@ function ThreeWayDelta({ g }) {
         {rows.map(r => (
           <div key={r.key} title={`${r.title}: ${r.detail}`}
             style={{ display:"flex", alignItems:"center", gap:4, whiteSpace:"nowrap" }}>
-            <span style={{ fontSize:8, color:"var(--dimmer)", minWidth:16, letterSpacing:".02em" }}>{r.key}</span>
+            <span style={{ fontSize:8, color:"#5a5a7a", minWidth:16, letterSpacing:".02em" }}>{r.key}</span>
             <span style={{ fontSize:11, fontWeight:700, color: r.color }}>{r.symbol}</span>
           </div>
         ))}
@@ -262,7 +262,7 @@ function ThreeWayDelta({ g }) {
           background:"var(--s1)", border:"1px solid var(--b2)",
           padding:"10px 12px", boxShadow:"0 8px 24px rgba(0,0,0,.3)", minWidth:180
         }}>
-          <div style={{ fontSize:9, color:"var(--dimmer)", textTransform:"uppercase", letterSpacing:".1em", marginBottom:8 }}>Comparison</div>
+          <div style={{ fontSize:9, color:"#5a5a7a", textTransform:"uppercase", letterSpacing:".1em", marginBottom:8 }}>Comparison</div>
           {[
             { label:"My Grade",    val: me,   grade: g.myGrade },
             { label:"Expert",      val: exp,  grade: null },
@@ -340,7 +340,7 @@ function TagCell({ tags = [], onToggle }) {
             : null;
         })}
         {overflow > 0 && (
-          <span style={{ fontSize:8, color:"var(--dimmer)", whiteSpace:"nowrap" }}>+{overflow}</span>
+          <span style={{ fontSize:8, color:"#5a5a7a", whiteSpace:"nowrap" }}>+{overflow}</span>
         )}
         <button className="tag-add-btn" onClick={() => setOpen(v => !v)}>
           {open ? "✕" : tags.length ? "edit" : "+ tag"}
@@ -355,7 +355,7 @@ function TagCell({ tags = [], onToggle }) {
         }}>
           {TAG_GROUPS.map(({ label, ids }) => (
             <div key={label} style={{ marginBottom:8 }}>
-              <div style={{ fontSize:8, color:"var(--dimmer)", marginBottom:4, textTransform:"uppercase", letterSpacing:".1em" }}>{label}</div>
+              <div style={{ fontSize:8, color:"#5a5a7a", marginBottom:4, textTransform:"uppercase", letterSpacing:".1em" }}>{label}</div>
               <div className="tag-chips">
                 {ids.map(id => {
                   const tag = TAGS.find(t => t.id === id);
@@ -382,7 +382,7 @@ function TagFilterPanel({ filterTags, onToggle, onClear }) {
       <div className="tag-filter-hdr">Filter by tag — any of</div>
       {TAG_GROUPS.map(({ label, ids }) => (
         <div key={label}>
-          <div style={{ fontSize:8, color:"var(--dimmer)", marginBottom:4, textTransform:"uppercase", letterSpacing:".1em" }}>{label}</div>
+          <div style={{ fontSize:8, color:"#5a5a7a", marginBottom:4, textTransform:"uppercase", letterSpacing:".1em" }}>{label}</div>
           <div className="tag-chips">
             {ids.map(id => {
               const tag = TAGS.find(t => t.id === id);
@@ -625,8 +625,8 @@ function AnalyticsView({ cards, grades, isMobile, onCardClick }) {
           tooltip:{ backgroundColor:"var(--s1)", titleColor:"var(--gold)", bodyColor:"var(--dim)",
             borderColor:"var(--b2)", borderWidth:1 } },
         scales:{
-          x:{ ticks:{color:"var(--dimmer)"}, grid:{color:"var(--b1)"} },
-          y:{ ticks:{color:"var(--dimmer)"}, grid:{color:"var(--b1)"}, beginAtZero:true }
+          x:{ ticks:{color:"#5a5a7a"}, grid:{color:"#22223a"} },
+          y:{ ticks:{color:"#5a5a7a"}, grid:{color:"#22223a"}, beginAtZero:true }
         }
       }
     });
@@ -670,16 +670,16 @@ function AnalyticsView({ cards, grades, isMobile, onCardClick }) {
             const yl = mode.yKey === "myNum" ? `Me:${p.g.myGrade}` : `Exp:${p.y.toFixed(1)}`;
             return [`${p.card.name}`, `${yl}  ${xl}  ${p.quad ?? ""}`];
           }},
-          backgroundColor:"var(--s1)", titleColor:"var(--gold)", bodyColor:"var(--dim)",
-          borderColor:"var(--b2)", borderWidth:1 },
+          backgroundColor:"#0e0e1c", titleColor:"#d4aa50", bodyColor:"#9090b8",
+          borderColor:"#2e2e4a", borderWidth:1},
         },
         scales:{
-          x:{ min:0, max:5, title:{display:true, text:mode.xLabel, color:"var(--dimmer)", font:{size:10}},
-              ticks:{color:"var(--dimmer)", stepSize:0.5, callback: mode.xKey !== "perf" ? gradeLabel : undefined},
-              grid:{color:"var(--b1)"} },
-          y:{ min:0, max:5, title:{display:true, text:mode.yLabel, color:"var(--dimmer)", font:{size:10}},
-              ticks:{color:"var(--dimmer)", stepSize:0.5, callback: gradeLabel},
-              grid:{color:"var(--b1)"} },
+          x:{ min:0, max:5, title:{display:true, text:mode.xLabel, color:"#5a5a7a", font:{size:10}},
+              ticks:{color:"#5a5a7a", stepSize:0.5, callback: mode.xKey !== "perf" ? gradeLabel : undefined},
+              grid:{color:"#22223a"} },
+          y:{ min:0, max:5, title:{display:true, text:mode.yLabel, color:"#5a5a7a", font:{size:10}},
+              ticks:{color:"#5a5a7a", stepSize:0.5, callback: gradeLabel},
+              grid:{color:"#22223a"} },
         },
         onClick:(e, els) => {
           if (!els.length) return;
@@ -734,7 +734,7 @@ function AnalyticsView({ cards, grades, isMobile, onCardClick }) {
                 <div className="analytics-stat-row"><span>Agreed</span><span className="analytics-stat-val">{stats.agreed} ({Math.round(100*stats.agreed/stats.total)}%)</span></div>
               </div>
             )}
-            <div className="analytics-stat-block" style={{ fontSize:10, color:"var(--dimmer)", lineHeight:1.7 }}>
+            <div className="analytics-stat-block" style={{ fontSize:10, color:"#5a5a7a", lineHeight:1.7 }}>
               <div className="analytics-stat-label">How to read this</div>
               <div><span style={{color:"var(--dim)"}}>Bars</span> — your grade distribution</div>
               <div><span style={{color:"rgba(200,168,75,0.9)"}}>Gold line</span> — GIH Win Rate distribution</div>
@@ -767,11 +767,11 @@ function AnalyticsView({ cards, grades, isMobile, onCardClick }) {
                     <div className="analytics-quad-dot" style={{ background: QUAD_COLORS[q] }} />
                     <span style={{ color:"var(--dim)", minWidth:80 }}>{q}</span>
                     <span className="analytics-stat-val">{n}</span>
-                    <span style={{ color:"var(--dimmer)", fontSize:9, marginLeft:4 }}>{Math.round(100*n/stats.total)}%</span>
+                    <span style={{ color:"#5a5a7a", fontSize:9, marginLeft:4 }}>{Math.round(100*n/stats.total)}%</span>
                   </div>
                 ))}
               </div>
-              <div className="analytics-stat-block" style={{ fontSize:10, color:"var(--dimmer)", lineHeight:1.7 }}>
+              <div className="analytics-stat-block" style={{ fontSize:10, color:"#5a5a7a", lineHeight:1.7 }}>
                 <div className="analytics-stat-label">How to read this</div>
                 <div><span style={{color:"var(--dim)"}}>Diagonal</span> — Perfect agreement</div>
                 <div><span style={{color:"#e05030"}}>Above</span> — You overrated</div>
@@ -779,7 +779,7 @@ function AnalyticsView({ cards, grades, isMobile, onCardClick }) {
                 <div><span style={{color:"var(--dim)"}}>Crosshairs</span> — Mean of each axis</div>
                 <div><span style={{color:"var(--dim)"}}>Color</span> — Quadrant classification</div>
                 <div><span style={{color:"var(--dim)"}}>Size</span> — Rarity (mythic largest)</div>
-                <div style={{marginTop:6, whiteSpace:"nowrap"}}>Hover to preview · click to open detail.</div>
+                <div style={{marginTop:6}}>Hover to preview · click for detail.</div>
               </div>
             </div>
           )}
@@ -1414,7 +1414,7 @@ function DraftLab({ user }) {
             <button className="set-btn" onClick={() => setShowSetDD(v => !v)}>
               <span className="set-btn-label">
                 {selectedSet
-                  ? <>{selectedSet.name} <span style={{ color:"var(--dimmer)", fontSize:9 }}>· {selectedSet.code.toUpperCase()}</span></>
+                  ? <>{selectedSet.name} <span style={{ color:"#5a5a7a", fontSize:9 }}>· {selectedSet.code.toUpperCase()}</span></>
                   : "Select a Set"}
               </span>
               <span style={{ color:"var(--dim)", fontSize:10, flexShrink:0 }}>▾</span>
@@ -1481,7 +1481,7 @@ function DraftLab({ user }) {
           </div>
           {user && syncStatus && <span className="sync-dot desktop-only">{syncStatus === "syncing" ? "↑ Syncing…" : "✓ Synced"}</span>}
           {user && (
-            <button className="btn desktop-only" style={{ fontSize:9, color:"var(--dimmer)" }} title={user.email}
+            <button className="btn desktop-only" style={{ fontSize:9, color:"#5a5a7a" }} title={user.email}
               onClick={() => sb.auth.signOut()}>Sign Out</button>
           )}
           <div className="icon-bar">
@@ -1597,7 +1597,7 @@ function DraftLab({ user }) {
               </button>
             )}
             {user && (
-              <button className="l17-fetch" style={{ flex:1, borderColor:"var(--dimmer)", color:"var(--dimmer)" }}
+              <button className="l17-fetch" style={{ flex:1, borderColor:"var(--dimmer)", color:"#5a5a7a" }}
                 onClick={() => { sb.auth.signOut(); setShowMobF(false); }}>
                 Sign Out
               </button>
@@ -1869,7 +1869,7 @@ function DraftLab({ user }) {
               guidelines. Pre-release ratings sourced from AetherHub and Nizzahon Magic for personal use.
             </div>
             <div className="guide-desc">This project is not affiliated with or endorsed by any of the above.</div>
-            <div className="guide-desc" style={{ marginTop:16, color:"var(--dimmer)", fontSize:10 }}>
+            <div className="guide-desc" style={{ marginTop:16, color:"#5a5a7a", fontSize:10 }}>
               Draft Lab source code is released under the MIT License.{" "}
               <a href="https://github.com/jason-norris/draft-lab" target="_blank" rel="noopener noreferrer"
                 style={{ color:"var(--gold2)", textDecoration:"none" }}>

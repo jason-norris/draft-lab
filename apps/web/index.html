@@ -824,7 +824,7 @@ function ThreeWayDelta(_ref4) {
   }, React.createElement("span", {
     style: {
       fontSize: 8,
-      color: "var(--dimmer)",
+      color: "#5a5a7a",
       minWidth: 16,
       letterSpacing: ".02em"
     }
@@ -850,7 +850,7 @@ function ThreeWayDelta(_ref4) {
   }, React.createElement("div", {
     style: {
       fontSize: 9,
-      color: "var(--dimmer)",
+      color: "#5a5a7a",
       textTransform: "uppercase",
       letterSpacing: ".1em",
       marginBottom: 8
@@ -1017,7 +1017,7 @@ function TagCell(_ref8) {
   }), overflow > 0 && React.createElement("span", {
     style: {
       fontSize: 8,
-      color: "var(--dimmer)",
+      color: "#5a5a7a",
       whiteSpace: "nowrap"
     }
   }, "+", overflow), React.createElement("button", {
@@ -1047,7 +1047,7 @@ function TagCell(_ref8) {
     }, React.createElement("div", {
       style: {
         fontSize: 8,
-        color: "var(--dimmer)",
+        color: "#5a5a7a",
         marginBottom: 4,
         textTransform: "uppercase",
         letterSpacing: ".1em"
@@ -1084,7 +1084,7 @@ function TagFilterPanel(_ref0) {
     }, React.createElement("div", {
       style: {
         fontSize: 8,
-        color: "var(--dimmer)",
+        color: "#5a5a7a",
         marginBottom: 4,
         textTransform: "uppercase",
         letterSpacing: ".1em"
@@ -1460,18 +1460,18 @@ function AnalyticsView(_ref12) {
         scales: {
           x: {
             ticks: {
-              color: "var(--dimmer)"
+              color: "#5a5a7a"
             },
             grid: {
-              color: "var(--b1)"
+              color: "#22223a"
             }
           },
           y: {
             ticks: {
-              color: "var(--dimmer)"
+              color: "#5a5a7a"
             },
             grid: {
-              color: "var(--b1)"
+              color: "#22223a"
             },
             beginAtZero: true
           }
@@ -1544,10 +1544,10 @@ function AnalyticsView(_ref12) {
                 return [`${p.card.name}`, `${yl}  ${xl}  ${p.quad ?? ""}`];
               }
             },
-            backgroundColor: "var(--s1)",
-            titleColor: "var(--gold)",
-            bodyColor: "var(--dim)",
-            borderColor: "var(--b2)",
+            backgroundColor: "#0e0e1c",
+            titleColor: "#d4aa50",
+            bodyColor: "#9090b8",
+            borderColor: "#2e2e4a",
             borderWidth: 1
           }
         },
@@ -1558,18 +1558,18 @@ function AnalyticsView(_ref12) {
             title: {
               display: true,
               text: mode.xLabel,
-              color: "var(--dimmer)",
+              color: "#5a5a7a",
               font: {
                 size: 10
               }
             },
             ticks: {
-              color: "var(--dimmer)",
+              color: "#5a5a7a",
               stepSize: 0.5,
               callback: mode.xKey !== "perf" ? gradeLabel : undefined
             },
             grid: {
-              color: "var(--b1)"
+              color: "#22223a"
             }
           },
           y: {
@@ -1578,18 +1578,18 @@ function AnalyticsView(_ref12) {
             title: {
               display: true,
               text: mode.yLabel,
-              color: "var(--dimmer)",
+              color: "#5a5a7a",
               font: {
                 size: 10
               }
             },
             ticks: {
-              color: "var(--dimmer)",
+              color: "#5a5a7a",
               stepSize: 0.5,
               callback: gradeLabel
             },
             grid: {
-              color: "var(--b1)"
+              color: "#22223a"
             }
           }
         },
@@ -1695,7 +1695,7 @@ function AnalyticsView(_ref12) {
     className: "analytics-stat-block",
     style: {
       fontSize: 10,
-      color: "var(--dimmer)",
+      color: "#5a5a7a",
       lineHeight: 1.7
     }
   }, React.createElement("div", {
@@ -1778,7 +1778,7 @@ function AnalyticsView(_ref12) {
       className: "analytics-stat-val"
     }, n), React.createElement("span", {
       style: {
-        color: "var(--dimmer)",
+        color: "#5a5a7a",
         fontSize: 9,
         marginLeft: 4
       }
@@ -1787,7 +1787,7 @@ function AnalyticsView(_ref12) {
     className: "analytics-stat-block",
     style: {
       fontSize: 10,
-      color: "var(--dimmer)",
+      color: "#5a5a7a",
       lineHeight: 1.7
     }
   }, React.createElement("div", {
@@ -1818,10 +1818,9 @@ function AnalyticsView(_ref12) {
     }
   }, "Size"), " \u2014 Rarity (mythic largest)"), React.createElement("div", {
     style: {
-      marginTop: 6,
-      whiteSpace: "nowrap"
+      marginTop: 6
     }
-  }, "Hover to preview \xB7 click to open detail."))))), activeTab === "quadrants" && React.createElement("div", {
+  }, "Hover to preview \xB7 click for detail."))))), activeTab === "quadrants" && React.createElement("div", {
     className: "analytics-empty"
   }, "Quadrant card lists \u2014 coming in session 2"));
 }
@@ -2781,7 +2780,7 @@ function DraftLab(_ref30) {
     className: "set-btn-label"
   }, selectedSet ? React.createElement(React.Fragment, null, selectedSet.name, " ", React.createElement("span", {
     style: {
-      color: "var(--dimmer)",
+      color: "#5a5a7a",
       fontSize: 9
     }
   }, "\xB7 ", selectedSet.code.toUpperCase())) : "Select a Set"), React.createElement("span", {
@@ -2894,7 +2893,7 @@ function DraftLab(_ref30) {
     className: "btn desktop-only",
     style: {
       fontSize: 9,
-      color: "var(--dimmer)"
+      color: "#5a5a7a"
     },
     title: user.email,
     onClick: () => sb.auth.signOut()
@@ -3089,7 +3088,7 @@ function DraftLab(_ref30) {
     style: {
       flex: 1,
       borderColor: "var(--dimmer)",
-      color: "var(--dimmer)"
+      color: "#5a5a7a"
     },
     onClick: () => {
       sb.auth.signOut();
@@ -3427,7 +3426,7 @@ function DraftLab(_ref30) {
     className: "guide-desc",
     style: {
       marginTop: 16,
-      color: "var(--dimmer)",
+      color: "#5a5a7a",
       fontSize: 10
     }
   }, "Draft Lab source code is released under the MIT License.", " ", React.createElement("a", {
