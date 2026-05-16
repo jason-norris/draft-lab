@@ -902,6 +902,15 @@ function DraftLab({ user }) {
     if (set) loadSet(set);
   }, [sets.length]);
 
+  // Persist sort + filter session state per set (excludes search and tag filter — too ephemeral)
+  useEffect(() => {
+    if (!selectedSet) return;
+    store.set(`draft-lab-session-${selectedSet.code}`, JSON.stringify({
+      sortCol, sortDir, mobileSort,
+      filterColor, filterRarity, filterGraded, filterQuadrant
+    }));
+  }, [selectedSet?.code, sortCol, sortDir, mobileSort, filterColor, filterRarity, filterGraded, filterQuadrant]);
+
   // ── Helpers ──
   const toggleTheme = () => {
     setTheme(prev => {
@@ -943,7 +952,17 @@ function DraftLab({ user }) {
     setCards([]);
     setLoading(true);
     setError(null);
-    setFilterColor("all"); setFilterRarity("all"); setFilterSearch(""); setFilterGraded("all"); setFilterQuadrant("all"); setFilterTags([]);
+    const saved = store.get(`draft-lab-session-${set.code}`);
+    const sess  = saved ? JSON.parse(saved.value) : null;
+    setFilterColor(sess?.filterColor ?? "all");
+    setFilterRarity(sess?.filterRarity ?? "all");
+    setFilterSearch("");
+    setFilterGraded(sess?.filterGraded ?? "all");
+    setFilterQuadrant(sess?.filterQuadrant ?? "all");
+    setFilterTags([]);
+    setSortCol(sess?.sortCol ?? "color");
+    setSortDir(sess?.sortDir ?? "asc");
+    setMobileSort(sess?.mobileSort ?? "color");
     loadGrades(set.code);
     let url = `https://api.scryfall.com/cards/search?q=set:${set.code}+game:paper&order=color&unique=cards`, all = [];
     try {

@@ -1878,6 +1878,18 @@ function DraftLab(_ref23) {
     const set = sets.find(s => s.code === saved.value);
     if (set) loadSet(set);
   }, [sets.length]);
+  useEffect(() => {
+    if (!selectedSet) return;
+    store.set(`draft-lab-session-${selectedSet.code}`, JSON.stringify({
+      sortCol,
+      sortDir,
+      mobileSort,
+      filterColor,
+      filterRarity,
+      filterGraded,
+      filterQuadrant
+    }));
+  }, [selectedSet === null || selectedSet === void 0 ? void 0 : selectedSet.code, sortCol, sortDir, mobileSort, filterColor, filterRarity, filterGraded, filterQuadrant]);
   const toggleTheme = () => {
     setTheme(prev => {
       const sysDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
@@ -1912,12 +1924,17 @@ function DraftLab(_ref23) {
     setCards([]);
     setLoading(true);
     setError(null);
-    setFilterColor("all");
-    setFilterRarity("all");
+    const saved = store.get(`draft-lab-session-${set.code}`);
+    const sess = saved ? JSON.parse(saved.value) : null;
+    setFilterColor((sess === null || sess === void 0 ? void 0 : sess.filterColor) ?? "all");
+    setFilterRarity((sess === null || sess === void 0 ? void 0 : sess.filterRarity) ?? "all");
     setFilterSearch("");
-    setFilterGraded("all");
-    setFilterQuadrant("all");
+    setFilterGraded((sess === null || sess === void 0 ? void 0 : sess.filterGraded) ?? "all");
+    setFilterQuadrant((sess === null || sess === void 0 ? void 0 : sess.filterQuadrant) ?? "all");
     setFilterTags([]);
+    setSortCol((sess === null || sess === void 0 ? void 0 : sess.sortCol) ?? "color");
+    setSortDir((sess === null || sess === void 0 ? void 0 : sess.sortDir) ?? "asc");
+    setMobileSort((sess === null || sess === void 0 ? void 0 : sess.mobileSort) ?? "color");
     loadGrades(set.code);
     let url = `https://api.scryfall.com/cards/search?q=set:${set.code}+game:paper&order=color&unique=cards`,
       all = [];
