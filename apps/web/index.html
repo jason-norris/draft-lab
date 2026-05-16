@@ -1260,7 +1260,7 @@ function GradeSelect(_ref12) {
   }, g || "—")));
 }
 function MobileCardItem(_ref13) {
-  var _card$type_line3;
+  var _card$card_faces4, _card$card_faces$2, _card$card_faces$face3, _card$type_line3;
   let card = _ref13.card,
     grade = _ref13.grade,
     onUpdate = _ref13.onUpdate;
@@ -1272,8 +1272,13 @@ function MobileCardItem(_ref13) {
     _useState10 = _slicedToArray(_useState1, 2),
     bigImg = _useState10[0],
     setBigImg = _useState10[1];
+  const _useState11 = useState(0),
+    _useState12 = _slicedToArray(_useState11, 2),
+    face = _useState12[0],
+    setFace = _useState12[1];
   const ck = getColorKey(card);
-  const img = getImageUrl(card);
+  const hasDFC = ((_card$card_faces4 = card.card_faces) === null || _card$card_faces4 === void 0 ? void 0 : _card$card_faces4.length) >= 2 && ((_card$card_faces$2 = card.card_faces[1]) === null || _card$card_faces$2 === void 0 ? void 0 : _card$card_faces$2.image_uris);
+  const img = hasDFC ? (_card$card_faces$face3 = card.card_faces[face]) === null || _card$card_faces$face3 === void 0 || (_card$card_faces$face3 = _card$card_faces$face3.image_uris) === null || _card$card_faces$face3 === void 0 ? void 0 : _card$card_faces$face3.normal : getImageUrl(card);
   const q = calcQuadrant(grade);
   return React.createElement("div", {
     className: `mc mobile-only c${ck}`
@@ -1290,6 +1295,7 @@ function MobileCardItem(_ref13) {
     onClick: () => {
       setExpanded(v => !v);
       setBigImg(false);
+      setFace(0);
     }
   }, React.createElement("div", {
     className: "mc-info"
@@ -1333,8 +1339,23 @@ function MobileCardItem(_ref13) {
     src: img,
     alt: card.name,
     className: "mc-img",
-    onClick: () => setBigImg(true)
-  })), React.createElement("div", {
+    onClick: () => hasDFC ? setFace(f => f === 0 ? 1 : 0) : setBigImg(true)
+  }), hasDFC && React.createElement("button", {
+    onClick: () => setFace(f => f === 0 ? 1 : 0),
+    style: {
+      display: "block",
+      width: "100%",
+      marginTop: 4,
+      background: "transparent",
+      border: "1px solid var(--b2)",
+      color: "var(--dim)",
+      fontFamily: "'IBM Plex Mono',monospace",
+      fontSize: 10,
+      padding: "3px 0",
+      cursor: "pointer",
+      borderRadius: 3
+    }
+  }, "\u21BB Flip")), React.createElement("div", {
     className: "mc-controls"
   }, React.createElement("div", {
     className: "mc-field"
@@ -1443,18 +1464,18 @@ function ImportPanel(_ref14) {
     setMeta = _ref14.setMeta,
     onGradesUpdate = _ref14.onGradesUpdate,
     mobile = _ref14.mobile;
-  const _useState11 = useState(""),
-    _useState12 = _slicedToArray(_useState11, 2),
-    msg = _useState12[0],
-    setMsg = _useState12[1];
-  const _useState13 = useState("17lands"),
+  const _useState13 = useState(""),
     _useState14 = _slicedToArray(_useState13, 2),
-    source = _useState14[0],
-    setSource = _useState14[1];
-  const _useState15 = useState("auto"),
+    msg = _useState14[0],
+    setMsg = _useState14[1];
+  const _useState15 = useState("17lands"),
     _useState16 = _slicedToArray(_useState15, 2),
-    target = _useState16[0],
-    setTarget = _useState16[1];
+    source = _useState16[0],
+    setSource = _useState16[1];
+  const _useState17 = useState("auto"),
+    _useState18 = _slicedToArray(_useState17, 2),
+    target = _useState18[0],
+    setTarget = _useState18[1];
   const resolvedTarget = target === "auto" ? source === "17lands" ? "performance" : "expert" : target;
   const importCSV = text => {
     const lines = text.trim().split("\n").filter(l => l.trim());
@@ -1659,133 +1680,133 @@ function DraftLab(_ref23) {
   let user = _ref23.user;
   const isMobile = useIsMobile();
   const didFirstSync = useRef(false);
-  const _useState17 = useState(() => localStorage.getItem("draft-lab-theme") || "auto"),
-    _useState18 = _slicedToArray(_useState17, 2),
-    theme = _useState18[0],
-    setTheme = _useState18[1];
-  const _useState19 = useState(false),
+  const _useState19 = useState(() => localStorage.getItem("draft-lab-theme") || "auto"),
     _useState20 = _slicedToArray(_useState19, 2),
-    showImport = _useState20[0],
-    setShowImport = _useState20[1];
+    theme = _useState20[0],
+    setTheme = _useState20[1];
   const _useState21 = useState(false),
     _useState22 = _slicedToArray(_useState21, 2),
-    showExport = _useState22[0],
-    setShowExport = _useState22[1];
-  const _useState23 = useState("PremierDraft"),
+    showImport = _useState22[0],
+    setShowImport = _useState22[1];
+  const _useState23 = useState(false),
     _useState24 = _slicedToArray(_useState23, 2),
-    fmt17l = _useState24[0],
-    setFmt17l = _useState24[1];
-  const _useState25 = useState(null),
+    showExport = _useState24[0],
+    setShowExport = _useState24[1];
+  const _useState25 = useState("PremierDraft"),
     _useState26 = _slicedToArray(_useState25, 2),
-    importMeta = _useState26[0],
-    setImportMeta = _useState26[1];
-  const _useState27 = useState([]),
+    fmt17l = _useState26[0],
+    setFmt17l = _useState26[1];
+  const _useState27 = useState(null),
     _useState28 = _slicedToArray(_useState27, 2),
-    sets = _useState28[0],
-    setSets = _useState28[1];
-  const _useState29 = useState(null),
+    importMeta = _useState28[0],
+    setImportMeta = _useState28[1];
+  const _useState29 = useState([]),
     _useState30 = _slicedToArray(_useState29, 2),
-    selectedSet = _useState30[0],
-    setSelectedSet = _useState30[1];
-  const _useState31 = useState([]),
+    sets = _useState30[0],
+    setSets = _useState30[1];
+  const _useState31 = useState(null),
     _useState32 = _slicedToArray(_useState31, 2),
-    cards = _useState32[0],
-    setCards = _useState32[1];
-  const _useState33 = useState({}),
+    selectedSet = _useState32[0],
+    setSelectedSet = _useState32[1];
+  const _useState33 = useState([]),
     _useState34 = _slicedToArray(_useState33, 2),
-    grades = _useState34[0],
-    setGrades = _useState34[1];
-  const _useState35 = useState(false),
+    cards = _useState34[0],
+    setCards = _useState34[1];
+  const _useState35 = useState({}),
     _useState36 = _slicedToArray(_useState35, 2),
-    loading = _useState36[0],
-    setLoading = _useState36[1];
-  const _useState37 = useState(""),
+    grades = _useState36[0],
+    setGrades = _useState36[1];
+  const _useState37 = useState(false),
     _useState38 = _slicedToArray(_useState37, 2),
-    loadMsg = _useState38[0],
-    setLoadMsg = _useState38[1];
-  const _useState39 = useState(null),
+    loading = _useState38[0],
+    setLoading = _useState38[1];
+  const _useState39 = useState(""),
     _useState40 = _slicedToArray(_useState39, 2),
-    error = _useState40[0],
-    setError = _useState40[1];
-  const _useState41 = useState("color"),
+    loadMsg = _useState40[0],
+    setLoadMsg = _useState40[1];
+  const _useState41 = useState(null),
     _useState42 = _slicedToArray(_useState41, 2),
-    sortCol = _useState42[0],
-    setSortCol = _useState42[1];
-  const _useState43 = useState("asc"),
+    error = _useState42[0],
+    setError = _useState42[1];
+  const _useState43 = useState("color"),
     _useState44 = _slicedToArray(_useState43, 2),
-    sortDir = _useState44[0],
-    setSortDir = _useState44[1];
-  const _useState45 = useState("color"),
+    sortCol = _useState44[0],
+    setSortCol = _useState44[1];
+  const _useState45 = useState("asc"),
     _useState46 = _slicedToArray(_useState45, 2),
-    mobileSort = _useState46[0],
-    setMobileSort = _useState46[1];
-  const _useState47 = useState("all"),
+    sortDir = _useState46[0],
+    setSortDir = _useState46[1];
+  const _useState47 = useState("color"),
     _useState48 = _slicedToArray(_useState47, 2),
-    filterColor = _useState48[0],
-    setFilterColor = _useState48[1];
+    mobileSort = _useState48[0],
+    setMobileSort = _useState48[1];
   const _useState49 = useState("all"),
     _useState50 = _slicedToArray(_useState49, 2),
-    filterRarity = _useState50[0],
-    setFilterRarity = _useState50[1];
-  const _useState51 = useState(""),
+    filterColor = _useState50[0],
+    setFilterColor = _useState50[1];
+  const _useState51 = useState("all"),
     _useState52 = _slicedToArray(_useState51, 2),
-    filterSearch = _useState52[0],
-    setFilterSearch = _useState52[1];
-  const _useState53 = useState("all"),
+    filterRarity = _useState52[0],
+    setFilterRarity = _useState52[1];
+  const _useState53 = useState(""),
     _useState54 = _slicedToArray(_useState53, 2),
-    filterGraded = _useState54[0],
-    setFilterGraded = _useState54[1];
+    filterSearch = _useState54[0],
+    setFilterSearch = _useState54[1];
   const _useState55 = useState("all"),
     _useState56 = _slicedToArray(_useState55, 2),
-    filterQuadrant = _useState56[0],
-    setFilterQuadrant = _useState56[1];
-  const _useState57 = useState([]),
+    filterGraded = _useState56[0],
+    setFilterGraded = _useState56[1];
+  const _useState57 = useState("all"),
     _useState58 = _slicedToArray(_useState57, 2),
-    filterTags = _useState58[0],
-    setFilterTags = _useState58[1];
-  const _useState59 = useState(false),
+    filterQuadrant = _useState58[0],
+    setFilterQuadrant = _useState58[1];
+  const _useState59 = useState([]),
     _useState60 = _slicedToArray(_useState59, 2),
-    showTagFilter = _useState60[0],
-    setShowTagFilter = _useState60[1];
+    filterTags = _useState60[0],
+    setFilterTags = _useState60[1];
   const _useState61 = useState(false),
     _useState62 = _slicedToArray(_useState61, 2),
-    showMobF = _useState62[0],
-    setShowMobF = _useState62[1];
-  const _useState63 = useState(null),
+    showTagFilter = _useState62[0],
+    setShowTagFilter = _useState62[1];
+  const _useState63 = useState(false),
     _useState64 = _slicedToArray(_useState63, 2),
-    lightboxIndex = _useState64[0],
-    setLightboxIndex = _useState64[1];
-  const _useState65 = useState(false),
+    showMobF = _useState64[0],
+    setShowMobF = _useState64[1];
+  const _useState65 = useState(null),
     _useState66 = _slicedToArray(_useState65, 2),
-    showGuide = _useState66[0],
-    setShowGuide = _useState66[1];
-  const _useState67 = useState(""),
+    lightboxIndex = _useState66[0],
+    setLightboxIndex = _useState66[1];
+  const _useState67 = useState(false),
     _useState68 = _slicedToArray(_useState67, 2),
-    syncStatus = _useState68[0],
-    setSyncStatus = _useState68[1];
-  const _useState69 = useState(false),
+    showGuide = _useState68[0],
+    setShowGuide = _useState68[1];
+  const _useState69 = useState(""),
     _useState70 = _slicedToArray(_useState69, 2),
-    showLegal = _useState70[0],
-    setShowLegal = _useState70[1];
-  const _useState71 = useState(null),
+    syncStatus = _useState70[0],
+    setSyncStatus = _useState70[1];
+  const _useState71 = useState(false),
     _useState72 = _slicedToArray(_useState71, 2),
-    hovered = _useState72[0],
-    setHovered = _useState72[1];
-  const _useState73 = useState({
+    showLegal = _useState72[0],
+    setShowLegal = _useState72[1];
+  const _useState73 = useState(null),
+    _useState74 = _slicedToArray(_useState73, 2),
+    hovered = _useState74[0],
+    setHovered = _useState74[1];
+  const _useState75 = useState({
       x: 0,
       y: 0
     }),
-    _useState74 = _slicedToArray(_useState73, 2),
-    hoverPos = _useState74[0],
-    setHoverPos = _useState74[1];
-  const _useState75 = useState(""),
     _useState76 = _slicedToArray(_useState75, 2),
-    setSearch = _useState76[0],
-    setSetSearch = _useState76[1];
-  const _useState77 = useState(false),
+    hoverPos = _useState76[0],
+    setHoverPos = _useState76[1];
+  const _useState77 = useState(""),
     _useState78 = _slicedToArray(_useState77, 2),
-    showSetDD = _useState78[0],
-    setShowSetDD = _useState78[1];
+    setSearch = _useState78[0],
+    setSetSearch = _useState78[1];
+  const _useState79 = useState(false),
+    _useState80 = _slicedToArray(_useState79, 2),
+    showSetDD = _useState80[0],
+    setShowSetDD = _useState80[1];
   useEffect(() => {
     if (theme === "auto") document.documentElement.removeAttribute("data-theme");else document.documentElement.setAttribute("data-theme", theme);
   }, [theme]);
@@ -2773,14 +2794,14 @@ function DraftLab(_ref23) {
 function LoginScreen(_ref33) {
   let onSignIn = _ref33.onSignIn,
     loading = _ref33.loading;
-  const _useState79 = useState(() => {
+  const _useState81 = useState(() => {
       const saved = localStorage.getItem("draft-lab-theme");
       if (saved && saved !== "auto") return saved;
       return window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
     }),
-    _useState80 = _slicedToArray(_useState79, 2),
-    theme = _useState80[0],
-    setTheme = _useState80[1];
+    _useState82 = _slicedToArray(_useState81, 2),
+    theme = _useState82[0],
+    setTheme = _useState82[1];
   useEffect(() => {
     document.documentElement.setAttribute("data-theme", theme);
     localStorage.setItem("draft-lab-theme", theme);
@@ -2842,18 +2863,18 @@ function LoginScreen(_ref33) {
   })), "Sign in with Google"))));
 }
 function AuthGate() {
-  const _useState81 = useState(null),
-    _useState82 = _slicedToArray(_useState81, 2),
-    user = _useState82[0],
-    setUser = _useState82[1];
-  const _useState83 = useState(true),
+  const _useState83 = useState(null),
     _useState84 = _slicedToArray(_useState83, 2),
-    authLoading = _useState84[0],
-    setAuthLoading = _useState84[1];
-  const _useState85 = useState(false),
+    user = _useState84[0],
+    setUser = _useState84[1];
+  const _useState85 = useState(true),
     _useState86 = _slicedToArray(_useState85, 2),
-    signing = _useState86[0],
-    setSigning = _useState86[1];
+    authLoading = _useState86[0],
+    setAuthLoading = _useState86[1];
+  const _useState87 = useState(false),
+    _useState88 = _slicedToArray(_useState87, 2),
+    signing = _useState88[0],
+    setSigning = _useState88[1];
   useEffect(() => {
     if (!SUPABASE_CONFIGURED) {
       setAuthLoading(false);
