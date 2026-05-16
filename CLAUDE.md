@@ -40,6 +40,12 @@ GitHub Actions runs `npm ci && node compile.js` automatically before each Pages 
 
 ---
 
+## Known Technical Debt
+
+**`DraftLab` is a god component** (~1,300 lines, ~30 useState, ~10 useEffect). It works but will become a problem when Phase 5 (draft simulator) adds its own complex state. Plan a refactor pass between Phase 4 and Phase 5 — split into `GradeTable`, `FilterBar`, `MobileDrawer`, and `AnalyticsView` sub-components. See ROADMAP Polish Queue for the entry.
+
+---
+
 ## Key Architecture
 
 - **Single-file web app** — React UMD (no bundler), compiled from JSX via Babel
