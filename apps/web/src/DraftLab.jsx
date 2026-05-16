@@ -1300,6 +1300,7 @@ function DraftLab({ user }) {
   const loadSet = async set => {
     store.set("draft-lab-last-set", set.code);
     setLightboxIndex(null);
+    setShowAnalytics(false);
     setSelectedSet(set);
     setCards([]);
     setLoading(true);
