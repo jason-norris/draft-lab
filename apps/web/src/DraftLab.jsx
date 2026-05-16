@@ -693,7 +693,7 @@ function AnalyticsView({ cards, grades, isMobile, onCardClick }) {
           else if (onCardClick) onCardClick(p.card);
         },
       },
-      plugins:[{ id:"crosshairs", afterDraw: chart => {
+      plugins:[{ id:"crosshairs", afterDatasetsDraw: chart => {
         const { ctx:c, scales:{x:xs, y:ys} } = chart;
         const px = xs.getPixelForValue(avgX), py = ys.getPixelForValue(avgY);
         c.save();

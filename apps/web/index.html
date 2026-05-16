@@ -1632,7 +1632,7 @@ function AnalyticsView(_ref12) {
       },
       plugins: [{
         id: "crosshairs",
-        afterDraw: chart => {
+        afterDatasetsDraw: chart => {
           const c = chart.ctx,
             _chart$scales = chart.scales,
             xs = _chart$scales.x,
