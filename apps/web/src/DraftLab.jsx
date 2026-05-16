@@ -799,7 +799,7 @@ function AnalyticsView({ cards, grades, isMobile, onCardClick }) {
             { id:"MISS",      label:"Miss",       desc:"You overrated vs both sources" },
             { id:"SPOT",      label:"Spot On",    desc:"You underrated vs both sources" },
             { id:"CONSENSUS", label:"Consensus",  desc:"All three roughly agreed" },
-            { id:"FORMAT",    label:"Format Gem", desc:"You matched Expert but Performance differed" },
+            { id:"FORMAT",    label:"Format Gem", desc:"Expert agreed; Performance didn't" },
             { id:"VAR",       label:"Variable",   desc:"Mixed signals across sources" },
           ].map(({ id, label, desc }) => {
             const qs = withPerf.filter(d => d.quad === id).sort((a, b) => {
