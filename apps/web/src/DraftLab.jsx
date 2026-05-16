@@ -1486,12 +1486,6 @@ function DraftLab({ user }) {
           </div>
           <div className="set-wrap">
             <button className="set-btn" onClick={() => setShowSetDD(v => !v)}>
-              {selectedSet && !isMobile && (
-                <img src={`https://svgs.scryfall.io/sets/${selectedSet.code.toLowerCase()}.svg`}
-                  alt="" onError={e => { e.target.style.display="none"; }}
-                  style={{ height:15, width:15, flexShrink:0, marginRight:7,
-                           filter:"brightness(0) saturate(100%) invert(72%) sepia(54%) saturate(421%) hue-rotate(3deg)", opacity:0.9 }} />
-              )}
               <span className="set-btn-label">
                 {selectedSet
                   ? <>{selectedSet.name} <span style={{ color:"#5a5a7a", fontSize:9 }}>· {selectedSet.code.toUpperCase()}</span></>
@@ -1517,6 +1511,12 @@ function DraftLab({ user }) {
               </div>
             )}
           </div>
+          {selectedSet && (
+            <img src={`https://svgs.scryfall.io/sets/${selectedSet.code.toLowerCase()}.svg`}
+              alt="" onError={e => { e.target.style.display="none"; }}
+              style={{ height:34, width:34, flexShrink:0, marginLeft:10,
+                       filter:"brightness(0) saturate(100%) invert(72%) sepia(54%) saturate(421%) hue-rotate(3deg)", opacity:0.85 }} />
+          )}
         </div>
 
         <div className="hdr-right">
@@ -1563,12 +1563,6 @@ function DraftLab({ user }) {
           {user && (
             <button className="btn desktop-only" style={{ fontSize:9, color:"#5a5a7a" }} title={user.email}
               onClick={() => sb.auth.signOut()}>Sign Out</button>
-          )}
-          {selectedSet && isMobile && (
-            <img src={`https://svgs.scryfall.io/sets/${selectedSet.code.toLowerCase()}.svg`}
-              alt="" onError={e => { e.target.style.display="none"; }}
-              style={{ height:26, width:26, flexShrink:0, marginRight:6,
-                       filter:"brightness(0) saturate(100%) invert(72%) sepia(54%) saturate(421%) hue-rotate(3deg)", opacity:0.85 }} />
           )}
           <div className="icon-bar">
             {isMobile && (

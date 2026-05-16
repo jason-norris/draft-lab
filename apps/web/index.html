@@ -2955,21 +2955,7 @@ function DraftLab(_ref31) {
   }, React.createElement("button", {
     className: "set-btn",
     onClick: () => setShowSetDD(v => !v)
-  }, selectedSet && !isMobile && React.createElement("img", {
-    src: `https://svgs.scryfall.io/sets/${selectedSet.code.toLowerCase()}.svg`,
-    alt: "",
-    onError: e => {
-      e.target.style.display = "none";
-    },
-    style: {
-      height: 15,
-      width: 15,
-      flexShrink: 0,
-      marginRight: 7,
-      filter: "brightness(0) saturate(100%) invert(72%) sepia(54%) saturate(421%) hue-rotate(3deg)",
-      opacity: 0.9
-    }
-  }), React.createElement("span", {
+  }, React.createElement("span", {
     className: "set-btn-label"
   }, selectedSet ? React.createElement(React.Fragment, null, selectedSet.name, " ", React.createElement("span", {
     style: {
@@ -3009,7 +2995,21 @@ function DraftLab(_ref31) {
     }, s.code), React.createElement("span", {
       className: "si-date"
     }, (_s$released_at = s.released_at) === null || _s$released_at === void 0 ? void 0 : _s$released_at.slice(0, 7)));
-  }))))), React.createElement("div", {
+  })))), selectedSet && React.createElement("img", {
+    src: `https://svgs.scryfall.io/sets/${selectedSet.code.toLowerCase()}.svg`,
+    alt: "",
+    onError: e => {
+      e.target.style.display = "none";
+    },
+    style: {
+      height: 34,
+      width: 34,
+      flexShrink: 0,
+      marginLeft: 10,
+      filter: "brightness(0) saturate(100%) invert(72%) sepia(54%) saturate(421%) hue-rotate(3deg)",
+      opacity: 0.85
+    }
+  })), React.createElement("div", {
     className: "hdr-right"
   }, selectedSet && !isMobile && React.createElement("div", {
     className: "l17-wrap",
@@ -3090,21 +3090,7 @@ function DraftLab(_ref31) {
     },
     title: user.email,
     onClick: () => sb.auth.signOut()
-  }, "Sign Out"), selectedSet && isMobile && React.createElement("img", {
-    src: `https://svgs.scryfall.io/sets/${selectedSet.code.toLowerCase()}.svg`,
-    alt: "",
-    onError: e => {
-      e.target.style.display = "none";
-    },
-    style: {
-      height: 26,
-      width: 26,
-      flexShrink: 0,
-      marginRight: 6,
-      filter: "brightness(0) saturate(100%) invert(72%) sepia(54%) saturate(421%) hue-rotate(3deg)",
-      opacity: 0.85
-    }
-  }), React.createElement("div", {
+  }, "Sign Out"), React.createElement("div", {
     className: "icon-bar"
   }, isMobile && React.createElement(React.Fragment, null, React.createElement("button", {
     className: `icon-bar-btn mobile-only${showMobF ? " active" : ""}`,
