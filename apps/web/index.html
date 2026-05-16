@@ -326,9 +326,9 @@
     .analytics-tab.active { border-color:var(--gold2); color:var(--gold); background:rgba(200,168,75,.08); }
     .analytics-content { display:flex; gap:20px; align-items:flex-start; flex-wrap:wrap; }
     .analytics-chart-wrap { flex:1; min-width:300px; position:relative; }
-    .analytics-panel { flex-shrink:0; width:240px; display:flex; flex-direction:column; gap:14px; }
-    @media (orientation:portrait) and (max-width:767px) { .analytics-chart-wrap { min-height:300px; } }
-    @media (orientation:landscape) and (max-width:900px) { .analytics-chart-wrap { min-height:220px; } }
+    .analytics-panel { flex-shrink:0; width:260px; display:flex; flex-direction:column; gap:14px; }
+    @media (orientation:portrait) and (max-width:767px) { .analytics-chart-wrap { min-height:220px; } }
+    @media (orientation:landscape) and (max-width:900px) { .analytics-chart-wrap { min-height:180px; } }
     .analytics-stat-block { background:var(--s2); border:1px solid var(--b1); padding:12px 14px; }
     .analytics-stat-label { font-size:9px; color:var(--dimmer); text-transform:uppercase; letter-spacing:.12em; margin-bottom:6px; }
     .analytics-stat-row { display:flex; justify-content:space-between; font-size:11px; margin-bottom:3px; }
@@ -351,10 +351,15 @@
     .analytics-quad-card-gap { font-size:10px; min-width:30px; text-align:right; font-weight:600; }
     @media (max-width:767px) {
       .analytics-wrap { padding:10px 10px; }
-      .analytics-content { flex-direction:column; }
-      .analytics-chart-wrap { min-width:0; width:100%; }
+      .analytics-content { flex-direction:column; gap:10px; }
+      .analytics-chart-wrap { min-width:0; width:100%; flex:0 0 auto; }
       .analytics-panel { width:100%; }
     }
+    .analytics-preview-overlay { position:fixed; inset:0; background:rgba(0,0,0,.85); z-index:500; display:flex; align-items:center; justify-content:center; padding:20px; }
+    .analytics-preview-card { position:relative; background:#0e0e1c; border:1px solid #2e2e4a; border-radius:10px; padding:12px; max-width:260px; width:100%; }
+    .analytics-preview-close { position:absolute; top:8px; right:10px; background:none; border:none; color:#5a5a7a; font-size:18px; cursor:pointer; line-height:1; padding:0; }
+    .analytics-preview-name { text-align:center; font-size:13px; color:#d4aa50; font-weight:600; margin-top:8px; }
+    .analytics-preview-info { padding:4px 0 0; }
 
     /* ── Card Lightbox ── */
     .lb-overlay { position:fixed; inset:0; z-index:600; background:rgba(0,0,0,.78); display:flex; align-items:center; justify-content:center; padding:20px; }
@@ -1348,6 +1353,10 @@ function AnalyticsView(_ref12) {
     _useState10 = _slicedToArray(_useState1, 2),
     scatterMode = _useState10[0],
     setScatterMode = _useState10[1];
+  const _useState11 = useState(null),
+    _useState12 = _slicedToArray(_useState11, 2),
+    previewCard = _useState12[0],
+    setPreviewCard = _useState12[1];
   const chartRef = useRef(null);
   const chartInstance = useRef(null);
   const dataset = useMemo(() => {
@@ -1537,12 +1546,16 @@ function AnalyticsView(_ref12) {
           duration: 400
         },
         events: ['mousemove', 'mouseout', 'click', 'touchstart', 'touchmove'],
+        interaction: {
+          mode: 'nearest',
+          intersect: false
+        },
         layout: {
           padding: {
-            top: 14,
-            right: 14,
-            bottom: 4,
-            left: 4
+            top: 20,
+            right: 20,
+            bottom: 20,
+            left: 20
           }
         },
         plugins: {
@@ -1610,7 +1623,8 @@ function AnalyticsView(_ref12) {
         onClick: (e, els) => {
           if (!els.length) return;
           const p = pts[els[0].index];
-          if (onCardClick && p.card) onCardClick(p.card);
+          if (!p.card) return;
+          if (isMobile) setPreviewCard(p.card);else if (onCardClick) onCardClick(p.card);
         }
       },
       plugins: [{
@@ -1889,7 +1903,7 @@ function AnalyticsView(_ref12) {
       return React.createElement("div", {
         key: d.card.id,
         className: "analytics-quad-card",
-        onClick: () => onCardClick && onCardClick(d.card)
+        onClick: () => isMobile ? setPreviewCard(d.card) : onCardClick && onCardClick(d.card)
       }, React.createElement("span", {
         className: "analytics-quad-card-name"
       }, d.card.name), React.createElement("span", {
@@ -1905,7 +1919,87 @@ function AnalyticsView(_ref12) {
         }
       }, gap > 0 ? "+" : "", gap.toFixed(1)));
     })));
-  })));
+  })), previewCard && ((_previewCard$card_fac, _previewCard$image_ur) => {
+    const pd = withPerf.find(d => d.card.id === previewCard.id);
+    const pg = grades[previewCard.id] ?? {};
+    const imgUrl = ((_previewCard$card_fac = previewCard.card_faces) === null || _previewCard$card_fac === void 0 || (_previewCard$card_fac = _previewCard$card_fac[0]) === null || _previewCard$card_fac === void 0 || (_previewCard$card_fac = _previewCard$card_fac.image_uris) === null || _previewCard$card_fac === void 0 ? void 0 : _previewCard$card_fac.normal) ?? ((_previewCard$image_ur = previewCard.image_uris) === null || _previewCard$image_ur === void 0 ? void 0 : _previewCard$image_ur.normal);
+    return React.createElement("div", {
+      className: "analytics-preview-overlay",
+      onClick: () => setPreviewCard(null)
+    }, React.createElement("div", {
+      className: "analytics-preview-card",
+      onClick: e => e.stopPropagation()
+    }, React.createElement("button", {
+      className: "analytics-preview-close",
+      onClick: () => setPreviewCard(null)
+    }, "✕"), imgUrl && React.createElement("img", {
+      src: imgUrl,
+      style: {
+        width: "100%",
+        borderRadius: 8,
+        display: "block"
+      }
+    }), React.createElement("div", {
+      className: "analytics-preview-info"
+    }, React.createElement("div", {
+      className: "analytics-preview-name"
+    }, previewCard.name), React.createElement("div", {
+      style: {
+        display: "flex",
+        gap: 16,
+        justifyContent: "center",
+        marginTop: 10
+      }
+    }, React.createElement("div", {
+      style: {
+        textAlign: "center"
+      }
+    }, React.createElement("div", {
+      style: {
+        fontSize: 9,
+        color: "#5a5a7a",
+        marginBottom: 3
+      }
+    }, "MY GRADE"), React.createElement("div", {
+      style: {
+        fontSize: 18,
+        fontWeight: 700,
+        color: GRADE_COLOR[pg.myGrade] ?? "var(--dim)"
+      }
+    }, pg.myGrade || "—")), (pd === null || pd === void 0 ? void 0 : pd.perf) != null && React.createElement("div", {
+      style: {
+        textAlign: "center"
+      }
+    }, React.createElement("div", {
+      style: {
+        fontSize: 9,
+        color: "#5a5a7a",
+        marginBottom: 3
+      }
+    }, "PERFORMANCE"), React.createElement("div", {
+      style: {
+        fontSize: 18,
+        fontWeight: 700,
+        color: "#d4aa50"
+      }
+    }, pd.perf.toFixed(1))), (pd === null || pd === void 0 ? void 0 : pd.quad) && React.createElement("div", {
+      style: {
+        textAlign: "center"
+      }
+    }, React.createElement("div", {
+      style: {
+        fontSize: 9,
+        color: "#5a5a7a",
+        marginBottom: 3
+      }
+    }, "QUADRANT"), React.createElement("div", {
+      style: {
+        fontSize: 11,
+        fontWeight: 600,
+        color: QUAD_COLORS[pd.quad] ?? "#808098"
+      }
+    }, pd.quad))))));
+  })());
 }
 function GradeSelect(_ref20) {
   let cls = _ref20.cls,
@@ -1931,18 +2025,18 @@ function MobileCardItem(_ref21) {
   let card = _ref21.card,
     grade = _ref21.grade,
     onUpdate = _ref21.onUpdate;
-  const _useState11 = useState(false),
-    _useState12 = _slicedToArray(_useState11, 2),
-    expanded = _useState12[0],
-    setExpanded = _useState12[1];
   const _useState13 = useState(false),
     _useState14 = _slicedToArray(_useState13, 2),
-    bigImg = _useState14[0],
-    setBigImg = _useState14[1];
-  const _useState15 = useState(0),
+    expanded = _useState14[0],
+    setExpanded = _useState14[1];
+  const _useState15 = useState(false),
     _useState16 = _slicedToArray(_useState15, 2),
-    face = _useState16[0],
-    setFace = _useState16[1];
+    bigImg = _useState16[0],
+    setBigImg = _useState16[1];
+  const _useState17 = useState(0),
+    _useState18 = _slicedToArray(_useState17, 2),
+    face = _useState18[0],
+    setFace = _useState18[1];
   const ck = getColorKey(card);
   const hasDFC = ((_card$card_faces4 = card.card_faces) === null || _card$card_faces4 === void 0 ? void 0 : _card$card_faces4.length) >= 2 && ((_card$card_faces$2 = card.card_faces[1]) === null || _card$card_faces$2 === void 0 ? void 0 : _card$card_faces$2.image_uris);
   const img = hasDFC ? (_card$card_faces$face3 = card.card_faces[face]) === null || _card$card_faces$face3 === void 0 || (_card$card_faces$face3 = _card$card_faces$face3.image_uris) === null || _card$card_faces$face3 === void 0 ? void 0 : _card$card_faces$face3.normal : getImageUrl(card);
@@ -2131,18 +2225,18 @@ function ImportPanel(_ref22) {
     setMeta = _ref22.setMeta,
     onGradesUpdate = _ref22.onGradesUpdate,
     mobile = _ref22.mobile;
-  const _useState17 = useState(""),
-    _useState18 = _slicedToArray(_useState17, 2),
-    msg = _useState18[0],
-    setMsg = _useState18[1];
-  const _useState19 = useState("17lands"),
+  const _useState19 = useState(""),
     _useState20 = _slicedToArray(_useState19, 2),
-    source = _useState20[0],
-    setSource = _useState20[1];
-  const _useState21 = useState("auto"),
+    msg = _useState20[0],
+    setMsg = _useState20[1];
+  const _useState21 = useState("17lands"),
     _useState22 = _slicedToArray(_useState21, 2),
-    target = _useState22[0],
-    setTarget = _useState22[1];
+    source = _useState22[0],
+    setSource = _useState22[1];
+  const _useState23 = useState("auto"),
+    _useState24 = _slicedToArray(_useState23, 2),
+    target = _useState24[0],
+    setTarget = _useState24[1];
   const resolvedTarget = target === "auto" ? source === "17lands" ? "performance" : "expert" : target;
   const importCSV = text => {
     const lines = text.trim().split("\n").filter(l => l.trim());
@@ -2347,26 +2441,26 @@ function DraftLab(_ref31) {
   let user = _ref31.user;
   const isMobile = useIsMobile();
   const didFirstSync = useRef(false);
-  const _useState23 = useState(() => localStorage.getItem("draft-lab-theme") || "auto"),
-    _useState24 = _slicedToArray(_useState23, 2),
-    theme = _useState24[0],
-    setTheme = _useState24[1];
-  const _useState25 = useState(false),
+  const _useState25 = useState(() => localStorage.getItem("draft-lab-theme") || "auto"),
     _useState26 = _slicedToArray(_useState25, 2),
-    showAnalytics = _useState26[0],
-    setShowAnalytics = _useState26[1];
+    theme = _useState26[0],
+    setTheme = _useState26[1];
   const _useState27 = useState(false),
     _useState28 = _slicedToArray(_useState27, 2),
-    showImport = _useState28[0],
-    setShowImport = _useState28[1];
+    showAnalytics = _useState28[0],
+    setShowAnalytics = _useState28[1];
   const _useState29 = useState(false),
     _useState30 = _slicedToArray(_useState29, 2),
-    showExport = _useState30[0],
-    setShowExport = _useState30[1];
-  const _useState31 = useState("PremierDraft"),
+    showImport = _useState30[0],
+    setShowImport = _useState30[1];
+  const _useState31 = useState(false),
     _useState32 = _slicedToArray(_useState31, 2),
-    fmt17l = _useState32[0],
-    setFmt17l = _useState32[1];
+    showExport = _useState32[0],
+    setShowExport = _useState32[1];
+  const _useState33 = useState("PremierDraft"),
+    _useState34 = _slicedToArray(_useState33, 2),
+    fmt17l = _useState34[0],
+    setFmt17l = _useState34[1];
   const importRef = useRef(null);
   const exportRef = useRef(null);
   useEffect(() => {
@@ -2385,117 +2479,117 @@ function DraftLab(_ref31) {
     document.addEventListener("mousedown", h);
     return () => document.removeEventListener("mousedown", h);
   }, [showExport]);
-  const _useState33 = useState(null),
-    _useState34 = _slicedToArray(_useState33, 2),
-    importMeta = _useState34[0],
-    setImportMeta = _useState34[1];
-  const _useState35 = useState([]),
+  const _useState35 = useState(null),
     _useState36 = _slicedToArray(_useState35, 2),
-    sets = _useState36[0],
-    setSets = _useState36[1];
-  const _useState37 = useState(null),
+    importMeta = _useState36[0],
+    setImportMeta = _useState36[1];
+  const _useState37 = useState([]),
     _useState38 = _slicedToArray(_useState37, 2),
-    selectedSet = _useState38[0],
-    setSelectedSet = _useState38[1];
-  const _useState39 = useState([]),
+    sets = _useState38[0],
+    setSets = _useState38[1];
+  const _useState39 = useState(null),
     _useState40 = _slicedToArray(_useState39, 2),
-    cards = _useState40[0],
-    setCards = _useState40[1];
-  const _useState41 = useState({}),
+    selectedSet = _useState40[0],
+    setSelectedSet = _useState40[1];
+  const _useState41 = useState([]),
     _useState42 = _slicedToArray(_useState41, 2),
-    grades = _useState42[0],
-    setGrades = _useState42[1];
-  const _useState43 = useState(false),
+    cards = _useState42[0],
+    setCards = _useState42[1];
+  const _useState43 = useState({}),
     _useState44 = _slicedToArray(_useState43, 2),
-    loading = _useState44[0],
-    setLoading = _useState44[1];
-  const _useState45 = useState(""),
+    grades = _useState44[0],
+    setGrades = _useState44[1];
+  const _useState45 = useState(false),
     _useState46 = _slicedToArray(_useState45, 2),
-    loadMsg = _useState46[0],
-    setLoadMsg = _useState46[1];
-  const _useState47 = useState(null),
+    loading = _useState46[0],
+    setLoading = _useState46[1];
+  const _useState47 = useState(""),
     _useState48 = _slicedToArray(_useState47, 2),
-    error = _useState48[0],
-    setError = _useState48[1];
-  const _useState49 = useState("color"),
+    loadMsg = _useState48[0],
+    setLoadMsg = _useState48[1];
+  const _useState49 = useState(null),
     _useState50 = _slicedToArray(_useState49, 2),
-    sortCol = _useState50[0],
-    setSortCol = _useState50[1];
-  const _useState51 = useState("asc"),
+    error = _useState50[0],
+    setError = _useState50[1];
+  const _useState51 = useState("color"),
     _useState52 = _slicedToArray(_useState51, 2),
-    sortDir = _useState52[0],
-    setSortDir = _useState52[1];
-  const _useState53 = useState("color"),
+    sortCol = _useState52[0],
+    setSortCol = _useState52[1];
+  const _useState53 = useState("asc"),
     _useState54 = _slicedToArray(_useState53, 2),
-    mobileSort = _useState54[0],
-    setMobileSort = _useState54[1];
-  const _useState55 = useState("all"),
+    sortDir = _useState54[0],
+    setSortDir = _useState54[1];
+  const _useState55 = useState("color"),
     _useState56 = _slicedToArray(_useState55, 2),
-    filterColor = _useState56[0],
-    setFilterColor = _useState56[1];
+    mobileSort = _useState56[0],
+    setMobileSort = _useState56[1];
   const _useState57 = useState("all"),
     _useState58 = _slicedToArray(_useState57, 2),
-    filterRarity = _useState58[0],
-    setFilterRarity = _useState58[1];
-  const _useState59 = useState(""),
+    filterColor = _useState58[0],
+    setFilterColor = _useState58[1];
+  const _useState59 = useState("all"),
     _useState60 = _slicedToArray(_useState59, 2),
-    filterSearch = _useState60[0],
-    setFilterSearch = _useState60[1];
-  const _useState61 = useState("all"),
+    filterRarity = _useState60[0],
+    setFilterRarity = _useState60[1];
+  const _useState61 = useState(""),
     _useState62 = _slicedToArray(_useState61, 2),
-    filterGraded = _useState62[0],
-    setFilterGraded = _useState62[1];
+    filterSearch = _useState62[0],
+    setFilterSearch = _useState62[1];
   const _useState63 = useState("all"),
     _useState64 = _slicedToArray(_useState63, 2),
-    filterQuadrant = _useState64[0],
-    setFilterQuadrant = _useState64[1];
-  const _useState65 = useState([]),
+    filterGraded = _useState64[0],
+    setFilterGraded = _useState64[1];
+  const _useState65 = useState("all"),
     _useState66 = _slicedToArray(_useState65, 2),
-    filterTags = _useState66[0],
-    setFilterTags = _useState66[1];
-  const _useState67 = useState(false),
+    filterQuadrant = _useState66[0],
+    setFilterQuadrant = _useState66[1];
+  const _useState67 = useState([]),
     _useState68 = _slicedToArray(_useState67, 2),
-    showTagFilter = _useState68[0],
-    setShowTagFilter = _useState68[1];
+    filterTags = _useState68[0],
+    setFilterTags = _useState68[1];
   const _useState69 = useState(false),
     _useState70 = _slicedToArray(_useState69, 2),
-    showMobF = _useState70[0],
-    setShowMobF = _useState70[1];
-  const _useState71 = useState(null),
+    showTagFilter = _useState70[0],
+    setShowTagFilter = _useState70[1];
+  const _useState71 = useState(false),
     _useState72 = _slicedToArray(_useState71, 2),
-    lightboxIndex = _useState72[0],
-    setLightboxIndex = _useState72[1];
-  const _useState73 = useState(false),
+    showMobF = _useState72[0],
+    setShowMobF = _useState72[1];
+  const _useState73 = useState(null),
     _useState74 = _slicedToArray(_useState73, 2),
-    showGuide = _useState74[0],
-    setShowGuide = _useState74[1];
-  const _useState75 = useState(""),
+    lightboxIndex = _useState74[0],
+    setLightboxIndex = _useState74[1];
+  const _useState75 = useState(false),
     _useState76 = _slicedToArray(_useState75, 2),
-    syncStatus = _useState76[0],
-    setSyncStatus = _useState76[1];
-  const _useState77 = useState(false),
+    showGuide = _useState76[0],
+    setShowGuide = _useState76[1];
+  const _useState77 = useState(""),
     _useState78 = _slicedToArray(_useState77, 2),
-    showLegal = _useState78[0],
-    setShowLegal = _useState78[1];
-  const _useState79 = useState(null),
+    syncStatus = _useState78[0],
+    setSyncStatus = _useState78[1];
+  const _useState79 = useState(false),
     _useState80 = _slicedToArray(_useState79, 2),
-    hovered = _useState80[0],
-    setHovered = _useState80[1];
-  const _useState81 = useState({
+    showLegal = _useState80[0],
+    setShowLegal = _useState80[1];
+  const _useState81 = useState(null),
+    _useState82 = _slicedToArray(_useState81, 2),
+    hovered = _useState82[0],
+    setHovered = _useState82[1];
+  const _useState83 = useState({
       x: 0,
       y: 0
     }),
-    _useState82 = _slicedToArray(_useState81, 2),
-    hoverPos = _useState82[0],
-    setHoverPos = _useState82[1];
-  const _useState83 = useState(""),
     _useState84 = _slicedToArray(_useState83, 2),
-    setSearch = _useState84[0],
-    setSetSearch = _useState84[1];
-  const _useState85 = useState(false),
+    hoverPos = _useState84[0],
+    setHoverPos = _useState84[1];
+  const _useState85 = useState(""),
     _useState86 = _slicedToArray(_useState85, 2),
-    showSetDD = _useState86[0],
-    setShowSetDD = _useState86[1];
+    setSearch = _useState86[0],
+    setSetSearch = _useState86[1];
+  const _useState87 = useState(false),
+    _useState88 = _slicedToArray(_useState87, 2),
+    showSetDD = _useState88[0],
+    setShowSetDD = _useState88[1];
   useEffect(() => {
     if (theme === "auto") document.documentElement.removeAttribute("data-theme");else document.documentElement.setAttribute("data-theme", theme);
   }, [theme]);
@@ -3525,14 +3619,14 @@ function DraftLab(_ref31) {
 function LoginScreen(_ref41) {
   let onSignIn = _ref41.onSignIn,
     loading = _ref41.loading;
-  const _useState87 = useState(() => {
+  const _useState89 = useState(() => {
       const saved = localStorage.getItem("draft-lab-theme");
       if (saved && saved !== "auto") return saved;
       return window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
     }),
-    _useState88 = _slicedToArray(_useState87, 2),
-    theme = _useState88[0],
-    setTheme = _useState88[1];
+    _useState90 = _slicedToArray(_useState89, 2),
+    theme = _useState90[0],
+    setTheme = _useState90[1];
   useEffect(() => {
     document.documentElement.setAttribute("data-theme", theme);
     localStorage.setItem("draft-lab-theme", theme);
@@ -3594,18 +3688,18 @@ function LoginScreen(_ref41) {
   })), "Sign in with Google"))));
 }
 function AuthGate() {
-  const _useState89 = useState(null),
-    _useState90 = _slicedToArray(_useState89, 2),
-    user = _useState90[0],
-    setUser = _useState90[1];
-  const _useState91 = useState(true),
+  const _useState91 = useState(null),
     _useState92 = _slicedToArray(_useState91, 2),
-    authLoading = _useState92[0],
-    setAuthLoading = _useState92[1];
-  const _useState93 = useState(false),
+    user = _useState92[0],
+    setUser = _useState92[1];
+  const _useState93 = useState(true),
     _useState94 = _slicedToArray(_useState93, 2),
-    signing = _useState94[0],
-    setSigning = _useState94[1];
+    authLoading = _useState94[0],
+    setAuthLoading = _useState94[1];
+  const _useState95 = useState(false),
+    _useState96 = _slicedToArray(_useState95, 2),
+    signing = _useState96[0],
+    setSigning = _useState96[1];
   useEffect(() => {
     if (!SUPABASE_CONFIGURED) {
       setAuthLoading(false);

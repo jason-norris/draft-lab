@@ -556,6 +556,7 @@ const SCATTER_MODES = [
 function AnalyticsView({ cards, grades, isMobile, onCardClick }) {
   const [activeTab, setActiveTab]       = useState("distribution");
   const [scatterMode, setScatterMode]   = useState("meVsPerf");
+  const [previewCard, setPreviewCard]   = useState(null);
   const chartRef     = useRef(null);
   const chartInstance = useRef(null);
 
@@ -663,7 +664,8 @@ function AnalyticsView({ cards, grades, isMobile, onCardClick }) {
         responsive:true, maintainAspectRatio:!isMobile, aspectRatio: isMobile ? 1 : 1.5,
         animation:{duration:400},
         events: ['mousemove', 'mouseout', 'click', 'touchstart', 'touchmove'],
-        layout:{ padding:{ top:14, right:14, bottom:4, left:4 } },
+        interaction:{ mode:'nearest', intersect:false },
+        layout:{ padding:{ top:20, right:20, bottom:20, left:20 } },
         plugins:{
           legend:{display:false},
           tooltip:{ callbacks:{ label: ctx => {
@@ -686,7 +688,9 @@ function AnalyticsView({ cards, grades, isMobile, onCardClick }) {
         onClick:(e, els) => {
           if (!els.length) return;
           const p = pts[els[0].index];
-          if (onCardClick && p.card) onCardClick(p.card);
+          if (!p.card) return;
+          if (isMobile) setPreviewCard(p.card);
+          else if (onCardClick) onCardClick(p.card);
         },
       },
       plugins:[{ id:"crosshairs", afterDraw: chart => {
@@ -816,7 +820,7 @@ function AnalyticsView({ cards, grades, isMobile, onCardClick }) {
                   {qs.map(d => {
                     const gap = d.myNum - d.perf;
                     return (
-                      <div key={d.card.id} className="analytics-quad-card" onClick={() => onCardClick && onCardClick(d.card)}>
+                      <div key={d.card.id} className="analytics-quad-card" onClick={() => isMobile ? setPreviewCard(d.card) : (onCardClick && onCardClick(d.card))}>
                         <span className="analytics-quad-card-name">{d.card.name}</span>
                         <span style={{ color: GRADE_COLOR[d.g.myGrade] ?? "var(--dim)", minWidth:28, textAlign:"right" }}>{d.g.myGrade}</span>
                         <span className="analytics-quad-card-gap" style={{ color: gap > 0 ? "#e05030" : gap < 0 ? "#32a050" : "#5a5a7a" }}>
@@ -831,6 +835,35 @@ function AnalyticsView({ cards, grades, isMobile, onCardClick }) {
           })}
         </div>
       )}
+
+      {previewCard && (() => {
+        const pd = withPerf.find(d => d.card.id === previewCard.id);
+        const pg = grades[previewCard.id] ?? {};
+        const imgUrl = previewCard.card_faces?.[0]?.image_uris?.normal ?? previewCard.image_uris?.normal;
+        return React.createElement("div", { className:"analytics-preview-overlay", onClick:() => setPreviewCard(null) },
+          React.createElement("div", { className:"analytics-preview-card", onClick: e => e.stopPropagation() },
+            React.createElement("button", { className:"analytics-preview-close", onClick:() => setPreviewCard(null) }, "✕"),
+            imgUrl && React.createElement("img", { src:imgUrl, style:{ width:"100%", borderRadius:8, display:"block" } }),
+            React.createElement("div", { className:"analytics-preview-info" },
+              React.createElement("div", { className:"analytics-preview-name" }, previewCard.name),
+              React.createElement("div", { style:{ display:"flex", gap:16, justifyContent:"center", marginTop:10 } },
+                React.createElement("div", { style:{ textAlign:"center" } },
+                  React.createElement("div", { style:{ fontSize:9, color:"#5a5a7a", marginBottom:3 } }, "MY GRADE"),
+                  React.createElement("div", { style:{ fontSize:18, fontWeight:700, color: GRADE_COLOR[pg.myGrade] ?? "var(--dim)" } }, pg.myGrade || "—")
+                ),
+                pd?.perf != null && React.createElement("div", { style:{ textAlign:"center" } },
+                  React.createElement("div", { style:{ fontSize:9, color:"#5a5a7a", marginBottom:3 } }, "PERFORMANCE"),
+                  React.createElement("div", { style:{ fontSize:18, fontWeight:700, color:"#d4aa50" } }, pd.perf.toFixed(1))
+                ),
+                pd?.quad && React.createElement("div", { style:{ textAlign:"center" } },
+                  React.createElement("div", { style:{ fontSize:9, color:"#5a5a7a", marginBottom:3 } }, "QUADRANT"),
+                  React.createElement("div", { style:{ fontSize:11, fontWeight:600, color: QUAD_COLORS[pd.quad] ?? "#808098" } }, pd.quad)
+                )
+              )
+            )
+          )
+        );
+      })()}
     </div>
   );
 }
