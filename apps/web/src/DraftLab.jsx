@@ -1080,11 +1080,14 @@ function DraftLab({ user }) {
       <header className="hdr" onClick={e => e.stopPropagation()}>
         <div className="hdr-left">
           <div>
-            <a href="https://github.com/jason-norris/draft-lab" target="_blank" rel="noopener noreferrer"
-              style={{ textDecoration:"none" }}>
-              <div className="logo">DRAFT LAB</div>
-            </a>
-            <div className="logo-sub">MTG · <span style={{ textTransform:"none" }}>{VERSION}</span></div>
+            <div className="logo-inline">
+              <a href="https://github.com/jason-norris/draft-lab" target="_blank" rel="noopener noreferrer"
+                style={{ textDecoration:"none" }}>
+                <div className="logo">DRAFT LAB</div>
+              </a>
+              <span className="logo-sub-inline desktop-only">MTG · <span style={{ textTransform:"none" }}>{VERSION}</span></span>
+            </div>
+            <div className="logo-sub mobile-only">MTG · <span style={{ textTransform:"none" }}>{VERSION}</span></div>
           </div>
           <div className="set-wrap">
             <button className="set-btn" onClick={() => setShowSetDD(v => !v)}>
@@ -1118,7 +1121,7 @@ function DraftLab({ user }) {
         <div className="hdr-right">
           {/* Mobile header: ⚙ ? 🌙 © — ordered left to right */}
           {selectedSet && isMobile && (
-            <button className={`icon-btn mobile-only${showMobF ? " active" : ""}`} onClick={() => setShowMobF(v => !v)}>⚙</button>
+            <button className={`icon-bar-btn mobile-only${showMobF ? " active" : ""}`} onClick={() => setShowMobF(v => !v)}>⚙</button>
           )}
           {selectedSet && !isMobile && (
             <div className="l17-wrap" onClick={e => e.stopPropagation()}>
@@ -1162,12 +1165,15 @@ function DraftLab({ user }) {
             <button className="btn desktop-only" style={{ fontSize:9, color:"var(--dimmer)" }} title={user.email}
               onClick={() => sb.auth.signOut()}>Sign Out</button>
           )}
-          <button className="icon-btn" onClick={() => setShowGuide(true)} title="Grade guide" style={{ fontSize:13, fontWeight:700 }}>?</button>
-          <button className="icon-btn" onClick={toggleTheme} title="Toggle light/dark mode" style={{ fontSize:16, padding:"6px 10px" }}>
-            {theme === "dark" ? "☀" : "🌙"}
-          </button>
-          <button className="icon-btn" onClick={() => setShowLegal(true)} title="Legal & Attribution"
-            style={{ fontSize:11, color:"var(--dimmer)", opacity:0.6 }}>©</button>
+          <div className="icon-bar">
+            <button className="icon-bar-btn" onClick={() => setShowGuide(true)} title="Grade guide">⚖</button>
+            <div className="icon-pipe" />
+            <button className="icon-bar-btn" onClick={toggleTheme} title="Toggle light/dark mode">
+              {theme === "dark" ? "☀" : "🌙"}
+            </button>
+            <div className="icon-pipe" />
+            <button className="icon-bar-btn faint" onClick={() => setShowLegal(true)} title="Legal & Attribution">©</button>
+          </div>
         </div>
       </header>
 
