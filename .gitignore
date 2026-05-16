@@ -6,6 +6,8 @@ skills-lock.json
 
 # Working design files (wireframes, sketches)
 docs/*.html
+# Personal analysis and reference docs (local only)
+docs/*-analysis.md
 
 # Python
 __pycache__/
