@@ -538,7 +538,7 @@ function classifyQuadrant(myNum, exp, perf, thresh=0.75) {
 }
 
 // ── AnalyticsView ─────────────────────────────────────────────────────────────
-function AnalyticsView({ cards, grades, onCardClick }) {
+function AnalyticsView({ cards, grades, isMobile, onCardClick }) {
   const [activeTab, setActiveTab] = useState("scatter");
   const chartRef = useRef(null);
   const chartInstance = useRef(null);
@@ -576,7 +576,9 @@ function AnalyticsView({ cards, grades, onCardClick }) {
 
   // Color map for scatter dots
   const DOT_COLORS = { W:"#c8a030", U:"#3a7abf", B:"#9050c0", R:"#c83030", G:"#309030", M:"#b08020", C:"#808098", L:"#907040" };
-  const RARITY_SIZE = { common:4, uncommon:6, rare:9, mythic:12 };
+  const RARITY_SIZE = isMobile
+    ? { common:3, uncommon:4, rare:6, mythic:8 }
+    : { common:4, uncommon:6, rare:9, mythic:12 };
 
   // Build/rebuild scatter chart
   useEffect(() => {
@@ -702,6 +704,18 @@ function AnalyticsView({ cards, grades, onCardClick }) {
                     <span style={{ color:"var(--dimmer)", fontSize:9, marginLeft:4 }}>{Math.round(100*n/stats.total)}%</span>
                   </div>
                 ))}
+              </div>
+              <div className="analytics-stat-block" style={{ fontSize:10, color:"var(--dimmer)", lineHeight:1.7 }}>
+                <div className="analytics-stat-label">How to read this</div>
+                <div><span style={{ color:"var(--dim)" }}>X axis</span> — Performance (17Lands GIH WR, 0–5)</div>
+                <div><span style={{ color:"var(--dim)" }}>Y axis</span> — Your pre-format grade (numeric)</div>
+                <div><span style={{ color:"var(--dim)" }}>Diagonal</span> — Perfect agreement with data</div>
+                <div><span style={{ color:"#e05030" }}>Above diagonal</span> — You overrated</div>
+                <div><span style={{ color:"#32a050" }}>Below diagonal</span> — You underrated</div>
+                <div><span style={{ color:"var(--dim)" }}>Crosshairs</span> — Mean of each axis</div>
+                <div><span style={{ color:"var(--dim)" }}>Color</span> — MTG color identity</div>
+                <div><span style={{ color:"var(--dim)" }}>Size</span> — Rarity (mythic largest)</div>
+                <div style={{ marginTop:6 }}>Hover a dot to see the card. Click to open card detail.</div>
               </div>
             </div>
           )}
@@ -1556,7 +1570,7 @@ function DraftLab({ user }) {
       )}
 
       {/* ── Desktop filters ── */}
-      {cards.length > 0 && (
+      {!showAnalytics && cards.length > 0 && (
         <div className="filters-desktop desktop-only">
           <span className="fl">Color</span>
           {["all","W","U","B","R","G","M","C","L"].map(c => (
@@ -1613,15 +1627,17 @@ function DraftLab({ user }) {
         <AnalyticsView
           cards={cards}
           grades={grades}
+          isMobile={isMobile}
           onCardClick={card => {
             const idx = sorted.indexOf(card);
-            if (idx !== -1) { setShowAnalytics(false); setLightboxIndex(idx); }
+            if (idx !== -1) setLightboxIndex(idx);
+            // Analytics stays open — lightbox overlays it
           }}
         />
       )}
 
-      {/* ── Empty / loading / error ── */}
-      {(loading || error || cards.length === 0) && (
+      {/* ── Card view — hidden when analytics is active ── */}
+      {!showAnalytics && (loading || error || cards.length === 0) && (
         <div className="center">
           {loading
             ? <><div className="spin" /><span>{loadMsg}</span></>
@@ -1633,7 +1649,7 @@ function DraftLab({ user }) {
       )}
 
       {/* ── Desktop table ── */}
-      {!loading && !error && cards.length > 0 && (
+      {!showAnalytics && !loading && !error && cards.length > 0 && (
         <div className="tbl-wrap desktop-only">
           <table>
             <thead>
@@ -1712,7 +1728,7 @@ function DraftLab({ user }) {
       )}
 
       {/* ── Mobile card list ── */}
-      {!loading && !error && cards.length > 0 && (
+      {!showAnalytics && !loading && !error && cards.length > 0 && (
         <div className="card-list mobile-only">
           {sorted.map(card => (
             <MobileCardItem key={card.id} card={card} grade={grades[card.id] ?? {}}

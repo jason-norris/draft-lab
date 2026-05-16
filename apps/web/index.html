@@ -1293,6 +1293,7 @@ function classifyQuadrant(myNum, exp, perf) {
 function AnalyticsView(_ref12) {
   let cards = _ref12.cards,
     grades = _ref12.grades,
+    isMobile = _ref12.isMobile,
     onCardClick = _ref12.onCardClick;
   const _useState9 = useState("scatter"),
     _useState0 = _slicedToArray(_useState9, 2),
@@ -1357,7 +1358,12 @@ function AnalyticsView(_ref12) {
     C: "#808098",
     L: "#907040"
   };
-  const RARITY_SIZE = {
+  const RARITY_SIZE = isMobile ? {
+    common: 3,
+    uncommon: 4,
+    rare: 6,
+    mythic: 8
+  } : {
     common: 4,
     uncommon: 6,
     rare: 9,
@@ -1601,7 +1607,52 @@ function AnalyticsView(_ref12) {
         marginLeft: 4
       }
     }, Math.round(100 * n / stats.total), "%"));
-  })))), activeTab === "calibration" && React.createElement("div", {
+  })), React.createElement("div", {
+    className: "analytics-stat-block",
+    style: {
+      fontSize: 10,
+      color: "var(--dimmer)",
+      lineHeight: 1.7
+    }
+  }, React.createElement("div", {
+    className: "analytics-stat-label"
+  }, "How to read this"), React.createElement("div", null, React.createElement("span", {
+    style: {
+      color: "var(--dim)"
+    }
+  }, "X axis"), " \u2014 Performance (17Lands GIH WR, 0\u20135)"), React.createElement("div", null, React.createElement("span", {
+    style: {
+      color: "var(--dim)"
+    }
+  }, "Y axis"), " \u2014 Your pre-format grade (numeric)"), React.createElement("div", null, React.createElement("span", {
+    style: {
+      color: "var(--dim)"
+    }
+  }, "Diagonal"), " \u2014 Perfect agreement with data"), React.createElement("div", null, React.createElement("span", {
+    style: {
+      color: "#e05030"
+    }
+  }, "Above diagonal"), " \u2014 You overrated"), React.createElement("div", null, React.createElement("span", {
+    style: {
+      color: "#32a050"
+    }
+  }, "Below diagonal"), " \u2014 You underrated"), React.createElement("div", null, React.createElement("span", {
+    style: {
+      color: "var(--dim)"
+    }
+  }, "Crosshairs"), " \u2014 Mean of each axis"), React.createElement("div", null, React.createElement("span", {
+    style: {
+      color: "var(--dim)"
+    }
+  }, "Color"), " \u2014 MTG color identity"), React.createElement("div", null, React.createElement("span", {
+    style: {
+      color: "var(--dim)"
+    }
+  }, "Size"), " \u2014 Rarity (mythic largest)"), React.createElement("div", {
+    style: {
+      marginTop: 6
+    }
+  }, "Hover a dot to see the card. Click to open card detail.")))), activeTab === "calibration" && React.createElement("div", {
     className: "analytics-empty"
   }, "Calibration histogram \u2014 coming in session 2"), activeTab === "quadrants" && React.createElement("div", {
     className: "analytics-empty"
@@ -2921,7 +2972,7 @@ function DraftLab(_ref30) {
     style: {
       width: `${pct}%`
     }
-  }))), cards.length > 0 && React.createElement("div", {
+  }))), !showAnalytics && cards.length > 0 && React.createElement("div", {
     className: "filters-desktop desktop-only"
   }, React.createElement("span", {
     className: "fl"
@@ -2987,14 +3038,12 @@ function DraftLab(_ref30) {
   }, sorted.length, " shown")), showAnalytics && analyticsUnlocked && React.createElement(AnalyticsView, {
     cards: cards,
     grades: grades,
+    isMobile: isMobile,
     onCardClick: card => {
       const idx = sorted.indexOf(card);
-      if (idx !== -1) {
-        setShowAnalytics(false);
-        setLightboxIndex(idx);
-      }
+      if (idx !== -1) setLightboxIndex(idx);
     }
-  }), (loading || error || cards.length === 0) && React.createElement("div", {
+  }), !showAnalytics && (loading || error || cards.length === 0) && React.createElement("div", {
     className: "center"
   }, loading ? React.createElement(React.Fragment, null, React.createElement("div", {
     className: "spin"
@@ -3006,7 +3055,7 @@ function DraftLab(_ref30) {
     className: "empty-title"
   }, "Draft Lab"), React.createElement("div", {
     className: "empty-sub"
-  }, "Choose a set above to start evaluating cards"))), !loading && !error && cards.length > 0 && React.createElement("div", {
+  }, "Choose a set above to start evaluating cards"))), !showAnalytics && !loading && !error && cards.length > 0 && React.createElement("div", {
     className: "tbl-wrap desktop-only"
   }, React.createElement("table", null, React.createElement("thead", null, React.createElement("tr", null, [["name", "Card"], ["cmc", "Cost"], [null, "Type"], ["rarity", "Rar"], ["color", "Color"], ["myGrade", "My Grade"], ["expert", "Expert"], ["performance", "Perf"], [null, "Δ"], [null, "Sunset"], [null, "Notes"]].map(_ref35 => {
     let _ref36 = _slicedToArray(_ref35, 2),
@@ -3100,7 +3149,7 @@ function DraftLab(_ref30) {
         updateGrade(card.id, "tags", cur.includes(id) ? cur.filter(t => t !== id) : [...cur, id]);
       }
     })));
-  })))), !loading && !error && cards.length > 0 && React.createElement("div", {
+  })))), !showAnalytics && !loading && !error && cards.length > 0 && React.createElement("div", {
     className: "card-list mobile-only"
   }, sorted.map(card => React.createElement(MobileCardItem, {
     key: card.id,
