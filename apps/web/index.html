@@ -326,6 +326,7 @@
     .analytics-tab.active { border-color:var(--gold2); color:var(--gold); background:rgba(200,168,75,.08); }
     .analytics-content { display:flex; gap:20px; align-items:flex-start; flex-wrap:wrap; }
     .analytics-chart-wrap { flex:1; min-width:300px; position:relative; }
+    .analytics-chart-wrap canvas { touch-action:none; }
     .analytics-panel { flex-shrink:0; width:260px; display:flex; flex-direction:column; gap:14px; }
     @media (orientation:portrait) and (max-width:767px) { .analytics-chart-wrap { min-height:220px; } }
     @media (orientation:landscape) and (max-width:900px) { .analytics-chart-wrap { min-height:180px; } }
