@@ -1470,6 +1470,133 @@ function FilterBar({ filters, dispatch, hasExpertData, hasPerformanceData, sorte
 const GradesContext = React.createContext(null);
 function useGrades() { return React.useContext(GradesContext); }
 
+// ── GradingView ───────────────────────────────────────────────────────────────
+function GradingView({
+  showAnalytics, showMobF, onCloseMobF,
+  selectedSet, user, syncStatus,
+  fmt17l, setFmt17l, handleGradesUpdate,
+  exportBackup, importBackup, exportCSV,
+  loading, loadMsg, error,
+  filters, dispatch, handleSort, clearFilters, toggleFilterTag, hasFilters,
+}) {
+  const isMobile = useIsMobile();
+  const { cards, grades } = useGrades();
+
+  const [showTagFilter, setShowTagFilter] = useState(false);
+  const [lightboxIndex, setLightboxIndex] = useState(null);
+  const [hovered, setHovered]             = useState(null);
+  const [hoverPos, setHoverPos]           = useState({ x:0, y:0 });
+
+  const activeSort        = isMobile ? filters.mobileSort : filters.sortCol;
+  const gradableCards     = useMemo(() => cards.filter(c => !isBasicLand(c)), [cards]);
+  const gradedCount       = gradableCards.filter(c => grades[c.id]?.myGrade).length;
+  const gradeCounts       = {};
+  for (const g of Object.values(grades)) { if (g.myGrade) gradeCounts[g.myGrade] = (gradeCounts[g.myGrade] ?? 0) + 1; }
+  const pct               = gradableCards.length ? Math.round(gradedCount / gradableCards.length * 100) : 0;
+  const analyticsUnlocked = pct >= 50 && (cards.some(c => grades[c.id]?.expert_rating != null) || cards.some(c => grades[c.id]?.performance_rating != null));
+  const filtered          = useMemo(() => cards.filter(c => applyFilters(c, grades[c.id] ?? {}, filters)), [cards, grades, filters]);
+  const sorted            = useMemo(() => [...filtered].sort((a, b) => applySort(a, b, grades, activeSort, isMobile ? "asc" : filters.sortDir)), [filtered, grades, activeSort, filters.sortDir, isMobile]);
+  const hasExpertData     = cards.some(c => grades[c.id]?.expert_rating != null);
+  const hasPerformanceData= cards.some(c => grades[c.id]?.performance_rating != null);
+
+  return (
+    <>
+      <MobileDrawer
+        open={showMobF} onClose={onCloseMobF}
+        filters={filters} dispatch={dispatch}
+        hasFilters={hasFilters} clearFilters={clearFilters} toggleFilterTag={toggleFilterTag}
+        selectedSet={selectedSet} fmt17l={fmt17l} setFmt17l={setFmt17l}
+        handleGradesUpdate={handleGradesUpdate}
+        exportBackup={exportBackup} importBackup={importBackup} exportCSV={exportCSV}
+        user={user} syncStatus={syncStatus}
+      />
+
+      {cards.length > 0 && (
+        <>
+          <div className="stats">
+            <span className="stat"><span className="stat-v">{cards.length}</span> cards</span>
+            <span className="stat"><span className="stat-v">{gradedCount}</span> graded</span>
+            <span className="stat"><span className="stat-v">{pct}%</span></span>
+            <span className="stat" style={{ color:"var(--b2)" }}>|</span>
+            {GRADES.filter(g => g).map(g => gradeCounts[g]
+              ? <span key={g} className="gp" style={{ background: GRADE_COLOR[g]+"22", color: GRADE_COLOR[g], border:`1px solid ${GRADE_COLOR[g]}55` }}>
+                  {g} <span style={{ opacity:.75 }}>{gradeCounts[g]}</span>
+                </span>
+              : null
+            )}
+          </div>
+          <div className="prog-bar"><div className="prog-fill" style={{ width:`${pct}%` }} /></div>
+        </>
+      )}
+
+      {!showAnalytics && cards.length > 0 && (
+        <FilterBar
+          filters={filters} dispatch={dispatch}
+          hasExpertData={hasExpertData} hasPerformanceData={hasPerformanceData}
+          sortedCount={sorted.length} hasFilters={hasFilters}
+          showTagFilter={showTagFilter} setShowTagFilter={setShowTagFilter}
+          toggleFilterTag={toggleFilterTag} clearFilters={clearFilters}
+        />
+      )}
+
+      {showAnalytics && analyticsUnlocked && (
+        <AnalyticsView
+          onCardClick={card => {
+            const idx = sorted.indexOf(card);
+            if (idx !== -1) setLightboxIndex(idx);
+          }}
+        />
+      )}
+
+      {!showAnalytics && (loading || error || cards.length === 0) && (
+        <div className="center">
+          {loading
+            ? <><div className="spin" /><span>{loadMsg}</span></>
+            : error
+              ? <span style={{ color:"#e05030" }}>{error}</span>
+              : <><div className="empty-title">Draft Lab</div><div className="empty-sub">Choose a set above to start evaluating cards</div></>
+          }
+        </div>
+      )}
+
+      {!showAnalytics && !loading && !error && cards.length > 0 && (
+        <GradeTable
+          sorted={sorted} filters={filters} onSort={handleSort}
+          onOpenLightbox={idx => setLightboxIndex(idx)}
+          onHoverEnter={(card, pos) => { setHovered(card); setHoverPos(pos); }}
+          onHoverMove={pos => setHoverPos(pos)}
+          onHoverLeave={() => setHovered(null)}
+        />
+      )}
+
+      {!showAnalytics && !loading && !error && cards.length > 0 && (
+        <div className="card-list mobile-only">
+          {sorted.map(card => (
+            <MobileCardItem key={card.id} card={card} />
+          ))}
+        </div>
+      )}
+
+      {hovered && getImageUrl(hovered) && !isMobile && lightboxIndex === null && (
+        <div className="preview" style={{ left: hoverPos.x + 16, top: Math.min(hoverPos.y - 60, window.innerHeight - 300) }}>
+          <img src={getImageUrl(hovered)} alt={hovered.name} />
+        </div>
+      )}
+
+      {lightboxIndex !== null && sorted[lightboxIndex] && (
+        <CardLightbox
+          sorted={sorted} lightboxIndex={lightboxIndex}
+          onClose={() => setLightboxIndex(null)}
+          onNav={delta => {
+            const next = lightboxIndex + delta;
+            if (next >= 0 && next < sorted.length) setLightboxIndex(next);
+          }}
+        />
+      )}
+    </>
+  );
+}
+
 // ── DraftLab ──────────────────────────────────────────────────────────────────
 function DraftLab({ user }) {
   const isMobile = useIsMobile();
@@ -1504,14 +1631,10 @@ function DraftLab({ user }) {
   const [loadMsg, setLoadMsg]       = useState("");
   const [error, setError]           = useState(null);
   const [filters, dispatchFilter] = useReducer(filterReducer, filterInitialState);
-  const [showTagFilter, setShowTagFilter] = useState(false);
   const [showMobF, setShowMobF]     = useState(false);
-  const [lightboxIndex, setLightboxIndex] = useState(null);
   const [showGuide, setShowGuide]   = useState(false);
   const [syncStatus, setSyncStatus] = useState("");
   const [showLegal, setShowLegal]   = useState(false);
-  const [hovered, setHovered]       = useState(null);
-  const [hoverPos, setHoverPos]     = useState({ x:0, y:0 });
   const [setSearch, setSetSearch]   = useState("");
   const [showSetDD, setShowSetDD]   = useState(false);
 
@@ -1621,7 +1744,6 @@ function DraftLab({ user }) {
 
   const loadSet = async set => {
     store.set("draft-lab-last-set", set.code);
-    setLightboxIndex(null);
     setShowAnalytics(false);
     setSelectedSet(set);
     setCards([]);
@@ -1678,7 +1800,7 @@ setGrades(prev => {
 
   const exportCSV = () => {
     const hdr  = ["Name","Color","Mana Cost","Type","Rarity","My Grade","Expert","Expert Source","Performance","Perf Source","Sunset","Quadrant","Tags","Notes"];
-    const rows = sorted.map(c => {
+    const rows = _csvSorted.map(c => {
       const g = grades[c.id] ?? {};
       const q = calcQuadrant(g);
       return [
@@ -1744,33 +1866,23 @@ setGrades(prev => {
   };
 
   // ── Derived ──
-  const activeSort   = isMobile ? filters.mobileSort : filters.sortCol;
   const filteredSets = sets.filter(s => s.name.toLowerCase().includes(setSearch.toLowerCase()) || s.code.toLowerCase().includes(setSearch.toLowerCase()));
-  const clearFilters = () => dispatchFilter({ type:"RESET" });
+  const clearFilters    = () => dispatchFilter({ type:"RESET" });
   const toggleFilterTag = id => dispatchFilter({ type:"SET_TAGS", value: filters.tags.includes(id) ? filters.tags.filter(t => t !== id) : [...filters.tags, id] });
-  const hasFilters   = filters.color !== "all" || filters.rarity !== "all" || filters.search || filters.graded !== "all" || filters.quadrant !== "all" || filters.tags.length > 0;
-  const gradableCards = useMemo(() => cards.filter(c => !isBasicLand(c)), [cards]);
-  const gradedCount   = gradableCards.filter(c => grades[c.id]?.myGrade).length;
-  const gradeCounts   = {};
-  for (const g of Object.values(grades)) { if (g.myGrade) gradeCounts[g.myGrade] = (gradeCounts[g.myGrade] ?? 0) + 1; }
-  const pct = gradableCards.length ? Math.round(gradedCount / gradableCards.length * 100) : 0;
-  const analyticsUnlocked = pct >= 50 && (cards.some(c => grades[c.id]?.expert_rating != null) || cards.some(c => grades[c.id]?.performance_rating != null));
+  const hasFilters      = filters.color !== "all" || filters.rarity !== "all" || filters.search || filters.graded !== "all" || filters.quadrant !== "all" || filters.tags.length > 0;
 
-  const filtered = useMemo(() => cards.filter(c =>
-    applyFilters(c, grades[c.id] ?? {}, filters)
-  ), [cards, grades, filters]);
-
-  const sorted = useMemo(() => [...filtered].sort((a, b) =>
-    applySort(a, b, grades, activeSort, isMobile ? "asc" : filters.sortDir)
-  ), [filtered, grades, activeSort, filters.sortDir, isMobile]);
-
-  const hasExpertData      = cards.some(c => grades[c.id]?.expert_rating != null);
-  const hasPerformanceData = cards.some(c => grades[c.id]?.performance_rating != null);
+  // Minimal computations kept in DraftLab for header 💡 button and exportCSV
+  const _gradableCards    = useMemo(() => cards.filter(c => !isBasicLand(c)), [cards]);
+  const _gradedCount      = _gradableCards.filter(c => grades[c.id]?.myGrade).length;
+  const _pct              = _gradableCards.length ? Math.round(_gradedCount / _gradableCards.length * 100) : 0;
+  const analyticsUnlocked = _pct >= 50 && (cards.some(c => grades[c.id]?.expert_rating != null) || cards.some(c => grades[c.id]?.performance_rating != null));
+  const _csvFiltered      = useMemo(() => cards.filter(c => applyFilters(c, grades[c.id] ?? {}, filters)), [cards, grades, filters]);
+  const _csvSorted        = useMemo(() => [..._csvFiltered].sort((a, b) => applySort(a, b, grades, filters.sortCol, filters.sortDir)), [_csvFiltered, grades, filters.sortCol, filters.sortDir]);
 
   // ── Render ──
   return (
     <GradesContext.Provider value={gradesContextValue}>
-    <div className="app" onClick={() => { setShowSetDD(false); setShowImport(false); setShowExport(false); setShowTagFilter(false); }}>
+    <div className="app" onClick={() => { setShowSetDD(false); setShowImport(false); setShowExport(false); }}>
 
       {/* ── Header ── */}
       <header className={`hdr${showAnalytics ? " analytics-open" : ""}`} onClick={e => e.stopPropagation()}>
@@ -1884,115 +1996,17 @@ setGrades(prev => {
         </div>
       </header>
 
-      {/* ── Mobile filter drawer ── */}
-      <MobileDrawer
-        open={showMobF} onClose={() => setShowMobF(false)}
-        filters={filters} dispatch={dispatchFilter}
-        hasFilters={hasFilters} clearFilters={clearFilters} toggleFilterTag={toggleFilterTag}
-        selectedSet={selectedSet} fmt17l={fmt17l} setFmt17l={setFmt17l}
-        handleGradesUpdate={handleGradesUpdate}
+      {/* ── Grading view ── */}
+      <GradingView
+        key={selectedSet?.code}
+        showAnalytics={showAnalytics} showMobF={showMobF} onCloseMobF={() => setShowMobF(false)}
+        selectedSet={selectedSet} user={user} syncStatus={syncStatus}
+        fmt17l={fmt17l} setFmt17l={setFmt17l} handleGradesUpdate={handleGradesUpdate}
         exportBackup={exportBackup} importBackup={importBackup} exportCSV={exportCSV}
-        user={user} syncStatus={syncStatus}
+        loading={loading} loadMsg={loadMsg} error={error}
+        filters={filters} dispatch={dispatchFilter} handleSort={handleSort}
+        clearFilters={clearFilters} toggleFilterTag={toggleFilterTag} hasFilters={hasFilters}
       />
-
-      {/* ── Stats bar ── */}
-      {cards.length > 0 && (
-        <>
-          <div className="stats">
-            <span className="stat"><span className="stat-v">{cards.length}</span> cards</span>
-            <span className="stat"><span className="stat-v">{gradedCount}</span> graded</span>
-            <span className="stat"><span className="stat-v">{pct}%</span></span>
-            <span className="stat" style={{ color:"var(--b2)" }}>|</span>
-            {GRADES.filter(g => g).map(g => gradeCounts[g]
-              ? <span key={g} className="gp" style={{ background: GRADE_COLOR[g]+"22", color: GRADE_COLOR[g], border:`1px solid ${GRADE_COLOR[g]}55` }}>
-                  {g} <span style={{ opacity:.75 }}>{gradeCounts[g]}</span>
-                </span>
-              : null
-            )}
-          </div>
-          <div className="prog-bar"><div className="prog-fill" style={{ width:`${pct}%` }} /></div>
-        </>
-      )}
-
-      {/* ── Desktop filters ── */}
-      {!showAnalytics && cards.length > 0 && (
-        <FilterBar
-          filters={filters}
-          dispatch={dispatchFilter}
-          hasExpertData={hasExpertData}
-          hasPerformanceData={hasPerformanceData}
-          sortedCount={sorted.length}
-          hasFilters={hasFilters}
-          showTagFilter={showTagFilter}
-          setShowTagFilter={setShowTagFilter}
-          toggleFilterTag={toggleFilterTag}
-          clearFilters={clearFilters}
-        />
-      )}
-
-      {/* ── Analytics view (replaces card table when active) ── */}
-      {showAnalytics && analyticsUnlocked && (
-        <AnalyticsView
-          onCardClick={card => {
-            const idx = sorted.indexOf(card);
-            if (idx !== -1) setLightboxIndex(idx);
-          }}
-        />
-      )}
-
-      {/* ── Card view — hidden when analytics is active ── */}
-      {!showAnalytics && (loading || error || cards.length === 0) && (
-        <div className="center">
-          {loading
-            ? <><div className="spin" /><span>{loadMsg}</span></>
-            : error
-              ? <span style={{ color:"#e05030" }}>{error}</span>
-              : <><div className="empty-title">Draft Lab</div><div className="empty-sub">Choose a set above to start evaluating cards</div></>
-          }
-        </div>
-      )}
-
-      {/* ── Desktop table ── */}
-      {!showAnalytics && !loading && !error && cards.length > 0 && (
-        <GradeTable
-          sorted={sorted}
-          filters={filters}
-          onSort={handleSort}
-          onOpenLightbox={idx => setLightboxIndex(idx)}
-          onHoverEnter={(card, pos) => { setHovered(card); setHoverPos(pos); }}
-          onHoverMove={pos => setHoverPos(pos)}
-          onHoverLeave={() => setHovered(null)}
-        />
-      )}
-
-      {/* ── Mobile card list ── */}
-      {!showAnalytics && !loading && !error && cards.length > 0 && (
-        <div className="card-list mobile-only">
-          {sorted.map(card => (
-            <MobileCardItem key={card.id} card={card} />
-          ))}
-        </div>
-      )}
-
-      {/* ── Hover preview (hidden when lightbox open) ── */}
-      {hovered && getImageUrl(hovered) && !isMobile && lightboxIndex === null && (
-        <div className="preview" style={{ left: hoverPos.x + 16, top: Math.min(hoverPos.y - 60, window.innerHeight - 300) }}>
-          <img src={getImageUrl(hovered)} alt={hovered.name} />
-        </div>
-      )}
-
-      {/* ── Card lightbox ── */}
-      {lightboxIndex !== null && sorted[lightboxIndex] && (
-        <CardLightbox
-          sorted={sorted}
-          lightboxIndex={lightboxIndex}
-          onClose={() => setLightboxIndex(null)}
-          onNav={delta => {
-            const next = lightboxIndex + delta;
-            if (next >= 0 && next < sorted.length) setLightboxIndex(next);
-          }}
-        />
-      )}
 
       {/* ── Grade guide modal ── */}
       {showGuide && (
