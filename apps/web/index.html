@@ -2235,14 +2235,27 @@ function MobileCardItem(_ref27) {
     _useState24 = _slicedToArray(_useState23, 2),
     addingContext = _useState24[0],
     setAddingContext = _useState24[1];
+  const cardRef = useRef(null);
   useEffect(() => {
     setLocalNotes(grade.notes ?? "");
   }, [grade.notes]);
+  useEffect(() => {
+    if (expanded && cardRef.current) {
+      setTimeout(() => {
+        var _cardRef$current;
+        return (_cardRef$current = cardRef.current) === null || _cardRef$current === void 0 ? void 0 : _cardRef$current.scrollIntoView({
+          behavior: "smooth",
+          block: "start"
+        });
+      }, 50);
+    }
+  }, [expanded]);
   const ck = getColorKey(card);
   const hasDFC = ((_card$card_faces4 = card.card_faces) === null || _card$card_faces4 === void 0 ? void 0 : _card$card_faces4.length) >= 2 && ((_card$card_faces$2 = card.card_faces[1]) === null || _card$card_faces$2 === void 0 ? void 0 : _card$card_faces$2.image_uris);
   const img = hasDFC ? (_card$card_faces$face3 = card.card_faces[face]) === null || _card$card_faces$face3 === void 0 || (_card$card_faces$face3 = _card$card_faces$face3.image_uris) === null || _card$card_faces$face3 === void 0 ? void 0 : _card$card_faces$face3.normal : getImageUrl(card);
   const q = calcQuadrant(grade);
   return React.createElement("div", {
+    ref: cardRef,
     className: `mc mobile-only c${ck}`
   }, React.createElement("div", {
     style: {

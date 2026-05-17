@@ -1014,14 +1014,20 @@ function MobileCardItem({ card, expanded, onToggleExpand }) {
   const [face, setFace]               = useState(0);
   const [localNotes, setLocalNotes]   = useState(grade.notes ?? "");
   const [addingContext, setAddingContext] = useState(false);
+  const cardRef = useRef(null);
   useEffect(() => { setLocalNotes(grade.notes ?? ""); }, [grade.notes]);
+  useEffect(() => {
+    if (expanded && cardRef.current) {
+      setTimeout(() => cardRef.current?.scrollIntoView({ behavior:"smooth", block:"start" }), 50);
+    }
+  }, [expanded]);
   const ck     = getColorKey(card);
   const hasDFC = card.card_faces?.length >= 2 && card.card_faces[1]?.image_uris;
   const img    = hasDFC ? card.card_faces[face]?.image_uris?.normal : getImageUrl(card);
   const q      = calcQuadrant(grade);
 
   return (
-    <div className={`mc mobile-only c${ck}`}>
+    <div ref={cardRef} className={`mc mobile-only c${ck}`}>
       <div style={{ display:"flex" }}>
         <div className="mc-stripe" />
         <div className="mc-body">
