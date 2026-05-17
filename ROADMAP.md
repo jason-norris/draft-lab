@@ -218,7 +218,7 @@ Converts GitHub Pages app to native mobile via Capacitor. The most expensive pha
 - [x] Source badge tooltip — shows source name, format, and time since import
 - [x] Mobile comparison row — three-way delta displayed in expanded card view
 - [x] Clickable Draft Lab logo → GitHub repo
-- [x] Version display (v2.2) in header subtitle and login screen
+- [x] Version display in header subtitle and login screen — now v3.0
 - [x] Login screen theme toggle (☀/🌙)
 - [x] Remember last open set — saves set code on `loadSet()`, auto-restores after sets list populates
 - [ ] Delta cell hover indicator — no visual feedback that the cell is clickable; consider subtle underline or background on hover
