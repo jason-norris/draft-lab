@@ -391,6 +391,15 @@
     .lb-field label { font-size:9px; color:var(--dimmer); text-transform:uppercase; letter-spacing:.12em; }
     .lb-row { display:flex; gap:10px; }
     .lb-row .lb-field { flex:1; }
+    .lb-context { display:flex; flex-direction:column; gap:4px; }
+    .lb-context-header { display:flex; justify-content:space-between; align-items:center; }
+    .lb-context-header span { font-size:9px; color:var(--dimmer); text-transform:uppercase; letter-spacing:.12em; }
+    .lb-context-remove { background:none; border:none; color:var(--dimmer); font-size:9px; cursor:pointer; padding:0; font-family:'IBM Plex Mono',monospace; }
+    .lb-context-remove:hover { color:var(--txt); }
+    .lb-context-row { display:flex; align-items:center; justify-content:space-between; gap:8px; }
+    .lb-context-row span { font-size:11px; color:var(--dim); min-width:48px; }
+    .lb-context-add { background:none; border:none; color:var(--dimmer); font-size:10px; cursor:pointer; padding:2px 0; font-family:'IBM Plex Mono',monospace; text-align:left; letter-spacing:.02em; }
+    .lb-context-add:hover { color:var(--txt); }
 
     @media (max-width:767px) {
       .desktop-only { display:none !important; }
