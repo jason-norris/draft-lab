@@ -1213,6 +1213,111 @@ function filterReducer(state, action) {
   }
 }
 
+// ── MobileDrawer ──────────────────────────────────────────────────────────────
+function MobileDrawer({ open, onClose, filters, dispatch, hasFilters, clearFilters, toggleFilterTag,
+                        selectedSet, fmt17l, setFmt17l, handleGradesUpdate,
+                        exportBackup, importBackup, exportCSV, user, syncStatus }) {
+  return (
+    <div className="filters-mobile mobile-only" style={{ maxHeight: open ? "70vh" : "0" }}>
+      {open && (
+        <div className="fm-inner">
+          <div className="fm-row">
+            <input className="fm-srch" placeholder="Search cards…"
+              value={filters.search} onChange={e => dispatch({ type:"SET_SEARCH", value:e.target.value })} />
+            <select className="fm-sort" value={filters.mobileSort} onChange={e => dispatch({ type:"SET_MOBILE_SORT", value:e.target.value })}>
+              <option value="color">Color → CMC</option>
+              <option value="name">Name A–Z</option>
+              <option value="cmc">Mana Cost</option>
+              <option value="rarity">Rarity</option>
+              <option value="myGrade">My Grade</option>
+              <option value="expert">Expert</option>
+              <option value="performance">Performance</option>
+            </select>
+          </div>
+          <div className="fm-row">
+            <span className="fl">Color:</span>
+            {["all","W","U","B","R","G","M","C","L"].map(c => (
+              <button key={c} className={`fb${filters.color === c ? " active" : ""}`} onClick={() => dispatch({ type:"SET_COLOR", value:c })}>
+                {c === "all" ? "All" : c}
+              </button>
+            ))}
+          </div>
+          <div className="fm-row">
+            <span className="fl">Rarity:</span>
+            {[["all","All"],["common","C"],["uncommon","U"],["rare","R"],["mythic","M"]].map(([full, abbr]) => (
+              <button key={full}
+                className={`fb${filters.rarity === full ? " active" : ""}`}
+                style={filters.rarity === full && full !== "all" ? { color: RARITY_COLORS[full], borderColor: RARITY_COLORS[full]+"88" } : {}}
+                onClick={() => dispatch({ type:"SET_RARITY", value:full })}>{abbr}</button>
+            ))}
+          </div>
+          <div className="fm-row">
+            <span className="fl">Show:</span>
+            {["all","graded","ungraded"].map(g => (
+              <button key={g} className={`fb${filters.graded === g ? " active" : ""}`} onClick={() => dispatch({ type:"SET_GRADED", value:g })}>
+                {g.charAt(0).toUpperCase() + g.slice(1)}
+              </button>
+            ))}
+          </div>
+          <div className="fm-row">
+            <span className="fl">Quad:</span>
+            {["all","FORMAT","MISS","SPOT","VAR","none"].map(q => (
+              <button key={q} className={`fb${filters.quadrant === q ? " active" : ""}`} onClick={() => dispatch({ type:"SET_QUADRANT", value:q })}>
+                {q === "all" ? "All" : q}
+              </button>
+            ))}
+          </div>
+          <div className="fm-row" style={{ flexDirection:"column", alignItems:"flex-start", gap:6 }}>
+            <span className="fl">Tags:</span>
+            <div className="tag-chips">
+              {TAGS.map(tag => (
+                <button key={tag.id} className={`tag-chip${filters.tags.includes(tag.id) ? " active" : ""}`}
+                  onClick={() => toggleFilterTag(tag.id)}>{tag.label}</button>
+              ))}
+            </div>
+          </div>
+          {hasFilters && <div className="fm-row"><button className="btn" style={{ padding:"3px 10px" }} onClick={clearFilters}>Clear Filters</button></div>}
+          {selectedSet && (
+            <div style={{ borderTop:"1px solid var(--b1)", paddingTop:10 }}>
+              <ImportPanel selectedSet={selectedSet} fmt17l={fmt17l} setFmt17l={setFmt17l}
+                onGradesUpdate={handleGradesUpdate} mobile={true} />
+            </div>
+          )}
+          <div style={{ borderTop:"1px solid var(--b1)", paddingTop:10, display:"flex", gap:8 }}>
+            <button className="l17-fetch" style={{ flex:1 }} onClick={exportBackup}>Export Backup</button>
+            <label className="l17-fetch" style={{ flex:1, textAlign:"center", cursor:"pointer" }}>
+              Import Backup
+              <input type="file" accept=".json" style={{ display:"none" }}
+                onChange={e => { importBackup(e.target.files[0]); e.target.value = ""; onClose(); }} />
+            </label>
+          </div>
+        </div>
+      )}
+      {open && (
+        <div className="fm-footer">
+          {selectedSet && (
+            <button className="l17-fetch" style={{ flex:1 }}
+              onClick={() => { exportCSV(); onClose(); }}>
+              ↓ Export CSV
+            </button>
+          )}
+          {user && (
+            <button className="l17-fetch" style={{ flex:1, borderColor:"var(--dimmer)", color:"#5a5a7a" }}
+              onClick={() => { sb.auth.signOut(); onClose(); }}>
+              Sign Out
+            </button>
+          )}
+          {user && syncStatus && (
+            <span className="sync-dot" style={{ alignSelf:"center", flexShrink:0 }}>
+              {syncStatus === "syncing" ? "↑" : "✓"}
+            </span>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ── FilterBar ─────────────────────────────────────────────────────────────────
 function FilterBar({ filters, dispatch, hasExpertData, hasPerformanceData, sortedCount, hasFilters, showTagFilter, setShowTagFilter, toggleFilterTag, clearFilters }) {
   return (
@@ -1492,7 +1597,7 @@ setGrades(prev => {
         `"${(g.notes ?? "").replace(/"/g, '""')}"`,
       ].join(",");
     });
-    const blob = new Blob([[hdr.join(","), ...rows].join("\n")], { type:"text/csv" });
+    const blob = new Blob(["﻿" + [hdr.join(","), ...rows].join("\n")], { type:"text/csv;charset=utf-8;" });
     Object.assign(document.createElement("a"), { href: URL.createObjectURL(blob), download: `${selectedSet?.code ?? "mtg"}-grades.csv` }).click();
   };
 
@@ -1687,105 +1792,15 @@ setGrades(prev => {
       </header>
 
       {/* ── Mobile filter drawer ── */}
-      <div className="filters-mobile mobile-only" style={{ maxHeight: showMobF ? "70vh" : "0" }}>
-        {showMobF && (
-          <div className="fm-inner">
-            <div className="fm-row">
-              <input className="fm-srch" placeholder="Search cards…"
-                value={filters.search} onChange={e => dispatchFilter({ type:"SET_SEARCH", value:e.target.value })} />
-              <select className="fm-sort" value={filters.mobileSort} onChange={e => dispatchFilter({ type:"SET_MOBILE_SORT", value:e.target.value })}>
-                <option value="color">Color → CMC</option>
-                <option value="name">Name A–Z</option>
-                <option value="cmc">Mana Cost</option>
-                <option value="rarity">Rarity</option>
-                <option value="myGrade">My Grade</option>
-                <option value="expert">Expert</option>
-                <option value="performance">Performance</option>
-              </select>
-            </div>
-            <div className="fm-row">
-              <span className="fl">Color:</span>
-              {["all","W","U","B","R","G","M","C","L"].map(c => (
-                <button key={c} className={`fb${filters.color === c ? " active" : ""}`} onClick={() => dispatchFilter({ type:"SET_COLOR", value:c })}>
-                  {c === "all" ? "All" : c}
-                </button>
-              ))}
-            </div>
-            <div className="fm-row">
-              <span className="fl">Rarity:</span>
-              {[["all","All"],["common","C"],["uncommon","U"],["rare","R"],["mythic","M"]].map(([full, abbr]) => (
-                <button key={full}
-                  className={`fb${filters.rarity === full ? " active" : ""}`}
-                  style={filters.rarity === full && full !== "all" ? { color: RARITY_COLORS[full], borderColor: RARITY_COLORS[full]+"88" } : {}}
-                  onClick={() => dispatchFilter({ type:"SET_RARITY", value:full })}>{abbr}</button>
-              ))}
-            </div>
-            <div className="fm-row">
-              <span className="fl">Show:</span>
-              {["all","graded","ungraded"].map(g => (
-                <button key={g} className={`fb${filters.graded === g ? " active" : ""}`} onClick={() => dispatchFilter({ type:"SET_GRADED", value:g })}>
-                  {g.charAt(0).toUpperCase() + g.slice(1)}
-                </button>
-              ))}
-            </div>
-            <div className="fm-row">
-              <span className="fl">Quad:</span>
-              {["all","FORMAT","MISS","SPOT","VAR","none"].map(q => (
-                <button key={q} className={`fb${filters.quadrant === q ? " active" : ""}`} onClick={() => dispatchFilter({ type:"SET_QUADRANT", value:q })}>
-                  {q === "all" ? "All" : q}
-                </button>
-              ))}
-            </div>
-            <div className="fm-row" style={{ flexDirection:"column", alignItems:"flex-start", gap:6 }}>
-              <span className="fl">Tags:</span>
-              <div className="tag-chips">
-                {TAGS.map(tag => (
-                  <button key={tag.id} className={`tag-chip${filters.tags.includes(tag.id) ? " active" : ""}`}
-                    onClick={() => toggleFilterTag(tag.id)}>{tag.label}</button>
-                ))}
-              </div>
-            </div>
-            {hasFilters && <div className="fm-row"><button className="btn" style={{ padding:"3px 10px" }} onClick={clearFilters}>Clear Filters</button></div>}
-            {selectedSet && (
-              <div style={{ borderTop:"1px solid var(--b1)", paddingTop:10 }}>
-                <ImportPanel
-                  selectedSet={selectedSet} fmt17l={fmt17l} setFmt17l={setFmt17l}
-                  onGradesUpdate={handleGradesUpdate} mobile={true} />
-              </div>
-            )}
-            <div style={{ borderTop:"1px solid var(--b1)", paddingTop:10, display:"flex", gap:8 }}>
-              <button className="l17-fetch" style={{ flex:1 }} onClick={exportBackup}>Export Backup</button>
-              <label className="l17-fetch" style={{ flex:1, textAlign:"center", cursor:"pointer" }}>
-                Import Backup
-                <input type="file" accept=".json" style={{ display:"none" }}
-                  onChange={e => { importBackup(e.target.files[0]); e.target.value = ""; setShowMobF(false); }} />
-              </label>
-            </div>
-          </div>
-        )}
-        {/* ── Pinned footer — always visible, never scrolled away ── */}
-        {showMobF && (
-          <div className="fm-footer">
-            {selectedSet && (
-              <button className="l17-fetch" style={{ flex:1 }}
-                onClick={() => { exportCSV(); setShowMobF(false); }}>
-                ↓ Export CSV
-              </button>
-            )}
-            {user && (
-              <button className="l17-fetch" style={{ flex:1, borderColor:"var(--dimmer)", color:"#5a5a7a" }}
-                onClick={() => { sb.auth.signOut(); setShowMobF(false); }}>
-                Sign Out
-              </button>
-            )}
-            {user && syncStatus && (
-              <span className="sync-dot" style={{ alignSelf:"center", flexShrink:0 }}>
-                {syncStatus === "syncing" ? "↑" : "✓"}
-              </span>
-            )}
-          </div>
-        )}
-      </div>
+      <MobileDrawer
+        open={showMobF} onClose={() => setShowMobF(false)}
+        filters={filters} dispatch={dispatchFilter}
+        hasFilters={hasFilters} clearFilters={clearFilters} toggleFilterTag={toggleFilterTag}
+        selectedSet={selectedSet} fmt17l={fmt17l} setFmt17l={setFmt17l}
+        handleGradesUpdate={handleGradesUpdate}
+        exportBackup={exportBackup} importBackup={importBackup} exportCSV={exportCSV}
+        user={user} syncStatus={syncStatus}
+      />
 
       {/* ── Stats bar ── */}
       {cards.length > 0 && (

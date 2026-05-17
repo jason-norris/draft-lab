@@ -2592,17 +2592,220 @@ function filterReducer(state, action) {
       return state;
   }
 }
-function FilterBar(_ref31) {
-  let filters = _ref31.filters,
+function MobileDrawer(_ref31) {
+  let open = _ref31.open,
+    onClose = _ref31.onClose,
+    filters = _ref31.filters,
     dispatch = _ref31.dispatch,
-    hasExpertData = _ref31.hasExpertData,
-    hasPerformanceData = _ref31.hasPerformanceData,
-    sortedCount = _ref31.sortedCount,
     hasFilters = _ref31.hasFilters,
-    showTagFilter = _ref31.showTagFilter,
-    setShowTagFilter = _ref31.setShowTagFilter,
+    clearFilters = _ref31.clearFilters,
     toggleFilterTag = _ref31.toggleFilterTag,
-    clearFilters = _ref31.clearFilters;
+    selectedSet = _ref31.selectedSet,
+    fmt17l = _ref31.fmt17l,
+    setFmt17l = _ref31.setFmt17l,
+    handleGradesUpdate = _ref31.handleGradesUpdate,
+    exportBackup = _ref31.exportBackup,
+    importBackup = _ref31.importBackup,
+    exportCSV = _ref31.exportCSV,
+    user = _ref31.user,
+    syncStatus = _ref31.syncStatus;
+  return React.createElement("div", {
+    className: "filters-mobile mobile-only",
+    style: {
+      maxHeight: open ? "70vh" : "0"
+    }
+  }, open && React.createElement("div", {
+    className: "fm-inner"
+  }, React.createElement("div", {
+    className: "fm-row"
+  }, React.createElement("input", {
+    className: "fm-srch",
+    placeholder: "Search cards\u2026",
+    value: filters.search,
+    onChange: e => dispatch({
+      type: "SET_SEARCH",
+      value: e.target.value
+    })
+  }), React.createElement("select", {
+    className: "fm-sort",
+    value: filters.mobileSort,
+    onChange: e => dispatch({
+      type: "SET_MOBILE_SORT",
+      value: e.target.value
+    })
+  }, React.createElement("option", {
+    value: "color"
+  }, "Color \u2192 CMC"), React.createElement("option", {
+    value: "name"
+  }, "Name A\u2013Z"), React.createElement("option", {
+    value: "cmc"
+  }, "Mana Cost"), React.createElement("option", {
+    value: "rarity"
+  }, "Rarity"), React.createElement("option", {
+    value: "myGrade"
+  }, "My Grade"), React.createElement("option", {
+    value: "expert"
+  }, "Expert"), React.createElement("option", {
+    value: "performance"
+  }, "Performance"))), React.createElement("div", {
+    className: "fm-row"
+  }, React.createElement("span", {
+    className: "fl"
+  }, "Color:"), ["all", "W", "U", "B", "R", "G", "M", "C", "L"].map(c => React.createElement("button", {
+    key: c,
+    className: `fb${filters.color === c ? " active" : ""}`,
+    onClick: () => dispatch({
+      type: "SET_COLOR",
+      value: c
+    })
+  }, c === "all" ? "All" : c))), React.createElement("div", {
+    className: "fm-row"
+  }, React.createElement("span", {
+    className: "fl"
+  }, "Rarity:"), [["all", "All"], ["common", "C"], ["uncommon", "U"], ["rare", "R"], ["mythic", "M"]].map(_ref32 => {
+    let _ref33 = _slicedToArray(_ref32, 2),
+      full = _ref33[0],
+      abbr = _ref33[1];
+    return React.createElement("button", {
+      key: full,
+      className: `fb${filters.rarity === full ? " active" : ""}`,
+      style: filters.rarity === full && full !== "all" ? {
+        color: RARITY_COLORS[full],
+        borderColor: RARITY_COLORS[full] + "88"
+      } : {},
+      onClick: () => dispatch({
+        type: "SET_RARITY",
+        value: full
+      })
+    }, abbr);
+  })), React.createElement("div", {
+    className: "fm-row"
+  }, React.createElement("span", {
+    className: "fl"
+  }, "Show:"), ["all", "graded", "ungraded"].map(g => React.createElement("button", {
+    key: g,
+    className: `fb${filters.graded === g ? " active" : ""}`,
+    onClick: () => dispatch({
+      type: "SET_GRADED",
+      value: g
+    })
+  }, g.charAt(0).toUpperCase() + g.slice(1)))), React.createElement("div", {
+    className: "fm-row"
+  }, React.createElement("span", {
+    className: "fl"
+  }, "Quad:"), ["all", "FORMAT", "MISS", "SPOT", "VAR", "none"].map(q => React.createElement("button", {
+    key: q,
+    className: `fb${filters.quadrant === q ? " active" : ""}`,
+    onClick: () => dispatch({
+      type: "SET_QUADRANT",
+      value: q
+    })
+  }, q === "all" ? "All" : q))), React.createElement("div", {
+    className: "fm-row",
+    style: {
+      flexDirection: "column",
+      alignItems: "flex-start",
+      gap: 6
+    }
+  }, React.createElement("span", {
+    className: "fl"
+  }, "Tags:"), React.createElement("div", {
+    className: "tag-chips"
+  }, TAGS.map(tag => React.createElement("button", {
+    key: tag.id,
+    className: `tag-chip${filters.tags.includes(tag.id) ? " active" : ""}`,
+    onClick: () => toggleFilterTag(tag.id)
+  }, tag.label)))), hasFilters && React.createElement("div", {
+    className: "fm-row"
+  }, React.createElement("button", {
+    className: "btn",
+    style: {
+      padding: "3px 10px"
+    },
+    onClick: clearFilters
+  }, "Clear Filters")), selectedSet && React.createElement("div", {
+    style: {
+      borderTop: "1px solid var(--b1)",
+      paddingTop: 10
+    }
+  }, React.createElement(ImportPanel, {
+    selectedSet: selectedSet,
+    fmt17l: fmt17l,
+    setFmt17l: setFmt17l,
+    onGradesUpdate: handleGradesUpdate,
+    mobile: true
+  })), React.createElement("div", {
+    style: {
+      borderTop: "1px solid var(--b1)",
+      paddingTop: 10,
+      display: "flex",
+      gap: 8
+    }
+  }, React.createElement("button", {
+    className: "l17-fetch",
+    style: {
+      flex: 1
+    },
+    onClick: exportBackup
+  }, "Export Backup"), React.createElement("label", {
+    className: "l17-fetch",
+    style: {
+      flex: 1,
+      textAlign: "center",
+      cursor: "pointer"
+    }
+  }, "Import Backup", React.createElement("input", {
+    type: "file",
+    accept: ".json",
+    style: {
+      display: "none"
+    },
+    onChange: e => {
+      importBackup(e.target.files[0]);
+      e.target.value = "";
+      onClose();
+    }
+  })))), open && React.createElement("div", {
+    className: "fm-footer"
+  }, selectedSet && React.createElement("button", {
+    className: "l17-fetch",
+    style: {
+      flex: 1
+    },
+    onClick: () => {
+      exportCSV();
+      onClose();
+    }
+  }, "\u2193 Export CSV"), user && React.createElement("button", {
+    className: "l17-fetch",
+    style: {
+      flex: 1,
+      borderColor: "var(--dimmer)",
+      color: "#5a5a7a"
+    },
+    onClick: () => {
+      sb.auth.signOut();
+      onClose();
+    }
+  }, "Sign Out"), user && syncStatus && React.createElement("span", {
+    className: "sync-dot",
+    style: {
+      alignSelf: "center",
+      flexShrink: 0
+    }
+  }, syncStatus === "syncing" ? "↑" : "✓")));
+}
+function FilterBar(_ref34) {
+  let filters = _ref34.filters,
+    dispatch = _ref34.dispatch,
+    hasExpertData = _ref34.hasExpertData,
+    hasPerformanceData = _ref34.hasPerformanceData,
+    sortedCount = _ref34.sortedCount,
+    hasFilters = _ref34.hasFilters,
+    showTagFilter = _ref34.showTagFilter,
+    setShowTagFilter = _ref34.setShowTagFilter,
+    toggleFilterTag = _ref34.toggleFilterTag,
+    clearFilters = _ref34.clearFilters;
   return React.createElement("div", {
     className: "filters-desktop desktop-only"
   }, React.createElement("span", {
@@ -2690,8 +2893,8 @@ const GradesContext = React.createContext(null);
 function useGrades() {
   return React.useContext(GradesContext);
 }
-function DraftLab(_ref32) {
-  let user = _ref32.user;
+function DraftLab(_ref35) {
+  let user = _ref35.user;
   const isMobile = useIsMobile();
   const didFirstSync = useRef(false);
   const _useState25 = useState(() => localStorage.getItem("draft-lab-theme") || "auto"),
@@ -2985,8 +3188,8 @@ function DraftLab(_ref32) {
       const q = calcQuadrant(g);
       return [`"${c.name}"`, getColorKey(c), `"${c.mana_cost ?? ""}"`, `"${c.type_line ?? ""}"`, c.rarity, g.myGrade ?? "", g.expert_rating ?? "", g.expert_source ?? "", g.performance_rating ?? "", g.performance_source ?? "", g.sunsetGrade ?? "", (q === null || q === void 0 ? void 0 : q.label) ?? "", `"${(g.tags ?? []).join("|")}"`, `"${(g.notes ?? "").replace(/"/g, '""')}"`].join(",");
     });
-    const blob = new Blob([[hdr.join(","), ...rows].join("\n")], {
-      type: "text/csv"
+    const blob = new Blob(["﻿" + [hdr.join(","), ...rows].join("\n")], {
+      type: "text/csv;charset=utf-8;"
     });
     Object.assign(document.createElement("a"), {
       href: URL.createObjectURL(blob),
@@ -3026,10 +3229,10 @@ function DraftLab(_ref32) {
         const data = parsed.data ?? parsed;
         let count = 0;
         const restoredGrades = {};
-        for (const _ref33 of Object.entries(data)) {
-          var _ref34 = _slicedToArray(_ref33, 2);
-          const key = _ref34[0];
-          const value = _ref34[1];
+        for (const _ref36 of Object.entries(data)) {
+          var _ref37 = _slicedToArray(_ref36, 2);
+          const key = _ref37[0];
+          const value = _ref37[1];
           if ((key.startsWith("draft-grades-") || key.startsWith("draft-import-meta-") || key === "draft-lab-theme") && typeof value === "string") {
             localStorage.setItem(key, value);
             count++;
@@ -3297,191 +3500,24 @@ function DraftLab(_ref32) {
     className: "icon-bar-btn faint",
     onClick: () => setShowLegal(true),
     title: "Legal & Attribution"
-  }, "\xA9")))), React.createElement("div", {
-    className: "filters-mobile mobile-only",
-    style: {
-      maxHeight: showMobF ? "70vh" : "0"
-    }
-  }, showMobF && React.createElement("div", {
-    className: "fm-inner"
-  }, React.createElement("div", {
-    className: "fm-row"
-  }, React.createElement("input", {
-    className: "fm-srch",
-    placeholder: "Search cards\u2026",
-    value: filters.search,
-    onChange: e => dispatchFilter({
-      type: "SET_SEARCH",
-      value: e.target.value
-    })
-  }), React.createElement("select", {
-    className: "fm-sort",
-    value: filters.mobileSort,
-    onChange: e => dispatchFilter({
-      type: "SET_MOBILE_SORT",
-      value: e.target.value
-    })
-  }, React.createElement("option", {
-    value: "color"
-  }, "Color \u2192 CMC"), React.createElement("option", {
-    value: "name"
-  }, "Name A\u2013Z"), React.createElement("option", {
-    value: "cmc"
-  }, "Mana Cost"), React.createElement("option", {
-    value: "rarity"
-  }, "Rarity"), React.createElement("option", {
-    value: "myGrade"
-  }, "My Grade"), React.createElement("option", {
-    value: "expert"
-  }, "Expert"), React.createElement("option", {
-    value: "performance"
-  }, "Performance"))), React.createElement("div", {
-    className: "fm-row"
-  }, React.createElement("span", {
-    className: "fl"
-  }, "Color:"), ["all", "W", "U", "B", "R", "G", "M", "C", "L"].map(c => React.createElement("button", {
-    key: c,
-    className: `fb${filters.color === c ? " active" : ""}`,
-    onClick: () => dispatchFilter({
-      type: "SET_COLOR",
-      value: c
-    })
-  }, c === "all" ? "All" : c))), React.createElement("div", {
-    className: "fm-row"
-  }, React.createElement("span", {
-    className: "fl"
-  }, "Rarity:"), [["all", "All"], ["common", "C"], ["uncommon", "U"], ["rare", "R"], ["mythic", "M"]].map(_ref35 => {
-    let _ref36 = _slicedToArray(_ref35, 2),
-      full = _ref36[0],
-      abbr = _ref36[1];
-    return React.createElement("button", {
-      key: full,
-      className: `fb${filters.rarity === full ? " active" : ""}`,
-      style: filters.rarity === full && full !== "all" ? {
-        color: RARITY_COLORS[full],
-        borderColor: RARITY_COLORS[full] + "88"
-      } : {},
-      onClick: () => dispatchFilter({
-        type: "SET_RARITY",
-        value: full
-      })
-    }, abbr);
-  })), React.createElement("div", {
-    className: "fm-row"
-  }, React.createElement("span", {
-    className: "fl"
-  }, "Show:"), ["all", "graded", "ungraded"].map(g => React.createElement("button", {
-    key: g,
-    className: `fb${filters.graded === g ? " active" : ""}`,
-    onClick: () => dispatchFilter({
-      type: "SET_GRADED",
-      value: g
-    })
-  }, g.charAt(0).toUpperCase() + g.slice(1)))), React.createElement("div", {
-    className: "fm-row"
-  }, React.createElement("span", {
-    className: "fl"
-  }, "Quad:"), ["all", "FORMAT", "MISS", "SPOT", "VAR", "none"].map(q => React.createElement("button", {
-    key: q,
-    className: `fb${filters.quadrant === q ? " active" : ""}`,
-    onClick: () => dispatchFilter({
-      type: "SET_QUADRANT",
-      value: q
-    })
-  }, q === "all" ? "All" : q))), React.createElement("div", {
-    className: "fm-row",
-    style: {
-      flexDirection: "column",
-      alignItems: "flex-start",
-      gap: 6
-    }
-  }, React.createElement("span", {
-    className: "fl"
-  }, "Tags:"), React.createElement("div", {
-    className: "tag-chips"
-  }, TAGS.map(tag => React.createElement("button", {
-    key: tag.id,
-    className: `tag-chip${filters.tags.includes(tag.id) ? " active" : ""}`,
-    onClick: () => toggleFilterTag(tag.id)
-  }, tag.label)))), hasFilters && React.createElement("div", {
-    className: "fm-row"
-  }, React.createElement("button", {
-    className: "btn",
-    style: {
-      padding: "3px 10px"
-    },
-    onClick: clearFilters
-  }, "Clear Filters")), selectedSet && React.createElement("div", {
-    style: {
-      borderTop: "1px solid var(--b1)",
-      paddingTop: 10
-    }
-  }, React.createElement(ImportPanel, {
+  }, "\xA9")))), React.createElement(MobileDrawer, {
+    open: showMobF,
+    onClose: () => setShowMobF(false),
+    filters: filters,
+    dispatch: dispatchFilter,
+    hasFilters: hasFilters,
+    clearFilters: clearFilters,
+    toggleFilterTag: toggleFilterTag,
     selectedSet: selectedSet,
     fmt17l: fmt17l,
     setFmt17l: setFmt17l,
-    onGradesUpdate: handleGradesUpdate,
-    mobile: true
-  })), React.createElement("div", {
-    style: {
-      borderTop: "1px solid var(--b1)",
-      paddingTop: 10,
-      display: "flex",
-      gap: 8
-    }
-  }, React.createElement("button", {
-    className: "l17-fetch",
-    style: {
-      flex: 1
-    },
-    onClick: exportBackup
-  }, "Export Backup"), React.createElement("label", {
-    className: "l17-fetch",
-    style: {
-      flex: 1,
-      textAlign: "center",
-      cursor: "pointer"
-    }
-  }, "Import Backup", React.createElement("input", {
-    type: "file",
-    accept: ".json",
-    style: {
-      display: "none"
-    },
-    onChange: e => {
-      importBackup(e.target.files[0]);
-      e.target.value = "";
-      setShowMobF(false);
-    }
-  })))), showMobF && React.createElement("div", {
-    className: "fm-footer"
-  }, selectedSet && React.createElement("button", {
-    className: "l17-fetch",
-    style: {
-      flex: 1
-    },
-    onClick: () => {
-      exportCSV();
-      setShowMobF(false);
-    }
-  }, "\u2193 Export CSV"), user && React.createElement("button", {
-    className: "l17-fetch",
-    style: {
-      flex: 1,
-      borderColor: "var(--dimmer)",
-      color: "#5a5a7a"
-    },
-    onClick: () => {
-      sb.auth.signOut();
-      setShowMobF(false);
-    }
-  }, "Sign Out"), user && syncStatus && React.createElement("span", {
-    className: "sync-dot",
-    style: {
-      alignSelf: "center",
-      flexShrink: 0
-    }
-  }, syncStatus === "syncing" ? "↑" : "✓"))), cards.length > 0 && React.createElement(React.Fragment, null, React.createElement("div", {
+    handleGradesUpdate: handleGradesUpdate,
+    exportBackup: exportBackup,
+    importBackup: importBackup,
+    exportCSV: exportCSV,
+    user: user,
+    syncStatus: syncStatus
+  }), cards.length > 0 && React.createElement(React.Fragment, null, React.createElement("div", {
     className: "stats"
   }, React.createElement("span", {
     className: "stat"
@@ -3549,10 +3585,10 @@ function DraftLab(_ref32) {
     className: "empty-sub"
   }, "Choose a set above to start evaluating cards"))), !showAnalytics && !loading && !error && cards.length > 0 && React.createElement("div", {
     className: "tbl-wrap desktop-only"
-  }, React.createElement("table", null, React.createElement("thead", null, React.createElement("tr", null, [["name", "Card"], ["cmc", "Cost"], [null, "Type"], ["rarity", "Rar"], ["color", "Color"], ["myGrade", "My Grade"], ["expert", "Expert"], ["performance", "Perf"], [null, "Δ"], [null, "Sunset"], [null, "Notes"]].map(_ref37 => {
-    let _ref38 = _slicedToArray(_ref37, 2),
-      col = _ref38[0],
-      lbl = _ref38[1];
+  }, React.createElement("table", null, React.createElement("thead", null, React.createElement("tr", null, [["name", "Card"], ["cmc", "Cost"], [null, "Type"], ["rarity", "Rar"], ["color", "Color"], ["myGrade", "My Grade"], ["expert", "Expert"], ["performance", "Perf"], [null, "Δ"], [null, "Sunset"], [null, "Notes"]].map(_ref38 => {
+    let _ref39 = _slicedToArray(_ref38, 2),
+      col = _ref39[0],
+      lbl = _ref39[1];
     return React.createElement("th", {
       key: lbl,
       className: col && filters.sortCol === col ? "sorted" : "",
@@ -3679,21 +3715,21 @@ function DraftLab(_ref32) {
     className: "guide-h1"
   }, "Grade Reference"), React.createElement("div", {
     className: "guide-sub"
-  }, "Half-grade anchors for Limited evaluation"), GRADE_TIERS.map(_ref39 => {
-    let tier = _ref39.tier,
-      rows = _ref39.rows;
+  }, "Half-grade anchors for Limited evaluation"), GRADE_TIERS.map(_ref40 => {
+    let tier = _ref40.tier,
+      rows = _ref40.rows;
     return React.createElement("div", {
       key: tier,
       className: "guide-tier"
     }, React.createElement("div", {
       className: "guide-tier-hdr"
-    }, tier), rows.map(_ref40 => {
-      let _ref41 = _slicedToArray(_ref40, 5),
-        grade = _ref41[0],
-        bg = _ref41[1],
-        fg = _ref41[2],
-        pick = _ref41[3],
-        desc = _ref41[4];
+    }, tier), rows.map(_ref41 => {
+      let _ref42 = _slicedToArray(_ref41, 5),
+        grade = _ref42[0],
+        bg = _ref42[1],
+        fg = _ref42[2],
+        pick = _ref42[3],
+        desc = _ref42[4];
       return React.createElement("div", {
         key: grade,
         className: "guide-row"
@@ -3765,9 +3801,9 @@ function DraftLab(_ref32) {
     }
   }, "View on GitHub \u2192"))))));
 }
-function LoginScreen(_ref42) {
-  let onSignIn = _ref42.onSignIn,
-    loading = _ref42.loading;
+function LoginScreen(_ref43) {
+  let onSignIn = _ref43.onSignIn,
+    loading = _ref43.loading;
   const _useState71 = useState(() => {
       const saved = localStorage.getItem("draft-lab-theme");
       if (saved && saved !== "auto") return saved;
@@ -3854,8 +3890,8 @@ function AuthGate() {
       setAuthLoading(false);
       return;
     }
-    sb.auth.getSession().then(_ref43 => {
-      let session = _ref43.data.session;
+    sb.auth.getSession().then(_ref44 => {
+      let session = _ref44.data.session;
       setUser((session === null || session === void 0 ? void 0 : session.user) ?? null);
       setAuthLoading(false);
     }).catch(() => setAuthLoading(false));
