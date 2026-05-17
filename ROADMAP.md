@@ -21,7 +21,7 @@
 - Color/rarity/graded/quadrant/tag filters, sortable columns
 - Responsive layout: desktop table + mobile expandable card list
 - Dark/light theme with manual toggle
-- Grade reference guide (? button), legal attribution (© button)
+- Grade reference guide (⚖ button), legal attribution (© button)
 - GitHub Pages hosted with JSX build pipeline (Babel)
 - Supabase auth (Google OAuth), cloud sync, multi-user via invite-only access
 - First-login local→Supabase push; backup restore pushes to cloud
@@ -136,7 +136,7 @@
 
 ### 4.1 Calibration Chart
 - [x] Histogram: My Grade distribution vs Performance rating
-- [ ] Breakdown by color and rarity — deferred
+- [ ] Breakdown by color and rarity — deferred to Phase 7
 
 ### 4.2 Core Scatter Plot
 - [x] X: Performance rating · Y: My Grade (numeric) · color: quadrant · size: rarity
@@ -147,16 +147,16 @@
 
 ### 4.3 Quadrant Summary
 - [x] COUNT and list of cards per quadrant, sorted by gap size
-- [ ] Tag correlation: "Cards tagged [sleeper] appeared in SPOT 60% of the time" — deferred
+- [ ] Tag correlation: "Cards tagged [sleeper] appeared in SPOT 60% of the time" — deferred to Phase 7
 
 ### 4.4 Sunset Grade Retrospective
-- [ ] Cards with largest My Grade → Sunset Grade swing — deferred (no sunset grades filled in yet)
+- [ ] Cards with largest My Grade → Sunset Grade swing — deferred to Phase 7 (no sunset grades filled in yet)
 
 ### 4.5 Tag Accuracy
-- [ ] Per-tag average accuracy vs Performance rating — deferred
+- [ ] Per-tag average accuracy vs Performance rating — deferred to Phase 7
 
 ### 4.6 Cross-Set Tracking
-- [ ] Aggregate calibration metrics across sets — color bias, rarity bias, improvement trend — deferred (needs multiple graded sets)
+- [ ] Aggregate calibration metrics across sets — color bias, rarity bias, improvement trend — deferred to Phase 7 (needs multiple graded sets)
 
 ### 4.7 Implementation Notes
 - [x] Chart.js 4 via CDN
@@ -165,45 +165,144 @@
 
 ---
 
-## Phase 5 — Draft Simulator 🔜 NEXT
+## Phase 4.5 — God Component Refactor 🔜 NEXT
 
-**Goal:** A full 8-player draft simulator with bot opponents, live signal tracking, deck construction, and retroactive pick review. Built on top of the existing card grading infrastructure — My Grade, Expert, and Performance ratings are visible on every card during the draft.
+**Goal:** Structural refactor of `DraftLab.jsx` before Phase 5 adds draft simulator state. No user-facing changes.
 
-**Prerequisites:** Phase 4 (Analytics) stable ✅, Supabase schema extensions deployed.
+**Spec:** See [`docs/refactor-god-component.md`](docs/refactor-god-component.md) for the full step-by-step migration order. Compile and test after every step — never leave the file in a broken intermediate state.
 
-**Before starting Phase 5:** Refactor DraftLab god component (~1,300 lines, ~30 useState) into sub-components (GradeTable, FilterBar, DrawerPanel, AnalyticsView) — Phase 5 adds significant new state and this will become unmanageable otherwise.
+- [ ] Extract pure utility functions above `DraftLab` (`applyFilters`, `applySort`, `computeQuadrant`, `renderMana`, `debounce`)
+- [ ] Introduce `GradesContext` + `useGrades()` hook for shared grade state without prop drilling
+- [ ] Extract `AnalyticsView` sub-component (reads context, no write path, local state only)
+- [ ] Extract `FilterBar` sub-component + introduce `filterReducer` for consolidated filter state
+- [ ] Extract `ImportPanel` sub-component
+- [ ] Extract `MobileDrawer` sub-component
+- [ ] Extract `CardLightbox` sub-component
+- [ ] Extract `GradeTable` and `GradeRow` sub-components
+- [ ] Extract `GradingView` as top-level assembly component
+- [ ] Add `useMemo` for sorted/filtered card list in `GradingView`
+- [ ] Debounce Supabase sync on notes input (~450ms)
+- [ ] Add `DraftView` and `DraftReviewView` stubs to view router (empty shells, ready for Phase 5)
 
-> **AI Architecture:** See [`docs/phase-7-draft-ai.md`](docs/phase-7-draft-ai.md) for the full technical design — four-layer bot system (card value function, Bayesian belief state, mistake injection, optional LLM), the signal accuracy training loop, and implementation guidance for Claude Code.
-
----
-
-## Phase 6 — Additional Community Sources (Lower Priority)
-
-### 6.1 MTGA Personal Data
-- [ ] 17Lands personal card stats (requires user token)
-- [ ] Stored as `personal_performance_rating` separate from community data
-
-### 6.2 Draftsim Integration
-- [ ] Investigate Draftsim JSON endpoint via DevTools; add `draftsim-prep.py` if accessible
-
-### 6.3 AetherHub Scraper Robustness
-- [ ] Fallback: if DOM walk yields <10 results, try JSON-LD structured data
-- [ ] Version check: warn if card count significantly below set size
-
-### 6.4 Restore from CSV Export
-**Decision: won't implement.** JSON backup is the canonical restore path. CSV is for external analysis only.
+**Must complete before Phase 5.1. All existing features must work identically after refactor.**
 
 ---
 
-## Phase 7 — Native App (Final Phase)
+## Phase 5 — Draft Simulator + Pick Review 🔜
 
-Converts GitHub Pages app to native mobile via Capacitor. The most expensive phase — requires an Apple Developer account ($99/yr) for iOS distribution. Tackle only after Phases 1–6 are stable and the app has proven long-term value.
+**Goal:** A full 8-player draft simulator with bot opponents, pick-by-pick signal review, and deck construction feedback. Built on top of the existing grading infrastructure — My Grade, Expert, and Performance ratings are visible on every card during the draft. Proving ground set: **KHM**.
+
+**Prerequisites:** Phase 4.5 complete.
+
+> **AI Architecture:** See [`docs/phase-7-draft-ai.md`](docs/phase-7-draft-ai.md) for the four-layer bot system (card value function, Bayesian belief state, mistake injection, optional LLM) and the signal accuracy training loop. Note: that document references "Phase 7" — this is now Phase 5. Architecture is unchanged.
+>
+> **Planning docs:** [`docs/phase-5-1-data-foundation.md`](docs/phase-5-1-data-foundation.md) · [`docs/phase-5-signal-review.md`](docs/phase-5-signal-review.md) · [`docs/draft-ai-planning-addendum.md`](docs/draft-ai-planning-addendum.md)
+
+### Phase 5.1 — Data Foundation
+
+**Goal:** Clean, structured card data before the simulator is built. Proving ground set: KHM.
+
+- [ ] Introduce `context` field on grade objects: `{ early, ahead, parity, behind }` — optional per card, never composited or averaged
+- [ ] Grade drawer UI: collapsible context rating section with per-game-state grade selectors
+- [ ] Migrate STX legacy Q-notation notes (`Q: A/A-/B/C`) into `context` objects via one-time script; clean notes field after migration
+- [ ] Formalize tag definitions — document in code near `TAGS` constant
+- [ ] Clarify notes field purpose — update placeholder text to reflect notes as reasoning/nuance only, not structured data
+- [ ] KHM grading continues with new tag and context standards applied going forward
+
+**Must complete before Phase 5.2. All definition-of-done criteria in the spec must be met.**
+
+### Phase 5.2 — Draft Simulator + Pick Review
+
+**Milestone 1 — Basic draft loop (Layer 1 bots)**
+- [ ] Supabase schema: `draft_sessions`, `draft_picks`, `draft_decks`
+- [ ] 17Lands script extension: add ALSA, ATA, OH WR columns to `17lands-prep.py`
+- [ ] Pack generation from Scryfall card pool by rarity slot
+- [ ] `DraftView`: user pick interface, pool display, session persistence
+- [ ] Layer 1 card value function (greedy, weighted across grade sources)
+- [ ] Basic `SessionList` in `DraftReviewView`
+
+**Milestone 2 — Signal-aware bots (Layer 1 + 2)**
+- [ ] Bayesian belief state model per bot (color commitment, updated per pack)
+- [ ] ALSA-informed bot pick decisions
+- [ ] Pick review: wheel check logic, ALSA-based pass evaluation
+- [ ] Pick classification labels (✓ Clean, ⚠ Risky pass, ⚠ Off-color, 🔍 Review)
+- [ ] `PickRow` UI with collapsed/expanded detail
+
+**Milestone 3 — Realistic table (Layer 1 + 2 + 3)**
+- [ ] Bot personality profiles with mistake injection (Spike, Timmy, Grinder, Johnny, Casual)
+- [ ] Pivot point detection in pick review
+- [ ] Summary panel: signal accuracy totals, archetype, colors
+- [ ] Archetype fingerprinting (`SET_ARCHETYPES` constant)
+- [ ] Deck build feedback vs archetype norms
+
+**Milestone 4 — Optional LLM layer**
+- [ ] Layer 4: LLM invocation for contested picks during draft (near-tie cards)
+- [ ] LLM narrative feedback for flagged picks in pick review (on-demand, ~5–15 API calls per review session)
+
+---
+
+## Phase 6 — Cross-Draft Analytics 🔜
+
+**Goal:** Longitudinal analysis across multiple draft sessions once Phase 5 data has accumulated. Answers "how am I improving?" rather than "how did this draft go?"
+
+- [ ] Signal accuracy trends over time — table signal reading improvement across sessions
+- [ ] Internal signal accuracy — how consistently does pool color lean lead to correct commitment?
+- [ ] Correlation between draft pick decisions and grading calibration (stated grade vs. in-draft behavior)
+- [ ] Cards consistently diverged from during drafts vs. grades — behavioral vs. stated evaluation gap
+- [ ] Cross-session archetype tendency profiling
+- [ ] History view surface: aggregated session data, trend charts
+
+---
+
+## Phase 7 — Data Quality + Analytical Accuracy 🔜
+
+**Goal:** Systematic tightening of the data foundation across all sets. Informed by what Phases 5 and 6 reveal about data quality gaps.
+
+- [ ] Tag audit across all graded sets against formalized Phase 5.1 definitions
+- [ ] Context rating audit — identify cards that would benefit from game state ratings
+- [ ] Grade consistency review — identify systematic calibration drift across sets
+- [ ] ALSA sample size thresholds — flag 17Lands data imported from low-sample periods
+- [ ] Notes quality pass — convert remaining freeform reasoning into structured fields where appropriate
+- [ ] Tune `SET_ARCHETYPES` norms from real draft session data
+- [ ] Deferred from Phase 4: tag accuracy per-tag vs Performance rating
+- [ ] Deferred from Phase 4: cross-set calibration metrics (color bias, rarity bias, improvement trend)
+- [ ] Deferred from Phase 4: quadrant tag correlation
+- [ ] Deferred from Phase 4: Sunset Grade retrospective (once sunset grades are filled in)
+
+---
+
+## Phase 8 — Community Ratings Expansion 🔜
+
+**Goal:** Add additional community rating sources to increase confidence in expert grade consensus through corroboration, not volume.
+
+- [ ] Research and evaluate additional pre-release rating sources alongside AetherHub
+- [ ] Weighted consensus grade: convergence = higher confidence, divergence = surfaced signal
+- [ ] Import pipeline extensions for new sources (consistent with existing ImportPanel pattern)
+- [ ] Source badge system extended for new sources
+- [ ] AetherHub scraper robustness: fallback to JSON-LD if DOM walk yields <10 results; warn if card count below set size
+- [ ] Draftsim: investigate JSON endpoint via DevTools; add `draftsim-prep.py` if accessible
+- [ ] MTGA Personal: 17Lands personal card stats (requires user token); stored as `personal_performance_rating`
+
+---
+
+## Phase 9 — Native App (Final Phase) 🔜
+
+Converts GitHub Pages app to native mobile via Capacitor. The most expensive phase — requires an Apple Developer account ($99/yr) for iOS distribution. Tackle only after Phases 1–8 are stable and the app has proven long-term value.
 
 - [ ] Capacitor scaffold, iOS + Android targets
 - [ ] Replace FileReader CSV import with Capacitor Filesystem plugin (iOS requirement)
 - [ ] App icon + splash screen
 - [ ] Deep linking for Google OAuth redirect
 - [ ] Android: signed APK for sideloading · iOS: TestFlight (up to 100 testers)
+
+---
+
+## Won't Implement
+
+- Restore from CSV export — JSON backup is the canonical restore path; CSV is for external analysis only
+- Multiplayer or shared draft sessions
+- Real-time MTGA integration
+- Social features or public grade sharing
 
 ---
 
@@ -221,15 +320,7 @@ Converts GitHub Pages app to native mobile via Capacitor. The most expensive pha
 - [x] Version display in header subtitle and login screen — now v3.0
 - [x] Login screen theme toggle (☀/🌙)
 - [x] Remember last open set — saves set code on `loadSet()`, auto-restores after sets list populates
-- [ ] Delta cell hover indicator — no visual feedback that the cell is clickable; consider subtle underline or background on hover
 - [x] Grade guide icon — replaced ? with ⚖ (scales)
-- [ ] Tags filter dropdown overflows screen on right side on desktop — reposition to open left-aligned or use viewport boundary detection
-- [ ] Set selector width inconsistency — desktop set name can feel truncated compared to mobile full-width version; consider consistent max-width treatment
-- [ ] Source badge visual weight inconsistency — AH (blue) border reads lighter than 17L (gold) border against the parchment background; same CSS but different perceived weight due to color. Consider normalizing border opacity or using a neutral border color for all badges
-- [ ] **Performance: useMemo for sorted/filtered** — both arrays recompute on every render regardless of what changed; wrap in `useMemo` with proper dependency arrays for a real win on 300-card sets
-- [ ] **Performance: debounce Supabase sync on note input** — every keystroke in a notes field triggers a Supabase upsert; debounce `persistGrades` 400–500ms for text fields
-- [ ] **Refactor DraftLab god component** — ~30 useState, ~10 useEffect, ~15 handlers all in one function; split into logical sub-components (GradeTable, FilterBar, DrawerPanel, etc.) before Phase 5 adds draft simulator state
-- [ ] **Session state persistence per set** — save sort column/direction and active filter buttons (color, rarity, graded, quadrant) to localStorage per set; restore on set load so returning to a set picks up exactly where you left off; extend the existing `draft-lab-last-set` pattern
 - [x] DFC image flip — ↻ button in lightbox toggles between card faces
 - [x] iOS input zoom — fixed with `font-size: 16px` minimum on all mobile inputs and selects
 - [x] GitHub project link inside the app — added as "View on GitHub →" in the © modal
@@ -238,8 +329,13 @@ Converts GitHub Pages app to native mobile via Capacitor. The most expensive pha
 - [x] Scatter chart scroll interference on mobile — `touch-action:none` on canvas prevents page scroll while hovering
 - [x] SPOT and CONSENSUS quadrant colors identical — SPOT changed to cyan (#00acc1)
 - [x] Set symbol in header — Scryfall SVG, gold CSS filter, displayed next to set dropdown
+- [ ] Delta cell hover indicator — no visual feedback that the cell is clickable; consider subtle underline or background on hover
+- [ ] Tags filter dropdown overflows screen on right side on desktop — reposition to open left-aligned or use viewport boundary detection
+- [ ] Set selector width inconsistency — desktop set name can feel truncated compared to mobile full-width version; consider consistent max-width treatment
+- [ ] Source badge visual weight inconsistency — AH (blue) border reads lighter than 17L (gold) border against the parchment background; same CSS but different perceived weight due to color. Consider normalizing border opacity or using a neutral border color for all badges
 - [ ] Grade dropdown alignment — native `<select>` can't be styled on mobile (OS renders natively); fix requires replacing GradeSelect with a custom picker component (button + styled overlay); deferred to polish pass
-- [ ] Mobile card whitespace — image column has dead space below the card when controls column is taller; consider full-width layout (image on top, controls stacked below) as a future option; also a natural placement for Phase 5 analytics shortcut buttons (e.g. "View in Analytics" linking to that card's scatter plot position)
+- [ ] Mobile card whitespace — image column has dead space below the card when controls column is taller; consider full-width layout (image on top, controls stacked below) as a future option
+- [ ] Session state persistence per set — save sort column/direction and active filter buttons (color, rarity, graded, quadrant) to localStorage per set; restore on set load; extend the existing `draft-lab-last-set` pattern
 
 ---
 
@@ -247,7 +343,7 @@ Converts GitHub Pages app to native mobile via Capacitor. The most expensive pha
 
 | Issue | Status | Notes |
 |-------|--------|-------|
-| AetherHub scraper uses heuristic DOM walk — may break on layout changes | Open | See Phase 5.3 |
+| AetherHub scraper uses heuristic DOM walk — may break on layout changes | Open | Robustness improvements planned for Phase 8 |
 | 17Lands game data files are 300–600MB — slow on poor connections | By design | Script supports pre-downloaded local files |
 
 ---
@@ -258,8 +354,8 @@ Converts GitHub Pages app to native mobile via Capacitor. The most expensive pha
 |--------|------|---------|--------|--------|
 | AetherHub / Nizzahon | Expert pre-release grades | Release weekend | 0–5 scale | `aetherhub-scrape.js` browser console |
 | 17Lands GIH WR | Empirical play data | 2–3 weeks post-release | Win rate → normalized 0–5 | `17lands-prep.py` + CSV import |
-| Draftsim | AI-adjusted ratings | Updated through format | Tier list | TBD — see Phase 5.2 |
-| MTGA Personal | Your own Arena play data | Ongoing | Win rate | TBD — see Phase 5.1 |
+| Draftsim | AI-adjusted ratings | Updated through format | Tier list | TBD — see Phase 8 |
+| MTGA Personal | Your own Arena play data | Ongoing | Win rate | TBD — see Phase 8 |
 
 ---
 
@@ -271,6 +367,7 @@ Converts GitHub Pages app to native mobile via Capacitor. The most expensive pha
 - All new grade fields must be handled in: `updateGrade`, `persistGrades`, `loadGrades`, `exportBackup`, `importBackup`, `exportCSV`, and the first-login sync effect
 - Mobile ⚙ drawer and desktop header must both expose any new import/action controls
 - Test mobile layout using Chrome DevTools device toolbar at 390px width
+- See `docs/README.md` for the full index of design documents and implementation specs
 
 ---
 
