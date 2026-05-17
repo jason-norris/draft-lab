@@ -2228,15 +2228,16 @@ function MobileCardItem(_ref21) {
   }, tag.label))))))))));
 }
 function ImportPanel(_ref22) {
-  let cards = _ref22.cards,
-    grades = _ref22.grades,
-    selectedSet = _ref22.selectedSet,
+  let selectedSet = _ref22.selectedSet,
     fmt17l = _ref22.fmt17l,
     setFmt17l = _ref22.setFmt17l,
-    meta = _ref22.meta,
-    setMeta = _ref22.setMeta,
     onGradesUpdate = _ref22.onGradesUpdate,
     mobile = _ref22.mobile;
+  const _useGrades2 = useGrades(),
+    cards = _useGrades2.cards,
+    grades = _useGrades2.grades,
+    meta = _useGrades2.importMeta,
+    setMeta = _useGrades2.setImportMeta;
   const _useState19 = useState(""),
     _useState20 = _slicedToArray(_useState19, 2),
     msg = _useState20[0],
@@ -3203,13 +3204,9 @@ function DraftLab(_ref32) {
       width: 300
     }
   }, React.createElement(ImportPanel, {
-    cards: cards,
-    grades: grades,
     selectedSet: selectedSet,
     fmt17l: fmt17l,
     setFmt17l: setFmt17l,
-    meta: importMeta,
-    setMeta: setImportMeta,
     onGradesUpdate: handleGradesUpdate,
     mobile: false
   }))), React.createElement("div", {
@@ -3420,13 +3417,9 @@ function DraftLab(_ref32) {
       paddingTop: 10
     }
   }, React.createElement(ImportPanel, {
-    cards: cards,
-    grades: grades,
     selectedSet: selectedSet,
     fmt17l: fmt17l,
     setFmt17l: setFmt17l,
-    meta: importMeta,
-    setMeta: setImportMeta,
     onGradesUpdate: handleGradesUpdate,
     mobile: true
   })), React.createElement("div", {

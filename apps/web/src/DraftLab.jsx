@@ -1014,7 +1014,8 @@ function MobileCardItem({ card, grade, onUpdate }) {
 }
 
 // ── ImportPanel ───────────────────────────────────────────────────────────────
-function ImportPanel({ cards, grades, selectedSet, fmt17l, setFmt17l, meta, setMeta, onGradesUpdate, mobile }) {
+function ImportPanel({ selectedSet, fmt17l, setFmt17l, onGradesUpdate, mobile }) {
+  const { cards, grades, importMeta: meta, setImportMeta: setMeta } = useGrades();
   const [msg, setMsg]         = useState("");
   const [source, setSource]   = useState("17lands");
   const [target, setTarget]   = useState("auto"); // auto | expert | performance
@@ -1628,9 +1629,7 @@ setGrades(prev => {
               {showImport && (
                 <div className="l17-panel" style={{ width:300 }}>
                   <ImportPanel
-                    cards={cards} grades={grades} selectedSet={selectedSet}
-                    fmt17l={fmt17l} setFmt17l={setFmt17l}
-                    meta={importMeta} setMeta={setImportMeta}
+                    selectedSet={selectedSet} fmt17l={fmt17l} setFmt17l={setFmt17l}
                     onGradesUpdate={handleGradesUpdate} mobile={false} />
                 </div>
               )}
@@ -1750,9 +1749,7 @@ setGrades(prev => {
             {selectedSet && (
               <div style={{ borderTop:"1px solid var(--b1)", paddingTop:10 }}>
                 <ImportPanel
-                  cards={cards} grades={grades} selectedSet={selectedSet}
-                  fmt17l={fmt17l} setFmt17l={setFmt17l}
-                  meta={importMeta} setMeta={setImportMeta}
+                  selectedSet={selectedSet} fmt17l={fmt17l} setFmt17l={setFmt17l}
                   onGradesUpdate={handleGradesUpdate} mobile={true} />
               </div>
             )}
