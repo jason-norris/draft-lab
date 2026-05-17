@@ -1053,20 +1053,65 @@ function GradeTable({ sorted, filters, onSort, onOpenLightbox, onHoverEnter, onH
   );
 }
 
+// ── MobileAnnotateSheet ───────────────────────────────────────────────────────
+function MobileAnnotateSheet({ card, onClose }) {
+  const { grades, updateGrade } = useGrades();
+  const grade  = grades[card.id] ?? {};
+  const [localNotes, setLocalNotes] = useState(grade.notes ?? "");
+  useEffect(() => { setLocalNotes(grade.notes ?? ""); }, [grade.notes]);
+
+  return (
+    <div className="annotate-overlay" onClick={e => e.target === e.currentTarget && onClose()}>
+      <div className="annotate-sheet">
+        <div className="annotate-header">
+          <span className="annotate-title">{card.name}</span>
+          <button className="annotate-close" onClick={onClose}>✕</button>
+        </div>
+
+        <div className="annotate-section">
+          <label className="annotate-label">Notes</label>
+          <textarea className="annotate-note"
+            placeholder="Capture reasoning behind grades, format-specific observations, or anything that doesn't fit the structured fields."
+            value={localNotes}
+            onChange={e => setLocalNotes(e.target.value)}
+            onBlur={() => updateGrade(card.id, "notes", localNotes || null)} />
+        </div>
+
+        <div className="annotate-section">
+          <label className="annotate-label">Tags</label>
+          <div className="tag-chips">
+            {TAGS.map(tag => (
+              <button key={tag.id}
+                className={`tag-chip${(grade.tags ?? []).includes(tag.id) ? " active" : ""}`}
+                onClick={() => {
+                  const cur = grade.tags ?? [];
+                  updateGrade(card.id, "tags", cur.includes(tag.id) ? cur.filter(t => t !== tag.id) : [...cur, tag.id]);
+                }}>{tag.label}</button>
+            ))}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // ── MobileCardItem ────────────────────────────────────────────────────────────
 function MobileCardItem({ card, expanded, onToggleExpand }) {
   const { grades, updateGrade } = useGrades();
   const grade    = grades[card.id] ?? {};
   const onUpdate = (field, value) => updateGrade(card.id, field, value);
-  const [bigImg, setBigImg]           = useState(false);
-  const [face, setFace]               = useState(0);
-  const [localNotes, setLocalNotes]   = useState(grade.notes ?? "");
+  const [bigImg, setBigImg]             = useState(false);
+  const [face, setFace]                 = useState(0);
+  const [showAnnotate, setShowAnnotate] = useState(false);
   const [addingContext, setAddingContext] = useState(false);
   const cardRef = useRef(null);
-  useEffect(() => { setLocalNotes(grade.notes ?? ""); }, [grade.notes]);
   useEffect(() => {
     if (expanded && cardRef.current) {
-      setTimeout(() => cardRef.current?.scrollIntoView({ behavior:"smooth", block:"start" }), 50);
+      setTimeout(() => {
+        const rect = cardRef.current.getBoundingClientRect();
+        const target = window.scrollY + rect.top - window.innerHeight * 0.15;
+        window.scrollTo({ top: Math.max(0, target), behavior:"smooth" });
+      }, 50);
     }
   }, [expanded]);
   const ck     = getColorKey(card);
@@ -1103,10 +1148,12 @@ function MobileCardItem({ card, expanded, onToggleExpand }) {
 
           {expanded && (
             <div className="mc-expanded">
-              {bigImg && img
-                ? <img src={img} alt={card.name} className="mc-img-full" onClick={() => setBigImg(false)} />
-                : (
-                  <div className="mc-exp-inner">
+              {bigImg && img && (
+                <div className="mc-img-overlay" onClick={() => setBigImg(false)}>
+                  <img src={img} alt={card.name} className="mc-img-overlay-img" />
+                </div>
+              )}
+              <div className="mc-exp-inner">
                     {img && (
                       <div className="mc-img-wrap">
                         <img src={img} alt={card.name} className="mc-img"
@@ -1188,30 +1235,22 @@ function MobileCardItem({ card, expanded, onToggleExpand }) {
                           </button>
                         );
                       })()}
-                      <div className="mc-field">
-                        <label>Notes</label>
-                        <textarea className="mc-note" placeholder="Capture reasoning behind grades, format-specific observations, or anything that doesn't fit the structured fields." rows="2"
-                          value={localNotes}
-                          onChange={e => setLocalNotes(e.target.value)}
-                          onBlur={() => updateGrade(card.id, "notes", localNotes || null)} />
-                      </div>
-                      <div className="mc-field">
-                        <label>Tags</label>
-                        <div className="tag-chips">
-                          {TAGS.map(tag => (
-                            <button key={tag.id}
-                              className={`tag-chip${(grade.tags ?? []).includes(tag.id) ? " active" : ""}`}
-                              onClick={() => {
-                                const cur = grade.tags ?? [];
-                                onUpdate("tags", cur.includes(tag.id) ? cur.filter(t => t !== tag.id) : [...cur, tag.id]);
-                              }}>{tag.label}</button>
-                          ))}
-                        </div>
-                      </div>
+                      <button className="mc-annotate-btn" onClick={() => setShowAnnotate(true)}>
+                        <span>Notes · Tags</span>
+                        {(grade.notes || (grade.tags?.length ?? 0) > 0) && (
+                          <span className="mc-annotate-hint">
+                            {[
+                              grade.notes && "note",
+                              (grade.tags?.length ?? 0) > 0 && `${grade.tags.length} tag${grade.tags.length !== 1 ? "s" : ""}`,
+                            ].filter(Boolean).join(" · ")}
+                          </span>
+                        )}
+                      </button>
+                      {showAnnotate && (
+                        <MobileAnnotateSheet card={card} onClose={() => setShowAnnotate(false)} />
+                      )}
                     </div>
                   </div>
-                )
-              }
             </div>
           )}
         </div>
