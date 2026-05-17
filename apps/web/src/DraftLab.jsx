@@ -885,8 +885,100 @@ function GradeSelect({ cls, value, onChange }) {
   );
 }
 
+// ── GradeRow ──────────────────────────────────────────────────────────────────
+function GradeRow({ card, onOpenLightbox, onHoverEnter, onHoverMove, onHoverLeave }) {
+  const { grades, updateGrade, importMeta } = useGrades();
+  const g  = grades[card.id] ?? {};
+  const ck = getColorKey(card);
+  const q  = calcQuadrant(g);
+  return (
+    <tr className={`c${ck}`}>
+      <td
+        onMouseEnter={e => onHoverEnter(card, { x: e.clientX, y: e.clientY })}
+        onMouseMove={e  => onHoverMove({ x: e.clientX, y: e.clientY })}
+        onMouseLeave={onHoverLeave}
+        onClick={onOpenLightbox}
+        style={{ cursor:"pointer" }}>
+        <div className="card-name">
+          {card.name}
+          {q && <QuadrantBadge g={g} />}
+        </div>
+      </td>
+      <td><span className="mana">{card.mana_cost ? renderMana(card.mana_cost) : "—"}</span></td>
+      <td><span className="typ">{card.type_line?.split("—")[0]?.trim()}</span></td>
+      <td>
+        <span className="rar-dot" style={{ background: RARITY_COLORS[card.rarity], marginRight:5 }} />
+        <span style={{ fontSize:10, color:"var(--dim)" }}>{card.rarity.charAt(0).toUpperCase()}</span>
+      </td>
+      <td><span className="ctag" data-c={ck}>{MTG_LABELS[ck]}</span></td>
+      <td>
+        <GradeSelect cls="gsel" value={g.myGrade || ""}
+          onChange={e => updateGrade(card.id, "myGrade", e.target.value)} />
+      </td>
+      <td>
+        <RatingInput value={g.expert_rating} source={g.expert_source}
+          sourceMeta={importMeta?.expert}
+          onChange={v => updateGrade(card.id, "expert_rating", v)} />
+      </td>
+      <td>
+        <RatingInput value={g.performance_rating} source={g.performance_source}
+          sourceMeta={importMeta?.performance}
+          onChange={v => updateGrade(card.id, "performance_rating", v)} />
+      </td>
+      <td><ThreeWayDelta g={g} /></td>
+      <td>
+        <GradeSelect cls="gsel" value={g.sunsetGrade || ""}
+          onChange={e => updateGrade(card.id, "sunsetGrade", e.target.value)} />
+      </td>
+      <td>
+        <input type="text" className="note-in" placeholder="Notes…"
+          value={g.notes ?? ""}
+          onChange={e => updateGrade(card.id, "notes", e.target.value)} />
+        <TagCell tags={g.tags ?? []} onToggle={id => {
+          const cur = g.tags ?? [];
+          updateGrade(card.id, "tags", cur.includes(id) ? cur.filter(t => t !== id) : [...cur, id]);
+        }} />
+      </td>
+    </tr>
+  );
+}
+
+// ── GradeTable ────────────────────────────────────────────────────────────────
+function GradeTable({ sorted, filters, onSort, onOpenLightbox, onHoverEnter, onHoverMove, onHoverLeave }) {
+  return (
+    <div className="tbl-wrap desktop-only">
+      <table>
+        <thead>
+          <tr>
+            {[
+              ["name","Card"],["cmc","Cost"],[null,"Type"],["rarity","Rar"],["color","Color"],
+              ["myGrade","My Grade"],["expert","Expert"],["performance","Perf"],
+              [null,"Δ"],[null,"Sunset"],[null,"Notes"]
+            ].map(([col, lbl]) => (
+              <th key={lbl} className={col && filters.sortCol === col ? "sorted" : ""}
+                onClick={() => col && onSort(col)} style={!col ? { cursor:"default" } : {}}>
+                {lbl}{col && filters.sortCol === col ? (filters.sortDir === "asc" ? " ▲" : " ▼") : ""}
+              </th>
+            ))}
+          </tr>
+        </thead>
+        <tbody>
+          {sorted.map((card, idx) => (
+            <GradeRow key={card.id} card={card}
+              onOpenLightbox={() => onOpenLightbox(idx)}
+              onHoverEnter={onHoverEnter} onHoverMove={onHoverMove} onHoverLeave={onHoverLeave} />
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
 // ── MobileCardItem ────────────────────────────────────────────────────────────
-function MobileCardItem({ card, grade, onUpdate }) {
+function MobileCardItem({ card }) {
+  const { grades, updateGrade } = useGrades();
+  const grade    = grades[card.id] ?? {};
+  const onUpdate = (field, value) => updateGrade(card.id, field, value);
   const [expanded, setExpanded] = useState(false);
   const [bigImg, setBigImg]     = useState(false);
   const [face, setFace]         = useState(0);
@@ -1862,89 +1954,22 @@ setGrades(prev => {
 
       {/* ── Desktop table ── */}
       {!showAnalytics && !loading && !error && cards.length > 0 && (
-        <div className="tbl-wrap desktop-only">
-          <table>
-            <thead>
-              <tr>
-                {[
-                  ["name","Card"],["cmc","Cost"],[null,"Type"],["rarity","Rar"],["color","Color"],
-                  ["myGrade","My Grade"],["expert","Expert"],["performance","Perf"],
-                  [null,"Δ"],[null,"Sunset"],[null,"Notes"]
-                ].map(([col, lbl]) => (
-                  <th key={lbl} className={col && filters.sortCol === col ? "sorted" : ""}
-                    onClick={() => col && handleSort(col)} style={!col ? { cursor:"default" } : {}}>
-                    {lbl}{col && filters.sortCol === col ? (filters.sortDir === "asc" ? " ▲" : " ▼") : ""}
-                  </th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {sorted.map(card => {
-                const g  = grades[card.id] ?? {};
-                const ck = getColorKey(card);
-                const q  = calcQuadrant(g);
-                return (
-                  <tr key={card.id} className={`c${ck}`}>
-                    <td
-                      onMouseEnter={e => { setHovered(card); setHoverPos({ x: e.clientX, y: e.clientY }); }}
-                      onMouseMove={e  =>   setHoverPos({ x: e.clientX, y: e.clientY })}
-                      onMouseLeave={()  =>  setHovered(null)}
-                      onClick={() => setLightboxIndex(sorted.indexOf(card))}
-                      style={{ cursor:"pointer" }}>
-                      <div className="card-name">
-                        {card.name}
-                        {q && <QuadrantBadge g={g} />}
-                      </div>
-                    </td>
-                    <td><span className="mana">{card.mana_cost ? renderMana(card.mana_cost) : "—"}</span></td>
-                    <td><span className="typ">{card.type_line?.split("—")[0]?.trim()}</span></td>
-                    <td>
-                      <span className="rar-dot" style={{ background: RARITY_COLORS[card.rarity], marginRight:5 }} />
-                      <span style={{ fontSize:10, color:"var(--dim)" }}>{card.rarity.charAt(0).toUpperCase()}</span>
-                    </td>
-                    <td><span className="ctag" data-c={ck}>{MTG_LABELS[ck]}</span></td>
-                    <td>
-                      <GradeSelect cls="gsel" value={g.myGrade || ""}
-                        onChange={e => updateGrade(card.id, "myGrade", e.target.value)} />
-                    </td>
-                    <td>
-                      <RatingInput value={g.expert_rating} source={g.expert_source}
-                        sourceMeta={importMeta?.expert}
-                        onChange={v => updateGrade(card.id, "expert_rating", v)} />
-                    </td>
-                    <td>
-                      <RatingInput value={g.performance_rating} source={g.performance_source}
-                        sourceMeta={importMeta?.performance}
-                        onChange={v => updateGrade(card.id, "performance_rating", v)} />
-                    </td>
-                    <td><ThreeWayDelta g={g} /></td>
-                    <td>
-                      <GradeSelect cls="gsel" value={g.sunsetGrade || ""}
-                        onChange={e => updateGrade(card.id, "sunsetGrade", e.target.value)} />
-                    </td>
-                    <td>
-                      <input type="text" className="note-in" placeholder="Notes…"
-                        value={g.notes ?? ""}
-                        onChange={e => updateGrade(card.id, "notes", e.target.value)} />
-                      <TagCell tags={g.tags ?? []} onToggle={id => {
-                        const cur = g.tags ?? [];
-                        updateGrade(card.id, "tags", cur.includes(id) ? cur.filter(t => t !== id) : [...cur, id]);
-                      }} />
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
-        </div>
+        <GradeTable
+          sorted={sorted}
+          filters={filters}
+          onSort={handleSort}
+          onOpenLightbox={idx => setLightboxIndex(idx)}
+          onHoverEnter={(card, pos) => { setHovered(card); setHoverPos(pos); }}
+          onHoverMove={pos => setHoverPos(pos)}
+          onHoverLeave={() => setHovered(null)}
+        />
       )}
 
       {/* ── Mobile card list ── */}
       {!showAnalytics && !loading && !error && cards.length > 0 && (
         <div className="card-list mobile-only">
           {sorted.map(card => (
-            <MobileCardItem key={card.id} card={card} grade={grades[card.id] ?? {}}
-              onUpdate={(field, value) => updateGrade(card.id, field, value)} />
+            <MobileCardItem key={card.id} card={card} />
           ))}
         </div>
       )}

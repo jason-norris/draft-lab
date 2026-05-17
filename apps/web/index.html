@@ -2033,11 +2033,131 @@ function GradeSelect(_ref20) {
     }
   }, g || "—")));
 }
-function MobileCardItem(_ref21) {
-  var _card$card_faces4, _card$card_faces$2, _card$card_faces$face3, _card$type_line4;
+function GradeRow(_ref21) {
+  var _card$type_line4;
   let card = _ref21.card,
-    grade = _ref21.grade,
-    onUpdate = _ref21.onUpdate;
+    onOpenLightbox = _ref21.onOpenLightbox,
+    onHoverEnter = _ref21.onHoverEnter,
+    onHoverMove = _ref21.onHoverMove,
+    onHoverLeave = _ref21.onHoverLeave;
+  const _useGrades3 = useGrades(),
+    grades = _useGrades3.grades,
+    updateGrade = _useGrades3.updateGrade,
+    importMeta = _useGrades3.importMeta;
+  const g = grades[card.id] ?? {};
+  const ck = getColorKey(card);
+  const q = calcQuadrant(g);
+  return React.createElement("tr", {
+    className: `c${ck}`
+  }, React.createElement("td", {
+    onMouseEnter: e => onHoverEnter(card, {
+      x: e.clientX,
+      y: e.clientY
+    }),
+    onMouseMove: e => onHoverMove({
+      x: e.clientX,
+      y: e.clientY
+    }),
+    onMouseLeave: onHoverLeave,
+    onClick: onOpenLightbox,
+    style: {
+      cursor: "pointer"
+    }
+  }, React.createElement("div", {
+    className: "card-name"
+  }, card.name, q && React.createElement(QuadrantBadge, {
+    g: g
+  }))), React.createElement("td", null, React.createElement("span", {
+    className: "mana"
+  }, card.mana_cost ? renderMana(card.mana_cost) : "—")), React.createElement("td", null, React.createElement("span", {
+    className: "typ"
+  }, (_card$type_line4 = card.type_line) === null || _card$type_line4 === void 0 || (_card$type_line4 = _card$type_line4.split("—")[0]) === null || _card$type_line4 === void 0 ? void 0 : _card$type_line4.trim())), React.createElement("td", null, React.createElement("span", {
+    className: "rar-dot",
+    style: {
+      background: RARITY_COLORS[card.rarity],
+      marginRight: 5
+    }
+  }), React.createElement("span", {
+    style: {
+      fontSize: 10,
+      color: "var(--dim)"
+    }
+  }, card.rarity.charAt(0).toUpperCase())), React.createElement("td", null, React.createElement("span", {
+    className: "ctag",
+    "data-c": ck
+  }, MTG_LABELS[ck])), React.createElement("td", null, React.createElement(GradeSelect, {
+    cls: "gsel",
+    value: g.myGrade || "",
+    onChange: e => updateGrade(card.id, "myGrade", e.target.value)
+  })), React.createElement("td", null, React.createElement(RatingInput, {
+    value: g.expert_rating,
+    source: g.expert_source,
+    sourceMeta: importMeta === null || importMeta === void 0 ? void 0 : importMeta.expert,
+    onChange: v => updateGrade(card.id, "expert_rating", v)
+  })), React.createElement("td", null, React.createElement(RatingInput, {
+    value: g.performance_rating,
+    source: g.performance_source,
+    sourceMeta: importMeta === null || importMeta === void 0 ? void 0 : importMeta.performance,
+    onChange: v => updateGrade(card.id, "performance_rating", v)
+  })), React.createElement("td", null, React.createElement(ThreeWayDelta, {
+    g: g
+  })), React.createElement("td", null, React.createElement(GradeSelect, {
+    cls: "gsel",
+    value: g.sunsetGrade || "",
+    onChange: e => updateGrade(card.id, "sunsetGrade", e.target.value)
+  })), React.createElement("td", null, React.createElement("input", {
+    type: "text",
+    className: "note-in",
+    placeholder: "Notes\u2026",
+    value: g.notes ?? "",
+    onChange: e => updateGrade(card.id, "notes", e.target.value)
+  }), React.createElement(TagCell, {
+    tags: g.tags ?? [],
+    onToggle: id => {
+      const cur = g.tags ?? [];
+      updateGrade(card.id, "tags", cur.includes(id) ? cur.filter(t => t !== id) : [...cur, id]);
+    }
+  })));
+}
+function GradeTable(_ref22) {
+  let sorted = _ref22.sorted,
+    filters = _ref22.filters,
+    onSort = _ref22.onSort,
+    onOpenLightbox = _ref22.onOpenLightbox,
+    onHoverEnter = _ref22.onHoverEnter,
+    onHoverMove = _ref22.onHoverMove,
+    onHoverLeave = _ref22.onHoverLeave;
+  return React.createElement("div", {
+    className: "tbl-wrap desktop-only"
+  }, React.createElement("table", null, React.createElement("thead", null, React.createElement("tr", null, [["name", "Card"], ["cmc", "Cost"], [null, "Type"], ["rarity", "Rar"], ["color", "Color"], ["myGrade", "My Grade"], ["expert", "Expert"], ["performance", "Perf"], [null, "Δ"], [null, "Sunset"], [null, "Notes"]].map(_ref23 => {
+    let _ref24 = _slicedToArray(_ref23, 2),
+      col = _ref24[0],
+      lbl = _ref24[1];
+    return React.createElement("th", {
+      key: lbl,
+      className: col && filters.sortCol === col ? "sorted" : "",
+      onClick: () => col && onSort(col),
+      style: !col ? {
+        cursor: "default"
+      } : {}
+    }, lbl, col && filters.sortCol === col ? filters.sortDir === "asc" ? " ▲" : " ▼" : "");
+  }))), React.createElement("tbody", null, sorted.map((card, idx) => React.createElement(GradeRow, {
+    key: card.id,
+    card: card,
+    onOpenLightbox: () => onOpenLightbox(idx),
+    onHoverEnter: onHoverEnter,
+    onHoverMove: onHoverMove,
+    onHoverLeave: onHoverLeave
+  })))));
+}
+function MobileCardItem(_ref25) {
+  var _card$card_faces4, _card$card_faces$2, _card$card_faces$face3, _card$type_line5;
+  let card = _ref25.card;
+  const _useGrades4 = useGrades(),
+    grades = _useGrades4.grades,
+    updateGrade = _useGrades4.updateGrade;
+  const grade = grades[card.id] ?? {};
+  const onUpdate = (field, value) => updateGrade(card.id, field, value);
   const _useState13 = useState(false),
     _useState14 = _slicedToArray(_useState13, 2),
     expanded = _useState14[0],
@@ -2082,7 +2202,7 @@ function MobileCardItem(_ref21) {
     }
   })), React.createElement("div", {
     className: "mc-meta"
-  }, (_card$type_line4 = card.type_line) === null || _card$type_line4 === void 0 || (_card$type_line4 = _card$type_line4.split("—")[0]) === null || _card$type_line4 === void 0 ? void 0 : _card$type_line4.trim(), " · ", React.createElement("span", {
+  }, (_card$type_line5 = card.type_line) === null || _card$type_line5 === void 0 || (_card$type_line5 = _card$type_line5.split("—")[0]) === null || _card$type_line5 === void 0 ? void 0 : _card$type_line5.trim(), " · ", React.createElement("span", {
     style: {
       color: RARITY_COLORS[card.rarity],
       fontWeight: 600
@@ -2228,17 +2348,17 @@ function MobileCardItem(_ref21) {
     }
   }, tag.label))))))))));
 }
-function ImportPanel(_ref22) {
-  let selectedSet = _ref22.selectedSet,
-    fmt17l = _ref22.fmt17l,
-    setFmt17l = _ref22.setFmt17l,
-    onGradesUpdate = _ref22.onGradesUpdate,
-    mobile = _ref22.mobile;
-  const _useGrades3 = useGrades(),
-    cards = _useGrades3.cards,
-    grades = _useGrades3.grades,
-    meta = _useGrades3.importMeta,
-    setMeta = _useGrades3.setImportMeta;
+function ImportPanel(_ref26) {
+  let selectedSet = _ref26.selectedSet,
+    fmt17l = _ref26.fmt17l,
+    setFmt17l = _ref26.setFmt17l,
+    onGradesUpdate = _ref26.onGradesUpdate,
+    mobile = _ref26.mobile;
+  const _useGrades5 = useGrades(),
+    cards = _useGrades5.cards,
+    grades = _useGrades5.grades,
+    meta = _useGrades5.importMeta,
+    setMeta = _useGrades5.setImportMeta;
   const _useState19 = useState(""),
     _useState20 = _slicedToArray(_useState19, 2),
     msg = _useState20[0],
@@ -2331,10 +2451,10 @@ function ImportPanel(_ref22) {
   };
   const flush = which => {
     const next = {};
-    for (const _ref23 of Object.entries(grades)) {
-      var _ref24 = _slicedToArray(_ref23, 2);
-      const id = _ref24[0];
-      const g = _ref24[1];
+    for (const _ref27 of Object.entries(grades)) {
+      var _ref28 = _slicedToArray(_ref27, 2);
+      const id = _ref28[0];
+      const g = _ref28[1];
       const updated = {
         ...g
       };
@@ -2359,10 +2479,10 @@ function ImportPanel(_ref22) {
   };
   const srcButtons = React.createElement("div", {
     className: "l17-fmt"
-  }, [["17lands", "17Lands"], ["aetherhub", "AetherHub"], ["manual", "Manual"]].map(_ref25 => {
-    let _ref26 = _slicedToArray(_ref25, 2),
-      val = _ref26[0],
-      lbl = _ref26[1];
+  }, [["17lands", "17Lands"], ["aetherhub", "AetherHub"], ["manual", "Manual"]].map(_ref29 => {
+    let _ref30 = _slicedToArray(_ref29, 2),
+      val = _ref30[0],
+      lbl = _ref30[1];
     return React.createElement("button", {
       key: val,
       className: source === val ? "active" : "",
@@ -2371,10 +2491,10 @@ function ImportPanel(_ref22) {
   }));
   const fmt17lButtons = source === "17lands" && React.createElement("div", {
     className: "l17-fmt"
-  }, [["PremierDraft", "Premier"], ["QuickDraft", "Quick"], ["TradDraft", "Trad"]].map(_ref27 => {
-    let _ref28 = _slicedToArray(_ref27, 2),
-      val = _ref28[0],
-      lbl = _ref28[1];
+  }, [["PremierDraft", "Premier"], ["QuickDraft", "Quick"], ["TradDraft", "Trad"]].map(_ref31 => {
+    let _ref32 = _slicedToArray(_ref31, 2),
+      val = _ref32[0],
+      lbl = _ref32[1];
     return React.createElement("button", {
       key: val,
       className: fmt17l === val ? "active" : "",
@@ -2383,10 +2503,10 @@ function ImportPanel(_ref22) {
   }));
   const targetButtons = React.createElement("div", {
     className: "l17-fmt"
-  }, [["auto", "Auto"], ["expert", "Expert"], ["performance", "Perf"]].map(_ref29 => {
-    let _ref30 = _slicedToArray(_ref29, 2),
-      val = _ref30[0],
-      lbl = _ref30[1];
+  }, [["auto", "Auto"], ["expert", "Expert"], ["performance", "Perf"]].map(_ref33 => {
+    let _ref34 = _slicedToArray(_ref33, 2),
+      val = _ref34[0],
+      lbl = _ref34[1];
     return React.createElement("button", {
       key: val,
       className: target === val ? "active" : "",
@@ -2593,23 +2713,23 @@ function filterReducer(state, action) {
       return state;
   }
 }
-function MobileDrawer(_ref31) {
-  let open = _ref31.open,
-    onClose = _ref31.onClose,
-    filters = _ref31.filters,
-    dispatch = _ref31.dispatch,
-    hasFilters = _ref31.hasFilters,
-    clearFilters = _ref31.clearFilters,
-    toggleFilterTag = _ref31.toggleFilterTag,
-    selectedSet = _ref31.selectedSet,
-    fmt17l = _ref31.fmt17l,
-    setFmt17l = _ref31.setFmt17l,
-    handleGradesUpdate = _ref31.handleGradesUpdate,
-    exportBackup = _ref31.exportBackup,
-    importBackup = _ref31.importBackup,
-    exportCSV = _ref31.exportCSV,
-    user = _ref31.user,
-    syncStatus = _ref31.syncStatus;
+function MobileDrawer(_ref35) {
+  let open = _ref35.open,
+    onClose = _ref35.onClose,
+    filters = _ref35.filters,
+    dispatch = _ref35.dispatch,
+    hasFilters = _ref35.hasFilters,
+    clearFilters = _ref35.clearFilters,
+    toggleFilterTag = _ref35.toggleFilterTag,
+    selectedSet = _ref35.selectedSet,
+    fmt17l = _ref35.fmt17l,
+    setFmt17l = _ref35.setFmt17l,
+    handleGradesUpdate = _ref35.handleGradesUpdate,
+    exportBackup = _ref35.exportBackup,
+    importBackup = _ref35.importBackup,
+    exportCSV = _ref35.exportCSV,
+    user = _ref35.user,
+    syncStatus = _ref35.syncStatus;
   return React.createElement("div", {
     className: "filters-mobile mobile-only",
     style: {
@@ -2663,10 +2783,10 @@ function MobileDrawer(_ref31) {
     className: "fm-row"
   }, React.createElement("span", {
     className: "fl"
-  }, "Rarity:"), [["all", "All"], ["common", "C"], ["uncommon", "U"], ["rare", "R"], ["mythic", "M"]].map(_ref32 => {
-    let _ref33 = _slicedToArray(_ref32, 2),
-      full = _ref33[0],
-      abbr = _ref33[1];
+  }, "Rarity:"), [["all", "All"], ["common", "C"], ["uncommon", "U"], ["rare", "R"], ["mythic", "M"]].map(_ref36 => {
+    let _ref37 = _slicedToArray(_ref36, 2),
+      full = _ref37[0],
+      abbr = _ref37[1];
     return React.createElement("button", {
       key: full,
       className: `fb${filters.rarity === full ? " active" : ""}`,
@@ -2796,17 +2916,17 @@ function MobileDrawer(_ref31) {
     }
   }, syncStatus === "syncing" ? "↑" : "✓")));
 }
-function FilterBar(_ref34) {
-  let filters = _ref34.filters,
-    dispatch = _ref34.dispatch,
-    hasExpertData = _ref34.hasExpertData,
-    hasPerformanceData = _ref34.hasPerformanceData,
-    sortedCount = _ref34.sortedCount,
-    hasFilters = _ref34.hasFilters,
-    showTagFilter = _ref34.showTagFilter,
-    setShowTagFilter = _ref34.setShowTagFilter,
-    toggleFilterTag = _ref34.toggleFilterTag,
-    clearFilters = _ref34.clearFilters;
+function FilterBar(_ref38) {
+  let filters = _ref38.filters,
+    dispatch = _ref38.dispatch,
+    hasExpertData = _ref38.hasExpertData,
+    hasPerformanceData = _ref38.hasPerformanceData,
+    sortedCount = _ref38.sortedCount,
+    hasFilters = _ref38.hasFilters,
+    showTagFilter = _ref38.showTagFilter,
+    setShowTagFilter = _ref38.setShowTagFilter,
+    toggleFilterTag = _ref38.toggleFilterTag,
+    clearFilters = _ref38.clearFilters;
   return React.createElement("div", {
     className: "filters-desktop desktop-only"
   }, React.createElement("span", {
@@ -2894,8 +3014,8 @@ const GradesContext = React.createContext(null);
 function useGrades() {
   return React.useContext(GradesContext);
 }
-function DraftLab(_ref35) {
-  let user = _ref35.user;
+function DraftLab(_ref39) {
+  let user = _ref39.user;
   const isMobile = useIsMobile();
   const didFirstSync = useRef(false);
   const _useState25 = useState(() => localStorage.getItem("draft-lab-theme") || "auto"),
@@ -3230,10 +3350,10 @@ function DraftLab(_ref35) {
         const data = parsed.data ?? parsed;
         let count = 0;
         const restoredGrades = {};
-        for (const _ref36 of Object.entries(data)) {
-          var _ref37 = _slicedToArray(_ref36, 2);
-          const key = _ref37[0];
-          const value = _ref37[1];
+        for (const _ref40 of Object.entries(data)) {
+          var _ref41 = _slicedToArray(_ref40, 2);
+          const key = _ref41[0];
+          const value = _ref41[1];
           if ((key.startsWith("draft-grades-") || key.startsWith("draft-import-meta-") || key === "draft-lab-theme") && typeof value === "string") {
             localStorage.setItem(key, value);
             count++;
@@ -3584,107 +3704,22 @@ function DraftLab(_ref35) {
     className: "empty-title"
   }, "Draft Lab"), React.createElement("div", {
     className: "empty-sub"
-  }, "Choose a set above to start evaluating cards"))), !showAnalytics && !loading && !error && cards.length > 0 && React.createElement("div", {
-    className: "tbl-wrap desktop-only"
-  }, React.createElement("table", null, React.createElement("thead", null, React.createElement("tr", null, [["name", "Card"], ["cmc", "Cost"], [null, "Type"], ["rarity", "Rar"], ["color", "Color"], ["myGrade", "My Grade"], ["expert", "Expert"], ["performance", "Perf"], [null, "Δ"], [null, "Sunset"], [null, "Notes"]].map(_ref38 => {
-    let _ref39 = _slicedToArray(_ref38, 2),
-      col = _ref39[0],
-      lbl = _ref39[1];
-    return React.createElement("th", {
-      key: lbl,
-      className: col && filters.sortCol === col ? "sorted" : "",
-      onClick: () => col && handleSort(col),
-      style: !col ? {
-        cursor: "default"
-      } : {}
-    }, lbl, col && filters.sortCol === col ? filters.sortDir === "asc" ? " ▲" : " ▼" : "");
-  }))), React.createElement("tbody", null, sorted.map(card => {
-    var _card$type_line5;
-    const g = grades[card.id] ?? {};
-    const ck = getColorKey(card);
-    const q = calcQuadrant(g);
-    return React.createElement("tr", {
-      key: card.id,
-      className: `c${ck}`
-    }, React.createElement("td", {
-      onMouseEnter: e => {
-        setHovered(card);
-        setHoverPos({
-          x: e.clientX,
-          y: e.clientY
-        });
-      },
-      onMouseMove: e => setHoverPos({
-        x: e.clientX,
-        y: e.clientY
-      }),
-      onMouseLeave: () => setHovered(null),
-      onClick: () => setLightboxIndex(sorted.indexOf(card)),
-      style: {
-        cursor: "pointer"
-      }
-    }, React.createElement("div", {
-      className: "card-name"
-    }, card.name, q && React.createElement(QuadrantBadge, {
-      g: g
-    }))), React.createElement("td", null, React.createElement("span", {
-      className: "mana"
-    }, card.mana_cost ? renderMana(card.mana_cost) : "—")), React.createElement("td", null, React.createElement("span", {
-      className: "typ"
-    }, (_card$type_line5 = card.type_line) === null || _card$type_line5 === void 0 || (_card$type_line5 = _card$type_line5.split("—")[0]) === null || _card$type_line5 === void 0 ? void 0 : _card$type_line5.trim())), React.createElement("td", null, React.createElement("span", {
-      className: "rar-dot",
-      style: {
-        background: RARITY_COLORS[card.rarity],
-        marginRight: 5
-      }
-    }), React.createElement("span", {
-      style: {
-        fontSize: 10,
-        color: "var(--dim)"
-      }
-    }, card.rarity.charAt(0).toUpperCase())), React.createElement("td", null, React.createElement("span", {
-      className: "ctag",
-      "data-c": ck
-    }, MTG_LABELS[ck])), React.createElement("td", null, React.createElement(GradeSelect, {
-      cls: "gsel",
-      value: g.myGrade || "",
-      onChange: e => updateGrade(card.id, "myGrade", e.target.value)
-    })), React.createElement("td", null, React.createElement(RatingInput, {
-      value: g.expert_rating,
-      source: g.expert_source,
-      sourceMeta: importMeta === null || importMeta === void 0 ? void 0 : importMeta.expert,
-      onChange: v => updateGrade(card.id, "expert_rating", v)
-    })), React.createElement("td", null, React.createElement(RatingInput, {
-      value: g.performance_rating,
-      source: g.performance_source,
-      sourceMeta: importMeta === null || importMeta === void 0 ? void 0 : importMeta.performance,
-      onChange: v => updateGrade(card.id, "performance_rating", v)
-    })), React.createElement("td", null, React.createElement(ThreeWayDelta, {
-      g: g
-    })), React.createElement("td", null, React.createElement(GradeSelect, {
-      cls: "gsel",
-      value: g.sunsetGrade || "",
-      onChange: e => updateGrade(card.id, "sunsetGrade", e.target.value)
-    })), React.createElement("td", null, React.createElement("input", {
-      type: "text",
-      className: "note-in",
-      placeholder: "Notes\u2026",
-      value: g.notes ?? "",
-      onChange: e => updateGrade(card.id, "notes", e.target.value)
-    }), React.createElement(TagCell, {
-      tags: g.tags ?? [],
-      onToggle: id => {
-        const cur = g.tags ?? [];
-        updateGrade(card.id, "tags", cur.includes(id) ? cur.filter(t => t !== id) : [...cur, id]);
-      }
-    })));
-  })))), !showAnalytics && !loading && !error && cards.length > 0 && React.createElement("div", {
+  }, "Choose a set above to start evaluating cards"))), !showAnalytics && !loading && !error && cards.length > 0 && React.createElement(GradeTable, {
+    sorted: sorted,
+    filters: filters,
+    onSort: handleSort,
+    onOpenLightbox: idx => setLightboxIndex(idx),
+    onHoverEnter: (card, pos) => {
+      setHovered(card);
+      setHoverPos(pos);
+    },
+    onHoverMove: pos => setHoverPos(pos),
+    onHoverLeave: () => setHovered(null)
+  }), !showAnalytics && !loading && !error && cards.length > 0 && React.createElement("div", {
     className: "card-list mobile-only"
   }, sorted.map(card => React.createElement(MobileCardItem, {
     key: card.id,
-    card: card,
-    grade: grades[card.id] ?? {},
-    onUpdate: (field, value) => updateGrade(card.id, field, value)
+    card: card
   }))), hovered && getImageUrl(hovered) && !isMobile && lightboxIndex === null && React.createElement("div", {
     className: "preview",
     style: {
@@ -3714,21 +3749,21 @@ function DraftLab(_ref35) {
     className: "guide-h1"
   }, "Grade Reference"), React.createElement("div", {
     className: "guide-sub"
-  }, "Half-grade anchors for Limited evaluation"), GRADE_TIERS.map(_ref40 => {
-    let tier = _ref40.tier,
-      rows = _ref40.rows;
+  }, "Half-grade anchors for Limited evaluation"), GRADE_TIERS.map(_ref42 => {
+    let tier = _ref42.tier,
+      rows = _ref42.rows;
     return React.createElement("div", {
       key: tier,
       className: "guide-tier"
     }, React.createElement("div", {
       className: "guide-tier-hdr"
-    }, tier), rows.map(_ref41 => {
-      let _ref42 = _slicedToArray(_ref41, 5),
-        grade = _ref42[0],
-        bg = _ref42[1],
-        fg = _ref42[2],
-        pick = _ref42[3],
-        desc = _ref42[4];
+    }, tier), rows.map(_ref43 => {
+      let _ref44 = _slicedToArray(_ref43, 5),
+        grade = _ref44[0],
+        bg = _ref44[1],
+        fg = _ref44[2],
+        pick = _ref44[3],
+        desc = _ref44[4];
       return React.createElement("div", {
         key: grade,
         className: "guide-row"
@@ -3800,9 +3835,9 @@ function DraftLab(_ref35) {
     }
   }, "View on GitHub \u2192"))))));
 }
-function LoginScreen(_ref43) {
-  let onSignIn = _ref43.onSignIn,
-    loading = _ref43.loading;
+function LoginScreen(_ref45) {
+  let onSignIn = _ref45.onSignIn,
+    loading = _ref45.loading;
   const _useState71 = useState(() => {
       const saved = localStorage.getItem("draft-lab-theme");
       if (saved && saved !== "auto") return saved;
@@ -3889,8 +3924,8 @@ function AuthGate() {
       setAuthLoading(false);
       return;
     }
-    sb.auth.getSession().then(_ref44 => {
-      let session = _ref44.data.session;
+    sb.auth.getSession().then(_ref46 => {
+      let session = _ref46.data.session;
       setUser((session === null || session === void 0 ? void 0 : session.user) ?? null);
       setAuthLoading(false);
     }).catch(() => setAuthLoading(false));
