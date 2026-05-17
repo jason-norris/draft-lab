@@ -1141,6 +1141,57 @@ function ImportPanel({ cards, grades, selectedSet, fmt17l, setFmt17l, meta, setM
   );
 }
 
+// ── Pure utilities (no state dependencies) ────────────────────────────────────
+
+function debounce(fn, ms) {
+  let timer;
+  return function(...args) {
+    clearTimeout(timer);
+    timer = setTimeout(() => fn.apply(this, args), ms);
+  };
+}
+
+function applyFilters(card, grade, filters) {
+  const ck = getColorKey(card);
+  if (filters.color    !== "all" && ck !== filters.color) return false;
+  if (filters.rarity   !== "all" && card.rarity !== filters.rarity) return false;
+  if (filters.search   && !card.name.toLowerCase().includes(filters.search.toLowerCase())) return false;
+  if (filters.graded   === "graded"   && !grade.myGrade) return false;
+  if (filters.graded   === "ungraded" &&  grade.myGrade) return false;
+  if (filters.quadrant !== "all") {
+    const q = calcQuadrant(grade);
+    const label = q?.label ?? "none";
+    if (filters.quadrant === "none" ? label !== "none" : label !== filters.quadrant) return false;
+  }
+  if (filters.tags?.length > 0) {
+    const cardTags = grade.tags ?? [];
+    if (!filters.tags.some(t => cardTags.includes(t))) return false;
+  }
+  return true;
+}
+
+function applySort(a, b, grades, col, dir) {
+  const ga = grades[a.id] ?? {}, gb = grades[b.id] ?? {};
+  let av, bv;
+  switch (col) {
+    case "color":       av = COLOR_ORDER[getColorKey(a)] * 100 + (a.cmc ?? 0); bv = COLOR_ORDER[getColorKey(b)] * 100 + (b.cmc ?? 0); break;
+    case "name":        av = a.name;                               bv = b.name; break;
+    case "cmc":         av = a.cmc ?? 0;                           bv = b.cmc ?? 0; break;
+    case "rarity":      av = RARITIES.indexOf(a.rarity);           bv = RARITIES.indexOf(b.rarity); break;
+    case "myGrade":     av = GRADES.indexOf(ga.myGrade || "");     bv = GRADES.indexOf(gb.myGrade || ""); break;
+    case "expert":      av = ga.expert_rating ?? 99;               bv = gb.expert_rating ?? 99; break;
+    case "performance": av = ga.performance_rating ?? 99;          bv = gb.performance_rating ?? 99; break;
+    default: return 0;
+  }
+  if (av < bv) return dir === "asc" ? -1 :  1;
+  if (av > bv) return dir === "asc" ?  1 : -1;
+  return 0;
+}
+
+// ── GradesContext ─────────────────────────────────────────────────────────────
+const GradesContext = React.createContext(null);
+function useGrades() { return React.useContext(GradesContext); }
+
 // ── DraftLab ──────────────────────────────────────────────────────────────────
 function DraftLab({ user }) {
   const isMobile = useIsMobile();
@@ -1336,13 +1387,17 @@ function DraftLab({ user }) {
     }
   };
 
-  const updateGrade = (cardId, field, value) => {
-    setGrades(prev => {
+  const updateGrade = useCallback((cardId, field, value) => {
+setGrades(prev => {
       const next = { ...prev, [cardId]: { ...(prev[cardId] ?? {}), [field]: value } };
       if (selectedSet) persistGrades(next, selectedSet.code);
       return next;
     });
-  };
+  }, [selectedSet, persistGrades]);
+
+  const gradesContextValue = useMemo(() => ({
+    grades, updateGrade, cards, importMeta, setImportMeta,
+  }), [grades, updateGrade, cards, importMeta]);
 
   const handleSort = col => {
     if (sortCol === col) setSortDir(d => d === "asc" ? "desc" : "asc");
@@ -1429,50 +1484,23 @@ function DraftLab({ user }) {
   const pct = gradableCards.length ? Math.round(gradedCount / gradableCards.length * 100) : 0;
   const analyticsUnlocked = pct >= 50 && (cards.some(c => grades[c.id]?.expert_rating != null) || cards.some(c => grades[c.id]?.performance_rating != null));
 
-  const filtered = useMemo(() => cards.filter(c => {
-    const ck = getColorKey(c);
-    const g  = grades[c.id] ?? {};
-    if (filterColor    !== "all" && ck !== filterColor) return false;
-    if (filterRarity   !== "all" && c.rarity !== filterRarity) return false;
-    if (filterSearch && !c.name.toLowerCase().includes(filterSearch.toLowerCase())) return false;
-    if (filterGraded   === "graded"   && !g.myGrade) return false;
-    if (filterGraded   === "ungraded" &&  g.myGrade) return false;
-    if (filterQuadrant !== "all") {
-      const q = calcQuadrant(g);
-      const label = q?.label ?? "none";
-      if (filterQuadrant === "none" ? label !== "none" : label !== filterQuadrant) return false;
-    }
-    if (filterTags.length > 0) {
-      const cardTags = g.tags ?? [];
-      if (!filterTags.some(t => cardTags.includes(t))) return false;
-    }
-    return true;
-  }), [cards, grades, filterColor, filterRarity, filterSearch, filterGraded, filterQuadrant, filterTags]);
+  const filtered = useMemo(() => cards.filter(c =>
+    applyFilters(c, grades[c.id] ?? {}, {
+      color: filterColor, rarity: filterRarity, search: filterSearch,
+      graded: filterGraded, quadrant: filterQuadrant, tags: filterTags,
+    })
+  ), [cards, grades, filterColor, filterRarity, filterSearch, filterGraded, filterQuadrant, filterTags]);
 
-  const sorted = useMemo(() => [...filtered].sort((a, b) => {
-    const ga = grades[a.id] ?? {}, gb = grades[b.id] ?? {};
-    let av, bv;
-    switch (activeSort) {
-      case "color":       av = COLOR_ORDER[getColorKey(a)] * 100 + (a.cmc ?? 0); bv = COLOR_ORDER[getColorKey(b)] * 100 + (b.cmc ?? 0); break;
-      case "name":        av = a.name; bv = b.name; break;
-      case "cmc":         av = a.cmc ?? 0; bv = b.cmc ?? 0; break;
-      case "rarity":      av = RARITIES.indexOf(a.rarity); bv = RARITIES.indexOf(b.rarity); break;
-      case "myGrade":     av = GRADES.indexOf(ga.myGrade || ""); bv = GRADES.indexOf(gb.myGrade || ""); break;
-      case "expert":      av = ga.expert_rating ?? 99; bv = gb.expert_rating ?? 99; break;
-      case "performance": av = ga.performance_rating ?? 99; bv = gb.performance_rating ?? 99; break;
-      default: return 0;
-    }
-    const dir = isMobile ? "asc" : sortDir;
-    if (av < bv) return dir === "asc" ? -1 :  1;
-    if (av > bv) return dir === "asc" ?  1 : -1;
-    return 0;
-  }), [filtered, grades, activeSort, sortDir, isMobile]);
+  const sorted = useMemo(() => [...filtered].sort((a, b) =>
+    applySort(a, b, grades, activeSort, isMobile ? "asc" : sortDir)
+  ), [filtered, grades, activeSort, sortDir, isMobile]);
 
   const hasExpertData      = cards.some(c => grades[c.id]?.expert_rating != null);
   const hasPerformanceData = cards.some(c => grades[c.id]?.performance_rating != null);
 
   // ── Render ──
   return (
+    <GradesContext.Provider value={gradesContextValue}>
     <div className="app" onClick={() => { setShowSetDD(false); setShowImport(false); setShowExport(false); setShowTagFilter(false); }}>
 
       {/* ── Header ── */}
@@ -1961,6 +1989,7 @@ function DraftLab({ user }) {
         </div>
       )}
     </div>
+    </GradesContext.Provider>
   );
 }
 
