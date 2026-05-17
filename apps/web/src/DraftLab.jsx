@@ -408,9 +408,10 @@ function CardLightbox({ sorted, lightboxIndex, onClose, onNav }) {
   const g     = grades[card.id] ?? {};
   const q     = calcQuadrant(g);
   const hasDFC = card.card_faces?.length >= 2 && card.card_faces[1]?.image_uris;
-  const [face, setFace] = useState(0);
+  const [face, setFace]               = useState(0);
+  const [addingContext, setAddingContext] = useState(false);
 
-  useEffect(() => { setFace(0); }, [card.id]);
+  useEffect(() => { setFace(0); setAddingContext(false); }, [card.id]);
 
   useEffect(() => {
     const handler = e => {
@@ -430,6 +431,12 @@ function CardLightbox({ sorted, lightboxIndex, onClose, onNav }) {
   const Field = ({ label, children }) => (
     <div className="lb-field"><label>{label}</label>{children}</div>
   );
+
+  const showContext = g.context != null || addingContext;
+  const ctx = g.context ?? {};
+  const updateCtx = (field, val) =>
+    onUpdate(card.id, "context", { early:"", ahead:"", parity:"", behind:"", ...ctx, [field]: val });
+  const removeCtx = () => { onUpdate(card.id, "context", null); setAddingContext(false); };
 
   return (
     <div className="lb-overlay" onClick={e => e.target === e.currentTarget && onClose()}>
@@ -498,11 +505,31 @@ function CardLightbox({ sorted, lightboxIndex, onClose, onNav }) {
 
           <div className="lb-divider" />
 
+          {showContext ? (
+            <div className="lb-context">
+              <div className="lb-context-header">
+                <span>Game State Context</span>
+                <button className="lb-context-remove" onClick={removeCtx}>Remove</button>
+              </div>
+              {[["early","Early"],["ahead","Ahead"],["parity","Parity"],["behind","Behind"]].map(([key, label]) => (
+                <div key={key} className="lb-context-row">
+                  <span>{label}</span>
+                  <GradeSelect cls="mc-sel" value={ctx[key] ?? ""}
+                    onChange={e => updateCtx(key, e.target.value)} />
+                </div>
+              ))}
+            </div>
+          ) : (
+            <button className="lb-context-add" onClick={() => setAddingContext(true)}>
+              + Add context ratings
+            </button>
+          )}
+
           <Field label="Notes">
-            <textarea className="mc-note" style={{ minHeight:72 }} placeholder="Notes…"
+            <textarea className="mc-note" style={{ minHeight:72 }} placeholder="Capture reasoning behind grades, format-specific observations, or anything that doesn't fit the structured fields."
               key={card.id}
               defaultValue={g.notes ?? ""}
-              onBlur={e => onUpdate(card.id, "notes", e.target.value)} />
+              onBlur={e => onUpdate(card.id, "notes", e.target.value || null)} />
           </Field>
 
           <Field label="Tags">
@@ -983,9 +1010,10 @@ function MobileCardItem({ card, expanded, onToggleExpand }) {
   const { grades, updateGrade } = useGrades();
   const grade    = grades[card.id] ?? {};
   const onUpdate = (field, value) => updateGrade(card.id, field, value);
-  const [bigImg, setBigImg]       = useState(false);
-  const [face, setFace]           = useState(0);
-  const [localNotes, setLocalNotes] = useState(grade.notes ?? "");
+  const [bigImg, setBigImg]           = useState(false);
+  const [face, setFace]               = useState(0);
+  const [localNotes, setLocalNotes]   = useState(grade.notes ?? "");
+  const [addingContext, setAddingContext] = useState(false);
   useEffect(() => { setLocalNotes(grade.notes ?? ""); }, [grade.notes]);
   const ck     = getColorKey(card);
   const hasDFC = card.card_faces?.length >= 2 && card.card_faces[1]?.image_uris;
@@ -1080,12 +1108,38 @@ function MobileCardItem({ card, expanded, onToggleExpand }) {
                           </div>
                         ) : null;
                       })()}
+                      {(() => {
+                        const showCtx = grade.context != null || addingContext;
+                        const ctx = grade.context ?? {};
+                        const updateCtx = (field, val) =>
+                          onUpdate("context", { early:"", ahead:"", parity:"", behind:"", ...ctx, [field]: val });
+                        return showCtx ? (
+                          <div className="mc-field">
+                            <div className="lb-context-header" style={{ marginBottom:6 }}>
+                              <span>Game State Context</span>
+                              <button className="lb-context-remove"
+                                onClick={() => { onUpdate("context", null); setAddingContext(false); }}>Remove</button>
+                            </div>
+                            {[["early","Early"],["ahead","Ahead"],["parity","Parity"],["behind","Behind"]].map(([key, label]) => (
+                              <div key={key} className="lb-context-row">
+                                <span>{label}</span>
+                                <GradeSelect cls="mc-sel" value={ctx[key] ?? ""}
+                                  onChange={e => updateCtx(key, e.target.value)} />
+                              </div>
+                            ))}
+                          </div>
+                        ) : (
+                          <button className="lb-context-add" onClick={() => setAddingContext(true)}>
+                            + Add context ratings
+                          </button>
+                        );
+                      })()}
                       <div className="mc-field">
                         <label>Notes</label>
-                        <textarea className="mc-note" placeholder="Notes…" rows="2"
+                        <textarea className="mc-note" placeholder="Capture reasoning behind grades, format-specific observations, or anything that doesn't fit the structured fields." rows="2"
                           value={localNotes}
                           onChange={e => setLocalNotes(e.target.value)}
-                          onBlur={() => updateGrade(card.id, "notes", localNotes)} />
+                          onBlur={() => updateGrade(card.id, "notes", localNotes || null)} />
                       </div>
                       <div className="mc-field">
                         <label>Tags</label>
