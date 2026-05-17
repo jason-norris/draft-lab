@@ -1280,8 +1280,9 @@ function CardLightbox(_ref10) {
       minHeight: 72
     },
     placeholder: "Notes\u2026",
-    value: g.notes || "",
-    onChange: e => onUpdate(card.id, "notes", e.target.value)
+    key: card.id,
+    defaultValue: g.notes ?? "",
+    onBlur: e => onUpdate(card.id, "notes", e.target.value)
   })), React.createElement(Field, {
     label: "Tags"
   }, React.createElement("div", {
@@ -2047,6 +2048,13 @@ function GradeRow(_ref21) {
   const g = grades[card.id] ?? {};
   const ck = getColorKey(card);
   const q = calcQuadrant(g);
+  const _useState13 = useState(g.notes ?? ""),
+    _useState14 = _slicedToArray(_useState13, 2),
+    localNotes = _useState14[0],
+    setLocalNotes = _useState14[1];
+  useEffect(() => {
+    setLocalNotes(g.notes ?? "");
+  }, [g.notes]);
   return React.createElement("tr", {
     className: `c${ck}`
   }, React.createElement("td", {
@@ -2109,8 +2117,9 @@ function GradeRow(_ref21) {
     type: "text",
     className: "note-in",
     placeholder: "Notes\u2026",
-    value: g.notes ?? "",
-    onChange: e => updateGrade(card.id, "notes", e.target.value)
+    value: localNotes,
+    onChange: e => setLocalNotes(e.target.value),
+    onBlur: () => updateGrade(card.id, "notes", localNotes)
   }), React.createElement(TagCell, {
     tags: g.tags ?? [],
     onToggle: id => {
@@ -2152,16 +2161,14 @@ function GradeTable(_ref22) {
 }
 function MobileCardItem(_ref25) {
   var _card$card_faces4, _card$card_faces$2, _card$card_faces$face3, _card$type_line5;
-  let card = _ref25.card;
+  let card = _ref25.card,
+    expanded = _ref25.expanded,
+    onToggleExpand = _ref25.onToggleExpand;
   const _useGrades4 = useGrades(),
     grades = _useGrades4.grades,
     updateGrade = _useGrades4.updateGrade;
   const grade = grades[card.id] ?? {};
   const onUpdate = (field, value) => updateGrade(card.id, field, value);
-  const _useState13 = useState(false),
-    _useState14 = _slicedToArray(_useState13, 2),
-    expanded = _useState14[0],
-    setExpanded = _useState14[1];
   const _useState15 = useState(false),
     _useState16 = _slicedToArray(_useState15, 2),
     bigImg = _useState16[0],
@@ -2170,6 +2177,13 @@ function MobileCardItem(_ref25) {
     _useState18 = _slicedToArray(_useState17, 2),
     face = _useState18[0],
     setFace = _useState18[1];
+  const _useState19 = useState(grade.notes ?? ""),
+    _useState20 = _slicedToArray(_useState19, 2),
+    localNotes = _useState20[0],
+    setLocalNotes = _useState20[1];
+  useEffect(() => {
+    setLocalNotes(grade.notes ?? "");
+  }, [grade.notes]);
   const ck = getColorKey(card);
   const hasDFC = ((_card$card_faces4 = card.card_faces) === null || _card$card_faces4 === void 0 ? void 0 : _card$card_faces4.length) >= 2 && ((_card$card_faces$2 = card.card_faces[1]) === null || _card$card_faces$2 === void 0 ? void 0 : _card$card_faces$2.image_uris);
   const img = hasDFC ? (_card$card_faces$face3 = card.card_faces[face]) === null || _card$card_faces$face3 === void 0 || (_card$card_faces$face3 = _card$card_faces$face3.image_uris) === null || _card$card_faces$face3 === void 0 ? void 0 : _card$card_faces$face3.normal : getImageUrl(card);
@@ -2187,7 +2201,7 @@ function MobileCardItem(_ref25) {
   }, React.createElement("div", {
     className: "mc-top",
     onClick: () => {
-      setExpanded(v => !v);
+      onToggleExpand();
       setBigImg(false);
       setFace(0);
     }
@@ -2333,8 +2347,9 @@ function MobileCardItem(_ref25) {
     className: "mc-note",
     placeholder: "Notes\u2026",
     rows: "2",
-    value: grade.notes || "",
-    onChange: e => onUpdate("notes", e.target.value)
+    value: localNotes,
+    onChange: e => setLocalNotes(e.target.value),
+    onBlur: () => updateGrade(card.id, "notes", localNotes)
   })), React.createElement("div", {
     className: "mc-field"
   }, React.createElement("label", null, "Tags"), React.createElement("div", {
@@ -2359,18 +2374,18 @@ function ImportPanel(_ref26) {
     grades = _useGrades5.grades,
     meta = _useGrades5.importMeta,
     setMeta = _useGrades5.setImportMeta;
-  const _useState19 = useState(""),
-    _useState20 = _slicedToArray(_useState19, 2),
-    msg = _useState20[0],
-    setMsg = _useState20[1];
-  const _useState21 = useState("17lands"),
+  const _useState21 = useState(""),
     _useState22 = _slicedToArray(_useState21, 2),
-    source = _useState22[0],
-    setSource = _useState22[1];
-  const _useState23 = useState("auto"),
+    msg = _useState22[0],
+    setMsg = _useState22[1];
+  const _useState23 = useState("17lands"),
     _useState24 = _slicedToArray(_useState23, 2),
-    target = _useState24[0],
-    setTarget = _useState24[1];
+    source = _useState24[0],
+    setSource = _useState24[1];
+  const _useState25 = useState("auto"),
+    _useState26 = _slicedToArray(_useState25, 2),
+    target = _useState26[0],
+    setTarget = _useState26[1];
   const resolvedTarget = target === "auto" ? source === "17lands" ? "performance" : "expert" : target;
   const importCSV = text => {
     const lines = text.trim().split("\n").filter(l => l.trim());
@@ -3040,25 +3055,29 @@ function GradingView(_ref39) {
   const _useGrades6 = useGrades(),
     cards = _useGrades6.cards,
     grades = _useGrades6.grades;
-  const _useState25 = useState(false),
-    _useState26 = _slicedToArray(_useState25, 2),
-    showTagFilter = _useState26[0],
-    setShowTagFilter = _useState26[1];
-  const _useState27 = useState(null),
+  const _useState27 = useState(false),
     _useState28 = _slicedToArray(_useState27, 2),
-    lightboxIndex = _useState28[0],
-    setLightboxIndex = _useState28[1];
+    showTagFilter = _useState28[0],
+    setShowTagFilter = _useState28[1];
   const _useState29 = useState(null),
     _useState30 = _slicedToArray(_useState29, 2),
-    hovered = _useState30[0],
-    setHovered = _useState30[1];
-  const _useState31 = useState({
+    lightboxIndex = _useState30[0],
+    setLightboxIndex = _useState30[1];
+  const _useState31 = useState(null),
+    _useState32 = _slicedToArray(_useState31, 2),
+    hovered = _useState32[0],
+    setHovered = _useState32[1];
+  const _useState33 = useState({
       x: 0,
       y: 0
     }),
-    _useState32 = _slicedToArray(_useState31, 2),
-    hoverPos = _useState32[0],
-    setHoverPos = _useState32[1];
+    _useState34 = _slicedToArray(_useState33, 2),
+    hoverPos = _useState34[0],
+    setHoverPos = _useState34[1];
+  const _useState35 = useState(null),
+    _useState36 = _slicedToArray(_useState35, 2),
+    expandedCardId = _useState36[0],
+    setExpandedCardId = _useState36[1];
   const activeSort = isMobile ? filters.mobileSort : filters.sortCol;
   const gradableCards = useMemo(() => cards.filter(c => !isBasicLand(c)), [cards]);
   const gradedCount = gradableCards.filter(c => {
@@ -3185,7 +3204,9 @@ function GradingView(_ref39) {
     className: "card-list mobile-only"
   }, sorted.map(card => React.createElement(MobileCardItem, {
     key: card.id,
-    card: card
+    card: card,
+    expanded: expandedCardId === card.id,
+    onToggleExpand: () => setExpandedCardId(v => v === card.id ? null : card.id)
   }))), hovered && getImageUrl(hovered) && !isMobile && lightboxIndex === null && React.createElement("div", {
     className: "preview",
     style: {
@@ -3209,26 +3230,26 @@ function DraftLab(_ref40) {
   let user = _ref40.user;
   const isMobile = useIsMobile();
   const didFirstSync = useRef(false);
-  const _useState33 = useState(() => localStorage.getItem("draft-lab-theme") || "auto"),
-    _useState34 = _slicedToArray(_useState33, 2),
-    theme = _useState34[0],
-    setTheme = _useState34[1];
-  const _useState35 = useState(false),
-    _useState36 = _slicedToArray(_useState35, 2),
-    showAnalytics = _useState36[0],
-    setShowAnalytics = _useState36[1];
-  const _useState37 = useState(false),
+  const _useState37 = useState(() => localStorage.getItem("draft-lab-theme") || "auto"),
     _useState38 = _slicedToArray(_useState37, 2),
-    showImport = _useState38[0],
-    setShowImport = _useState38[1];
+    theme = _useState38[0],
+    setTheme = _useState38[1];
   const _useState39 = useState(false),
     _useState40 = _slicedToArray(_useState39, 2),
-    showExport = _useState40[0],
-    setShowExport = _useState40[1];
-  const _useState41 = useState("PremierDraft"),
+    showAnalytics = _useState40[0],
+    setShowAnalytics = _useState40[1];
+  const _useState41 = useState(false),
     _useState42 = _slicedToArray(_useState41, 2),
-    fmt17l = _useState42[0],
-    setFmt17l = _useState42[1];
+    showImport = _useState42[0],
+    setShowImport = _useState42[1];
+  const _useState43 = useState(false),
+    _useState44 = _slicedToArray(_useState43, 2),
+    showExport = _useState44[0],
+    setShowExport = _useState44[1];
+  const _useState45 = useState("PremierDraft"),
+    _useState46 = _slicedToArray(_useState45, 2),
+    fmt17l = _useState46[0],
+    setFmt17l = _useState46[1];
   const importRef = useRef(null);
   const exportRef = useRef(null);
   useEffect(() => {
@@ -3247,66 +3268,66 @@ function DraftLab(_ref40) {
     document.addEventListener("mousedown", h);
     return () => document.removeEventListener("mousedown", h);
   }, [showExport]);
-  const _useState43 = useState(null),
-    _useState44 = _slicedToArray(_useState43, 2),
-    importMeta = _useState44[0],
-    setImportMeta = _useState44[1];
-  const _useState45 = useState([]),
-    _useState46 = _slicedToArray(_useState45, 2),
-    sets = _useState46[0],
-    setSets = _useState46[1];
   const _useState47 = useState(null),
     _useState48 = _slicedToArray(_useState47, 2),
-    selectedSet = _useState48[0],
-    setSelectedSet = _useState48[1];
+    importMeta = _useState48[0],
+    setImportMeta = _useState48[1];
   const _useState49 = useState([]),
     _useState50 = _slicedToArray(_useState49, 2),
-    cards = _useState50[0],
-    setCards = _useState50[1];
-  const _useState51 = useState({}),
+    sets = _useState50[0],
+    setSets = _useState50[1];
+  const _useState51 = useState(null),
     _useState52 = _slicedToArray(_useState51, 2),
-    grades = _useState52[0],
-    setGrades = _useState52[1];
-  const _useState53 = useState(false),
+    selectedSet = _useState52[0],
+    setSelectedSet = _useState52[1];
+  const _useState53 = useState([]),
     _useState54 = _slicedToArray(_useState53, 2),
-    loading = _useState54[0],
-    setLoading = _useState54[1];
-  const _useState55 = useState(""),
+    cards = _useState54[0],
+    setCards = _useState54[1];
+  const _useState55 = useState({}),
     _useState56 = _slicedToArray(_useState55, 2),
-    loadMsg = _useState56[0],
-    setLoadMsg = _useState56[1];
-  const _useState57 = useState(null),
+    grades = _useState56[0],
+    setGrades = _useState56[1];
+  const _useState57 = useState(false),
     _useState58 = _slicedToArray(_useState57, 2),
-    error = _useState58[0],
-    setError = _useState58[1];
+    loading = _useState58[0],
+    setLoading = _useState58[1];
+  const _useState59 = useState(""),
+    _useState60 = _slicedToArray(_useState59, 2),
+    loadMsg = _useState60[0],
+    setLoadMsg = _useState60[1];
+  const _useState61 = useState(null),
+    _useState62 = _slicedToArray(_useState61, 2),
+    error = _useState62[0],
+    setError = _useState62[1];
   const _useReducer = useReducer(filterReducer, filterInitialState),
     _useReducer2 = _slicedToArray(_useReducer, 2),
     filters = _useReducer2[0],
     dispatchFilter = _useReducer2[1];
-  const _useState59 = useState(false),
-    _useState60 = _slicedToArray(_useState59, 2),
-    showMobF = _useState60[0],
-    setShowMobF = _useState60[1];
-  const _useState61 = useState(false),
-    _useState62 = _slicedToArray(_useState61, 2),
-    showGuide = _useState62[0],
-    setShowGuide = _useState62[1];
-  const _useState63 = useState(""),
+  const _useState63 = useState(false),
     _useState64 = _slicedToArray(_useState63, 2),
-    syncStatus = _useState64[0],
-    setSyncStatus = _useState64[1];
+    showMobF = _useState64[0],
+    setShowMobF = _useState64[1];
   const _useState65 = useState(false),
     _useState66 = _slicedToArray(_useState65, 2),
-    showLegal = _useState66[0],
-    setShowLegal = _useState66[1];
+    showGuide = _useState66[0],
+    setShowGuide = _useState66[1];
   const _useState67 = useState(""),
     _useState68 = _slicedToArray(_useState67, 2),
-    setSearch = _useState68[0],
-    setSetSearch = _useState68[1];
+    syncStatus = _useState68[0],
+    setSyncStatus = _useState68[1];
   const _useState69 = useState(false),
     _useState70 = _slicedToArray(_useState69, 2),
-    showSetDD = _useState70[0],
-    setShowSetDD = _useState70[1];
+    showLegal = _useState70[0],
+    setShowLegal = _useState70[1];
+  const _useState71 = useState(""),
+    _useState72 = _slicedToArray(_useState71, 2),
+    setSearch = _useState72[0],
+    setSetSearch = _useState72[1];
+  const _useState73 = useState(false),
+    _useState74 = _slicedToArray(_useState73, 2),
+    showSetDD = _useState74[0],
+    setShowSetDD = _useState74[1];
   useEffect(() => {
     if (theme === "auto") document.documentElement.removeAttribute("data-theme");else document.documentElement.setAttribute("data-theme", theme);
   }, [theme]);
@@ -3902,14 +3923,14 @@ function DraftLab(_ref40) {
 function LoginScreen(_ref46) {
   let onSignIn = _ref46.onSignIn,
     loading = _ref46.loading;
-  const _useState71 = useState(() => {
+  const _useState75 = useState(() => {
       const saved = localStorage.getItem("draft-lab-theme");
       if (saved && saved !== "auto") return saved;
       return window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
     }),
-    _useState72 = _slicedToArray(_useState71, 2),
-    theme = _useState72[0],
-    setTheme = _useState72[1];
+    _useState76 = _slicedToArray(_useState75, 2),
+    theme = _useState76[0],
+    setTheme = _useState76[1];
   useEffect(() => {
     document.documentElement.setAttribute("data-theme", theme);
     localStorage.setItem("draft-lab-theme", theme);
@@ -3971,18 +3992,18 @@ function LoginScreen(_ref46) {
   })), "Sign in with Google"))));
 }
 function AuthGate() {
-  const _useState73 = useState(null),
-    _useState74 = _slicedToArray(_useState73, 2),
-    user = _useState74[0],
-    setUser = _useState74[1];
-  const _useState75 = useState(true),
-    _useState76 = _slicedToArray(_useState75, 2),
-    authLoading = _useState76[0],
-    setAuthLoading = _useState76[1];
-  const _useState77 = useState(false),
+  const _useState77 = useState(null),
     _useState78 = _slicedToArray(_useState77, 2),
-    signing = _useState78[0],
-    setSigning = _useState78[1];
+    user = _useState78[0],
+    setUser = _useState78[1];
+  const _useState79 = useState(true),
+    _useState80 = _slicedToArray(_useState79, 2),
+    authLoading = _useState80[0],
+    setAuthLoading = _useState80[1];
+  const _useState81 = useState(false),
+    _useState82 = _slicedToArray(_useState81, 2),
+    signing = _useState82[0],
+    setSigning = _useState82[1];
   useEffect(() => {
     if (!SUPABASE_CONFIGURED) {
       setAuthLoading(false);

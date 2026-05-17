@@ -500,8 +500,9 @@ function CardLightbox({ sorted, lightboxIndex, onClose, onNav }) {
 
           <Field label="Notes">
             <textarea className="mc-note" style={{ minHeight:72 }} placeholder="Notes…"
-              value={g.notes || ""}
-              onChange={e => onUpdate(card.id, "notes", e.target.value)} />
+              key={card.id}
+              defaultValue={g.notes ?? ""}
+              onBlur={e => onUpdate(card.id, "notes", e.target.value)} />
           </Field>
 
           <Field label="Tags">
@@ -891,6 +892,8 @@ function GradeRow({ card, onOpenLightbox, onHoverEnter, onHoverMove, onHoverLeav
   const g  = grades[card.id] ?? {};
   const ck = getColorKey(card);
   const q  = calcQuadrant(g);
+  const [localNotes, setLocalNotes] = useState(g.notes ?? "");
+  useEffect(() => { setLocalNotes(g.notes ?? ""); }, [g.notes]);
   return (
     <tr className={`c${ck}`}>
       <td
@@ -932,8 +935,9 @@ function GradeRow({ card, onOpenLightbox, onHoverEnter, onHoverMove, onHoverLeav
       </td>
       <td>
         <input type="text" className="note-in" placeholder="Notes…"
-          value={g.notes ?? ""}
-          onChange={e => updateGrade(card.id, "notes", e.target.value)} />
+          value={localNotes}
+          onChange={e => setLocalNotes(e.target.value)}
+          onBlur={() => updateGrade(card.id, "notes", localNotes)} />
         <TagCell tags={g.tags ?? []} onToggle={id => {
           const cur = g.tags ?? [];
           updateGrade(card.id, "tags", cur.includes(id) ? cur.filter(t => t !== id) : [...cur, id]);
@@ -975,13 +979,14 @@ function GradeTable({ sorted, filters, onSort, onOpenLightbox, onHoverEnter, onH
 }
 
 // ── MobileCardItem ────────────────────────────────────────────────────────────
-function MobileCardItem({ card }) {
+function MobileCardItem({ card, expanded, onToggleExpand }) {
   const { grades, updateGrade } = useGrades();
   const grade    = grades[card.id] ?? {};
   const onUpdate = (field, value) => updateGrade(card.id, field, value);
-  const [expanded, setExpanded] = useState(false);
-  const [bigImg, setBigImg]     = useState(false);
-  const [face, setFace]         = useState(0);
+  const [bigImg, setBigImg]       = useState(false);
+  const [face, setFace]           = useState(0);
+  const [localNotes, setLocalNotes] = useState(grade.notes ?? "");
+  useEffect(() => { setLocalNotes(grade.notes ?? ""); }, [grade.notes]);
   const ck     = getColorKey(card);
   const hasDFC = card.card_faces?.length >= 2 && card.card_faces[1]?.image_uris;
   const img    = hasDFC ? card.card_faces[face]?.image_uris?.normal : getImageUrl(card);
@@ -992,7 +997,7 @@ function MobileCardItem({ card }) {
       <div style={{ display:"flex" }}>
         <div className="mc-stripe" />
         <div className="mc-body">
-          <div className="mc-top" onClick={() => { setExpanded(v => !v); setBigImg(false); setFace(0); }}>
+          <div className="mc-top" onClick={() => { onToggleExpand(); setBigImg(false); setFace(0); }}>
             <div className="mc-info">
               <div className="mc-name">
                 {card.name}
@@ -1078,8 +1083,9 @@ function MobileCardItem({ card }) {
                       <div className="mc-field">
                         <label>Notes</label>
                         <textarea className="mc-note" placeholder="Notes…" rows="2"
-                          value={grade.notes || ""}
-                          onChange={e => onUpdate("notes", e.target.value)} />
+                          value={localNotes}
+                          onChange={e => setLocalNotes(e.target.value)}
+                          onBlur={() => updateGrade(card.id, "notes", localNotes)} />
                       </div>
                       <div className="mc-field">
                         <label>Tags</label>
@@ -1482,10 +1488,11 @@ function GradingView({
   const isMobile = useIsMobile();
   const { cards, grades } = useGrades();
 
-  const [showTagFilter, setShowTagFilter] = useState(false);
-  const [lightboxIndex, setLightboxIndex] = useState(null);
-  const [hovered, setHovered]             = useState(null);
-  const [hoverPos, setHoverPos]           = useState({ x:0, y:0 });
+  const [showTagFilter, setShowTagFilter]   = useState(false);
+  const [lightboxIndex, setLightboxIndex]   = useState(null);
+  const [hovered, setHovered]               = useState(null);
+  const [hoverPos, setHoverPos]             = useState({ x:0, y:0 });
+  const [expandedCardId, setExpandedCardId] = useState(null);
 
   const activeSort        = isMobile ? filters.mobileSort : filters.sortCol;
   const gradableCards     = useMemo(() => cards.filter(c => !isBasicLand(c)), [cards]);
@@ -1572,7 +1579,9 @@ function GradingView({
       {!showAnalytics && !loading && !error && cards.length > 0 && (
         <div className="card-list mobile-only">
           {sorted.map(card => (
-            <MobileCardItem key={card.id} card={card} />
+            <MobileCardItem key={card.id} card={card}
+              expanded={expandedCardId === card.id}
+              onToggleExpand={() => setExpandedCardId(v => v === card.id ? null : card.id)} />
           ))}
         </div>
       )}
