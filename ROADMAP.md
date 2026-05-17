@@ -1,6 +1,6 @@
 # Draft Lab — Feature Roadmap
 
-> Living document. Updated May 2026.  
+> Living document. Updated May 2026. Current version: **v3.0**  
 > Development target: local HTML → GitHub Pages + Supabase stack.  
 > Edit `apps/web/src/DraftLab.jsx`, run `node compile.js` from `apps/web/`, commit both files.
 
@@ -27,7 +27,12 @@
 - First-login local→Supabase push; backup restore pushes to cloud
 - Card hover preview confined to name cell
 - Desktop card lightbox: click card name → full overlay with image, editable grades, DFC flip, keyboard nav
-- v2.2 version display in header and login screen
+- **Analytics view** (💡 button) — unlocks at ≥50% graded + community ratings imported
+  - Distribution tab: grade histogram vs performance GIH WR line, calibration stats
+  - Scatter tab: quadrant-colored dots (MISS/SPOT/CONSENSUS/FORMAT/VAR), rarity sizing, mean crosshairs + diagonal, mobile card preview overlay
+  - Quadrants tab: card lists per quadrant sorted by gap size, count badges, clickable rows
+- Set symbol in header (Scryfall SVG, gold-tinted, next to set dropdown)
+- v3.0 version display in header and login screen
 - Login screen theme toggle (☀/🌙)
 - Auto-restore last open set on refresh/login
 - GitHub link in © modal
@@ -125,44 +130,48 @@
 
 ---
 
-## Phase 4 — Analytics View (High Value, Later)
+## Phase 4 — Analytics View ✅ COMPLETE (v3.0)
 
 **Goal:** End-of-season insight built into the app. Activates when a set has ≥50% of cards graded and at least one community rating source imported.
 
 ### 4.1 Calibration Chart
-- [ ] Histogram: My Grade distribution vs Performance rating
-- [ ] Breakdown by color and rarity
+- [x] Histogram: My Grade distribution vs Performance rating
+- [ ] Breakdown by color and rarity — deferred
 
 ### 4.2 Core Scatter Plot
-- [ ] X: Performance rating · Y: My Grade (numeric) · color: MTG color · size: rarity
-- [ ] Quadrant lines at mean of each axis
-- [ ] Hover shows card name + values; click opens lightbox (Phase 3.2)
+- [x] X: Performance rating · Y: My Grade (numeric) · color: quadrant · size: rarity
+- [x] Quadrant lines at mean of each axis + diagonal reference line
+- [x] Hover shows card name + values (nearest-point mode); click opens card preview
+- [x] Mobile: tap opens simple image+stats overlay instead of full lightbox
+- [x] Deterministic jitter prevents overplotting
 
 ### 4.3 Quadrant Summary
-- [ ] COUNT and list of cards per quadrant
-- [ ] Tag correlation: "Cards tagged [sleeper] appeared in SPOT 60% of the time"
+- [x] COUNT and list of cards per quadrant, sorted by gap size
+- [ ] Tag correlation: "Cards tagged [sleeper] appeared in SPOT 60% of the time" — deferred
 
 ### 4.4 Sunset Grade Retrospective
-- [ ] Cards with largest My Grade → Sunset Grade swing
+- [ ] Cards with largest My Grade → Sunset Grade swing — deferred (no sunset grades filled in yet)
 
 ### 4.5 Tag Accuracy
-- [ ] Per-tag average accuracy vs Performance rating
+- [ ] Per-tag average accuracy vs Performance rating — deferred
 
 ### 4.6 Cross-Set Tracking
-- [ ] Aggregate calibration metrics across sets — color bias, rarity bias, improvement trend
+- [ ] Aggregate calibration metrics across sets — color bias, rarity bias, improvement trend — deferred (needs multiple graded sets)
 
 ### 4.7 Implementation Notes
-- [ ] Lightweight CDN charting library (Chart.js or similar)
-- [ ] Analytics tab as top-level view alongside set picker
-- [ ] No additional API calls — all data already in memory
+- [x] Chart.js 4 via CDN
+- [x] Analytics tab as top-level view (💡 icon in header)
+- [x] No additional API calls — all data already in memory
 
 ---
 
-## Phase 5 — Draft Simulator (High Value, After Analytics)
+## Phase 5 — Draft Simulator 🔜 NEXT
 
 **Goal:** A full 8-player draft simulator with bot opponents, live signal tracking, deck construction, and retroactive pick review. Built on top of the existing card grading infrastructure — My Grade, Expert, and Performance ratings are visible on every card during the draft.
 
-**Prerequisites:** Phase 4 (Analytics) stable, Supabase schema extensions deployed.
+**Prerequisites:** Phase 4 (Analytics) stable ✅, Supabase schema extensions deployed.
+
+**Before starting Phase 5:** Refactor DraftLab god component (~1,300 lines, ~30 useState) into sub-components (GradeTable, FilterBar, DrawerPanel, AnalyticsView) — Phase 5 adds significant new state and this will become unmanageable otherwise.
 
 > **AI Architecture:** See [`docs/phase-7-draft-ai.md`](docs/phase-7-draft-ai.md) for the full technical design — four-layer bot system (card value function, Bayesian belief state, mistake injection, optional LLM), the signal accuracy training loop, and implementation guidance for Claude Code.
 
@@ -209,7 +218,7 @@ Converts GitHub Pages app to native mobile via Capacitor. The most expensive pha
 - [x] Source badge tooltip — shows source name, format, and time since import
 - [x] Mobile comparison row — three-way delta displayed in expanded card view
 - [x] Clickable Draft Lab logo → GitHub repo
-- [x] Version display (v2.2) in header subtitle and login screen
+- [x] Version display in header subtitle and login screen — now v3.0
 - [x] Login screen theme toggle (☀/🌙)
 - [x] Remember last open set — saves set code on `loadSet()`, auto-restores after sets list populates
 - [ ] Delta cell hover indicator — no visual feedback that the cell is clickable; consider subtle underline or background on hover
@@ -225,7 +234,12 @@ Converts GitHub Pages app to native mobile via Capacitor. The most expensive pha
 - [x] iOS input zoom — fixed with `font-size: 16px` minimum on all mobile inputs and selects
 - [x] GitHub project link inside the app — added as "View on GitHub →" in the © modal
 - [x] Sign Out unreachable on mobile — moved to mobile header as a small button to the left of ⚙
-- [ ] Mobile card whitespace — image column has dead space below the card when controls column is taller; consider full-width layout (image on top, controls stacked below) as a future option; also a natural placement for Phase 4 analytics shortcut buttons (e.g. "View in Analytics" linking to that card's scatter plot position)
+- [x] Analytics mobile landscape — header collapses to icon bar only, chart fills viewport height
+- [x] Scatter chart scroll interference on mobile — `touch-action:none` on canvas prevents page scroll while hovering
+- [x] SPOT and CONSENSUS quadrant colors identical — SPOT changed to cyan (#00acc1)
+- [x] Set symbol in header — Scryfall SVG, gold CSS filter, displayed next to set dropdown
+- [ ] Grade dropdown alignment — native `<select>` can't be styled on mobile (OS renders natively); fix requires replacing GradeSelect with a custom picker component (button + styled overlay); deferred to polish pass
+- [ ] Mobile card whitespace — image column has dead space below the card when controls column is taller; consider full-width layout (image on top, controls stacked below) as a future option; also a natural placement for Phase 5 analytics shortcut buttons (e.g. "View in Analytics" linking to that card's scatter plot position)
 
 ---
 
