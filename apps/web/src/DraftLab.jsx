@@ -48,6 +48,27 @@ const GRADE_TIERS = [
 ];
 
 // ── Tag vocabulary ───────────────────────────────────────────────────────────
+// Tags classify a card's PRIMARY DRAFT ROLE for archetype fingerprinting.
+// Use only the tags that represent the card's primary function — not every possible role.
+// Tags answer "what does this card DO for the archetype?", not "what type is it?"
+// Fewer tags = stronger signal. Over-tagging dilutes archetype analysis.
+//
+// EVALUATION — how this card compares to draft-table expectations:
+//   sleeper      - Underrated; performs better than its draft position suggests
+//   overrated    - Drafted earlier than its actual power level warrants
+//   uncertain    - Grade is provisional; revisit with more data or play experience
+//
+// ROLE — what this card does in the archetype:
+//   removal      - Kills, exiles, or permanently neutralizes an opposing permanent
+//   finisher     - Wins the game if unanswered; typically large or evasive
+//   tempo        - Temporarily disrupts opponent without permanently answering (bounce, tap, flash)
+//   card-draw    - Replaces itself or generates card advantage
+//   enabler      - Makes other cards significantly better (ramp, looters, synergy setup)
+//   build-around - The synergy piece that defines an archetype; weak in isolation
+//
+// CONTEXT — how the card fits a particular deck:
+//   archetype-only - Only playable in a specific shell; actively bad elsewhere
+//   filler         - Below-average playable; in the deck because nothing better exists
 const TAGS = [
   { id:"sleeper",        label:"Sleeper",       group:"eval" },
   { id:"overrated",      label:"Overrated",     group:"eval" },
@@ -76,6 +97,33 @@ const store = {
   get: k => { try { const v = localStorage.getItem(k); return v ? { value: v } : null; } catch { return null; } },
   set: (k, v) => { try { localStorage.setItem(k, v); } catch {} },
 };
+
+// ── Grade object type ────────────────────────────────────────────────────────
+/**
+ * @typedef {Object} GradeContext
+ * Game-state context ratings. Optional — null when not set, never an empty object.
+ * All values use the same letter grade scale as myGrade (A+…F).
+ * NEVER average or composite these values — the profile shape is the analytical signal.
+ * @property {string} early   - Card strength turns 1–3, game state undecided
+ * @property {string} ahead   - Card strength when you have board advantage
+ * @property {string} parity  - Card strength in a roughly even game
+ * @property {string} behind  - Card strength when you're losing / need to catch up
+ */
+
+/**
+ * @typedef {Object} GradeRecord
+ * Stored per card in the `data` JSONB column of `draft_grades` (keyed by Scryfall card ID).
+ * All fields are optional; omitted keys mean "not yet set" for that field.
+ * @property {string}       [myGrade]           - Letter grade (A+/A/A-/B+/B/B-/C+/C/C-/D+/D/F)
+ * @property {string}       [sunsetGrade]        - Revised end-of-season grade (same scale)
+ * @property {number}       [expert_rating]      - Pre-release expert rating 0–5
+ * @property {string}       [expert_source]      - '17lands' | 'aetherhub' | 'manual'
+ * @property {number}       [performance_rating] - 17Lands GIH win rate, normalized 0–5
+ * @property {string}       [performance_source] - '17lands' | 'aetherhub' | 'manual'
+ * @property {GradeContext} [context]            - Game state context ratings; null when not set
+ * @property {string[]}     [tags]               - Tag IDs from the TAGS vocabulary
+ * @property {string}       [notes]              - Reasoning, observations; null when empty
+ */
 
 // ── Data migration ────────────────────────────────────────────────────────────
 // Migrates old lsv/lsvSource fields → expert_rating / performance_rating
@@ -408,9 +456,10 @@ function CardLightbox({ sorted, lightboxIndex, onClose, onNav }) {
   const g     = grades[card.id] ?? {};
   const q     = calcQuadrant(g);
   const hasDFC = card.card_faces?.length >= 2 && card.card_faces[1]?.image_uris;
-  const [face, setFace] = useState(0);
+  const [face, setFace]               = useState(0);
+  const [addingContext, setAddingContext] = useState(false);
 
-  useEffect(() => { setFace(0); }, [card.id]);
+  useEffect(() => { setFace(0); setAddingContext(false); }, [card.id]);
 
   useEffect(() => {
     const handler = e => {
@@ -430,6 +479,12 @@ function CardLightbox({ sorted, lightboxIndex, onClose, onNav }) {
   const Field = ({ label, children }) => (
     <div className="lb-field"><label>{label}</label>{children}</div>
   );
+
+  const showContext = g.context != null || addingContext;
+  const ctx = g.context ?? {};
+  const updateCtx = (field, val) =>
+    onUpdate(card.id, "context", { early:"", ahead:"", parity:"", behind:"", ...ctx, [field]: val });
+  const removeCtx = () => { onUpdate(card.id, "context", null); setAddingContext(false); };
 
   return (
     <div className="lb-overlay" onClick={e => e.target === e.currentTarget && onClose()}>
@@ -498,11 +553,31 @@ function CardLightbox({ sorted, lightboxIndex, onClose, onNav }) {
 
           <div className="lb-divider" />
 
+          {showContext ? (
+            <div className="lb-context">
+              <div className="lb-context-header">
+                <span>Game State Context</span>
+                <button className="lb-context-remove" onClick={removeCtx}>Remove</button>
+              </div>
+              {[["early","Early"],["ahead","Ahead"],["parity","Parity"],["behind","Behind"]].map(([key, label]) => (
+                <div key={key} className="lb-context-row">
+                  <span>{label}</span>
+                  <GradeSelect cls="mc-sel" value={ctx[key] ?? ""}
+                    onChange={e => updateCtx(key, e.target.value)} />
+                </div>
+              ))}
+            </div>
+          ) : (
+            <button className="lb-context-add" onClick={() => setAddingContext(true)}>
+              + Add context ratings
+            </button>
+          )}
+
           <Field label="Notes">
-            <textarea className="mc-note" style={{ minHeight:72 }} placeholder="Notes…"
+            <textarea className="mc-note" style={{ minHeight:72 }} placeholder="Capture reasoning behind grades, format-specific observations, or anything that doesn't fit the structured fields."
               key={card.id}
               defaultValue={g.notes ?? ""}
-              onBlur={e => onUpdate(card.id, "notes", e.target.value)} />
+              onBlur={e => onUpdate(card.id, "notes", e.target.value || null)} />
           </Field>
 
           <Field label="Tags">
@@ -983,17 +1058,24 @@ function MobileCardItem({ card, expanded, onToggleExpand }) {
   const { grades, updateGrade } = useGrades();
   const grade    = grades[card.id] ?? {};
   const onUpdate = (field, value) => updateGrade(card.id, field, value);
-  const [bigImg, setBigImg]       = useState(false);
-  const [face, setFace]           = useState(0);
-  const [localNotes, setLocalNotes] = useState(grade.notes ?? "");
+  const [bigImg, setBigImg]           = useState(false);
+  const [face, setFace]               = useState(0);
+  const [localNotes, setLocalNotes]   = useState(grade.notes ?? "");
+  const [addingContext, setAddingContext] = useState(false);
+  const cardRef = useRef(null);
   useEffect(() => { setLocalNotes(grade.notes ?? ""); }, [grade.notes]);
+  useEffect(() => {
+    if (expanded && cardRef.current) {
+      setTimeout(() => cardRef.current?.scrollIntoView({ behavior:"smooth", block:"start" }), 50);
+    }
+  }, [expanded]);
   const ck     = getColorKey(card);
   const hasDFC = card.card_faces?.length >= 2 && card.card_faces[1]?.image_uris;
   const img    = hasDFC ? card.card_faces[face]?.image_uris?.normal : getImageUrl(card);
   const q      = calcQuadrant(grade);
 
   return (
-    <div className={`mc mobile-only c${ck}`}>
+    <div ref={cardRef} className={`mc mobile-only c${ck}`}>
       <div style={{ display:"flex" }}>
         <div className="mc-stripe" />
         <div className="mc-body">
@@ -1080,12 +1162,38 @@ function MobileCardItem({ card, expanded, onToggleExpand }) {
                           </div>
                         ) : null;
                       })()}
+                      {(() => {
+                        const showCtx = grade.context != null || addingContext;
+                        const ctx = grade.context ?? {};
+                        const updateCtx = (field, val) =>
+                          onUpdate("context", { early:"", ahead:"", parity:"", behind:"", ...ctx, [field]: val });
+                        return showCtx ? (
+                          <div className="mc-field">
+                            <div className="lb-context-header" style={{ marginBottom:6 }}>
+                              <span>Game State Context</span>
+                              <button className="lb-context-remove"
+                                onClick={() => { onUpdate("context", null); setAddingContext(false); }}>Remove</button>
+                            </div>
+                            {[["early","Early"],["ahead","Ahead"],["parity","Parity"],["behind","Behind"]].map(([key, label]) => (
+                              <div key={key} className="lb-context-row">
+                                <span>{label}</span>
+                                <GradeSelect cls="mc-sel" value={ctx[key] ?? ""}
+                                  onChange={e => updateCtx(key, e.target.value)} />
+                              </div>
+                            ))}
+                          </div>
+                        ) : (
+                          <button className="lb-context-add" onClick={() => setAddingContext(true)}>
+                            + Add context ratings
+                          </button>
+                        );
+                      })()}
                       <div className="mc-field">
                         <label>Notes</label>
-                        <textarea className="mc-note" placeholder="Notes…" rows="2"
+                        <textarea className="mc-note" placeholder="Capture reasoning behind grades, format-specific observations, or anything that doesn't fit the structured fields." rows="2"
                           value={localNotes}
                           onChange={e => setLocalNotes(e.target.value)}
-                          onBlur={() => updateGrade(card.id, "notes", localNotes)} />
+                          onBlur={() => updateGrade(card.id, "notes", localNotes || null)} />
                       </div>
                       <div className="mc-field">
                         <label>Tags</label>

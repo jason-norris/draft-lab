@@ -391,6 +391,15 @@
     .lb-field label { font-size:9px; color:var(--dimmer); text-transform:uppercase; letter-spacing:.12em; }
     .lb-row { display:flex; gap:10px; }
     .lb-row .lb-field { flex:1; }
+    .lb-context { display:flex; flex-direction:column; gap:4px; }
+    .lb-context-header { display:flex; justify-content:space-between; align-items:center; }
+    .lb-context-header span { font-size:9px; color:var(--dimmer); text-transform:uppercase; letter-spacing:.12em; }
+    .lb-context-remove { background:none; border:none; color:var(--dimmer); font-size:9px; cursor:pointer; padding:0; font-family:'IBM Plex Mono',monospace; }
+    .lb-context-remove:hover { color:var(--txt); }
+    .lb-context-row { display:flex; align-items:center; justify-content:space-between; gap:8px; }
+    .lb-context-row span { font-size:11px; color:var(--dim); min-width:48px; }
+    .lb-context-add { background:none; border:none; color:var(--dimmer); font-size:10px; cursor:pointer; padding:2px 0; font-family:'IBM Plex Mono',monospace; text-align:left; letter-spacing:.02em; }
+    .lb-context-add:hover { color:var(--txt); }
 
     @media (max-width:767px) {
       .desktop-only { display:none !important; }
@@ -1148,8 +1157,13 @@ function CardLightbox(_ref10) {
     _useState8 = _slicedToArray(_useState7, 2),
     face = _useState8[0],
     setFace = _useState8[1];
+  const _useState9 = useState(false),
+    _useState0 = _slicedToArray(_useState9, 2),
+    addingContext = _useState0[0],
+    setAddingContext = _useState0[1];
   useEffect(() => {
     setFace(0);
+    setAddingContext(false);
   }, [card.id]);
   useEffect(() => {
     const handler = e => {
@@ -1170,6 +1184,20 @@ function CardLightbox(_ref10) {
     return React.createElement("div", {
       className: "lb-field"
     }, React.createElement("label", null, label), children);
+  };
+  const showContext = g.context != null || addingContext;
+  const ctx = g.context ?? {};
+  const updateCtx = (field, val) => onUpdate(card.id, "context", {
+    early: "",
+    ahead: "",
+    parity: "",
+    behind: "",
+    ...ctx,
+    [field]: val
+  });
+  const removeCtx = () => {
+    onUpdate(card.id, "context", null);
+    setAddingContext(false);
   };
   return React.createElement("div", {
     className: "lb-overlay",
@@ -1272,17 +1300,39 @@ function CardLightbox(_ref10) {
     onChange: e => onUpdate(card.id, "performance_rating", e.target.value === "" ? null : parseFloat(e.target.value))
   }))), React.createElement("div", {
     className: "lb-divider"
-  }), React.createElement(Field, {
+  }), showContext ? React.createElement("div", {
+    className: "lb-context"
+  }, React.createElement("div", {
+    className: "lb-context-header"
+  }, React.createElement("span", null, "Game State Context"), React.createElement("button", {
+    className: "lb-context-remove",
+    onClick: removeCtx
+  }, "Remove")), [["early", "Early"], ["ahead", "Ahead"], ["parity", "Parity"], ["behind", "Behind"]].map(_ref12 => {
+    let _ref13 = _slicedToArray(_ref12, 2),
+      key = _ref13[0],
+      label = _ref13[1];
+    return React.createElement("div", {
+      key: key,
+      className: "lb-context-row"
+    }, React.createElement("span", null, label), React.createElement(GradeSelect, {
+      cls: "mc-sel",
+      value: ctx[key] ?? "",
+      onChange: e => updateCtx(key, e.target.value)
+    }));
+  })) : React.createElement("button", {
+    className: "lb-context-add",
+    onClick: () => setAddingContext(true)
+  }, "+ Add context ratings"), React.createElement(Field, {
     label: "Notes"
   }, React.createElement("textarea", {
     className: "mc-note",
     style: {
       minHeight: 72
     },
-    placeholder: "Notes\u2026",
+    placeholder: "Capture reasoning behind grades, format-specific observations, or anything that doesn't fit the structured fields.",
     key: card.id,
     defaultValue: g.notes ?? "",
-    onBlur: e => onUpdate(card.id, "notes", e.target.value)
+    onBlur: e => onUpdate(card.id, "notes", e.target.value || null)
   })), React.createElement(Field, {
     label: "Tags"
   }, React.createElement("div", {
@@ -1348,24 +1398,24 @@ const SCATTER_MODES = [{
   xLabel: "Performance",
   yLabel: "Expert"
 }];
-function AnalyticsView(_ref12) {
-  let onCardClick = _ref12.onCardClick;
+function AnalyticsView(_ref14) {
+  let onCardClick = _ref14.onCardClick;
   const _useGrades2 = useGrades(),
     cards = _useGrades2.cards,
     grades = _useGrades2.grades;
   const isMobile = useIsMobile();
-  const _useState9 = useState("distribution"),
-    _useState0 = _slicedToArray(_useState9, 2),
-    activeTab = _useState0[0],
-    setActiveTab = _useState0[1];
-  const _useState1 = useState("meVsPerf"),
+  const _useState1 = useState("distribution"),
     _useState10 = _slicedToArray(_useState1, 2),
-    scatterMode = _useState10[0],
-    setScatterMode = _useState10[1];
-  const _useState11 = useState(null),
+    activeTab = _useState10[0],
+    setActiveTab = _useState10[1];
+  const _useState11 = useState("meVsPerf"),
     _useState12 = _slicedToArray(_useState11, 2),
-    previewCard = _useState12[0],
-    setPreviewCard = _useState12[1];
+    scatterMode = _useState12[0],
+    setScatterMode = _useState12[1];
+  const _useState13 = useState(null),
+    _useState14 = _slicedToArray(_useState13, 2),
+    previewCard = _useState14[0],
+    setPreviewCard = _useState14[1];
   const chartRef = useRef(null);
   const chartInstance = useRef(null);
   const dataset = useMemo(() => {
@@ -1531,9 +1581,9 @@ function AnalyticsView(_ref12) {
     const avgY = pts.reduce((a, p) => a + p.y, 0) / pts.length;
     const gradeLabel = v => {
       var _Object$entries$find;
-      return ((_Object$entries$find = Object.entries(GRADE_NUMERIC).find(_ref13 => {
-        let _ref14 = _slicedToArray(_ref13, 2),
-          n = _ref14[1];
+      return ((_Object$entries$find = Object.entries(GRADE_NUMERIC).find(_ref15 => {
+        let _ref16 = _slicedToArray(_ref15, 2),
+          n = _ref16[1];
         return Math.abs(n - v) < 0.1;
       })) === null || _Object$entries$find === void 0 ? void 0 : _Object$entries$find[0]) ?? "";
     };
@@ -1685,10 +1735,10 @@ function AnalyticsView(_ref12) {
     className: "analytics-wrap"
   }, React.createElement("div", {
     className: "analytics-tabs"
-  }, [["distribution", "Distribution"], ["scatter", "Scatter"], ["quadrants", "Quadrants"]].map(_ref15 => {
-    let _ref16 = _slicedToArray(_ref15, 2),
-      id = _ref16[0],
-      lbl = _ref16[1];
+  }, [["distribution", "Distribution"], ["scatter", "Scatter"], ["quadrants", "Quadrants"]].map(_ref17 => {
+    let _ref18 = _slicedToArray(_ref17, 2),
+      id = _ref18[0],
+      lbl = _ref18[1];
     return React.createElement("button", {
       key: id,
       className: `analytics-tab${activeTab === id ? " active" : ""}`,
@@ -1771,10 +1821,10 @@ function AnalyticsView(_ref12) {
     className: "analytics-stat-block"
   }, React.createElement("div", {
     className: "analytics-stat-label"
-  }, "Quadrants"), Object.entries(stats.quads).map(_ref17 => {
-    let _ref18 = _slicedToArray(_ref17, 2),
-      q = _ref18[0],
-      n = _ref18[1];
+  }, "Quadrants"), Object.entries(stats.quads).map(_ref19 => {
+    let _ref20 = _slicedToArray(_ref19, 2),
+      q = _ref20[0],
+      n = _ref20[1];
     return React.createElement("div", {
       key: q,
       className: "analytics-quad-row"
@@ -1883,10 +1933,10 @@ function AnalyticsView(_ref12) {
     id: "VAR",
     label: "Variable",
     desc: "Mixed signals across sources"
-  }].map(_ref19 => {
-    let id = _ref19.id,
-      label = _ref19.label,
-      desc = _ref19.desc;
+  }].map(_ref21 => {
+    let id = _ref21.id,
+      label = _ref21.label,
+      desc = _ref21.desc;
     const qs = withPerf.filter(d => d.quad === id).sort((a, b) => {
       if (id === "MISS") return b.myNum - b.perf - (a.myNum - a.perf);
       if (id === "SPOT") return a.myNum - a.perf - (b.myNum - b.perf);
@@ -2015,10 +2065,10 @@ function AnalyticsView(_ref12) {
     }, pd.quad))))));
   })());
 }
-function GradeSelect(_ref20) {
-  let cls = _ref20.cls,
-    value = _ref20.value,
-    onChange = _ref20.onChange;
+function GradeSelect(_ref22) {
+  let cls = _ref22.cls,
+    value = _ref22.value,
+    onChange = _ref22.onChange;
   return React.createElement("select", {
     className: cls,
     value: value,
@@ -2034,13 +2084,13 @@ function GradeSelect(_ref20) {
     }
   }, g || "—")));
 }
-function GradeRow(_ref21) {
+function GradeRow(_ref23) {
   var _card$type_line4;
-  let card = _ref21.card,
-    onOpenLightbox = _ref21.onOpenLightbox,
-    onHoverEnter = _ref21.onHoverEnter,
-    onHoverMove = _ref21.onHoverMove,
-    onHoverLeave = _ref21.onHoverLeave;
+  let card = _ref23.card,
+    onOpenLightbox = _ref23.onOpenLightbox,
+    onHoverEnter = _ref23.onHoverEnter,
+    onHoverMove = _ref23.onHoverMove,
+    onHoverLeave = _ref23.onHoverLeave;
   const _useGrades3 = useGrades(),
     grades = _useGrades3.grades,
     updateGrade = _useGrades3.updateGrade,
@@ -2048,10 +2098,10 @@ function GradeRow(_ref21) {
   const g = grades[card.id] ?? {};
   const ck = getColorKey(card);
   const q = calcQuadrant(g);
-  const _useState13 = useState(g.notes ?? ""),
-    _useState14 = _slicedToArray(_useState13, 2),
-    localNotes = _useState14[0],
-    setLocalNotes = _useState14[1];
+  const _useState15 = useState(g.notes ?? ""),
+    _useState16 = _slicedToArray(_useState15, 2),
+    localNotes = _useState16[0],
+    setLocalNotes = _useState16[1];
   useEffect(() => {
     setLocalNotes(g.notes ?? "");
   }, [g.notes]);
@@ -2128,20 +2178,20 @@ function GradeRow(_ref21) {
     }
   })));
 }
-function GradeTable(_ref22) {
-  let sorted = _ref22.sorted,
-    filters = _ref22.filters,
-    onSort = _ref22.onSort,
-    onOpenLightbox = _ref22.onOpenLightbox,
-    onHoverEnter = _ref22.onHoverEnter,
-    onHoverMove = _ref22.onHoverMove,
-    onHoverLeave = _ref22.onHoverLeave;
+function GradeTable(_ref24) {
+  let sorted = _ref24.sorted,
+    filters = _ref24.filters,
+    onSort = _ref24.onSort,
+    onOpenLightbox = _ref24.onOpenLightbox,
+    onHoverEnter = _ref24.onHoverEnter,
+    onHoverMove = _ref24.onHoverMove,
+    onHoverLeave = _ref24.onHoverLeave;
   return React.createElement("div", {
     className: "tbl-wrap desktop-only"
-  }, React.createElement("table", null, React.createElement("thead", null, React.createElement("tr", null, [["name", "Card"], ["cmc", "Cost"], [null, "Type"], ["rarity", "Rar"], ["color", "Color"], ["myGrade", "My Grade"], ["expert", "Expert"], ["performance", "Perf"], [null, "Δ"], [null, "Sunset"], [null, "Notes"]].map(_ref23 => {
-    let _ref24 = _slicedToArray(_ref23, 2),
-      col = _ref24[0],
-      lbl = _ref24[1];
+  }, React.createElement("table", null, React.createElement("thead", null, React.createElement("tr", null, [["name", "Card"], ["cmc", "Cost"], [null, "Type"], ["rarity", "Rar"], ["color", "Color"], ["myGrade", "My Grade"], ["expert", "Expert"], ["performance", "Perf"], [null, "Δ"], [null, "Sunset"], [null, "Notes"]].map(_ref25 => {
+    let _ref26 = _slicedToArray(_ref25, 2),
+      col = _ref26[0],
+      lbl = _ref26[1];
     return React.createElement("th", {
       key: lbl,
       className: col && filters.sortCol === col ? "sorted" : "",
@@ -2159,36 +2209,53 @@ function GradeTable(_ref22) {
     onHoverLeave: onHoverLeave
   })))));
 }
-function MobileCardItem(_ref25) {
+function MobileCardItem(_ref27) {
   var _card$card_faces4, _card$card_faces$2, _card$card_faces$face3, _card$type_line5;
-  let card = _ref25.card,
-    expanded = _ref25.expanded,
-    onToggleExpand = _ref25.onToggleExpand;
+  let card = _ref27.card,
+    expanded = _ref27.expanded,
+    onToggleExpand = _ref27.onToggleExpand;
   const _useGrades4 = useGrades(),
     grades = _useGrades4.grades,
     updateGrade = _useGrades4.updateGrade;
   const grade = grades[card.id] ?? {};
   const onUpdate = (field, value) => updateGrade(card.id, field, value);
-  const _useState15 = useState(false),
-    _useState16 = _slicedToArray(_useState15, 2),
-    bigImg = _useState16[0],
-    setBigImg = _useState16[1];
-  const _useState17 = useState(0),
+  const _useState17 = useState(false),
     _useState18 = _slicedToArray(_useState17, 2),
-    face = _useState18[0],
-    setFace = _useState18[1];
-  const _useState19 = useState(grade.notes ?? ""),
+    bigImg = _useState18[0],
+    setBigImg = _useState18[1];
+  const _useState19 = useState(0),
     _useState20 = _slicedToArray(_useState19, 2),
-    localNotes = _useState20[0],
-    setLocalNotes = _useState20[1];
+    face = _useState20[0],
+    setFace = _useState20[1];
+  const _useState21 = useState(grade.notes ?? ""),
+    _useState22 = _slicedToArray(_useState21, 2),
+    localNotes = _useState22[0],
+    setLocalNotes = _useState22[1];
+  const _useState23 = useState(false),
+    _useState24 = _slicedToArray(_useState23, 2),
+    addingContext = _useState24[0],
+    setAddingContext = _useState24[1];
+  const cardRef = useRef(null);
   useEffect(() => {
     setLocalNotes(grade.notes ?? "");
   }, [grade.notes]);
+  useEffect(() => {
+    if (expanded && cardRef.current) {
+      setTimeout(() => {
+        var _cardRef$current;
+        return (_cardRef$current = cardRef.current) === null || _cardRef$current === void 0 ? void 0 : _cardRef$current.scrollIntoView({
+          behavior: "smooth",
+          block: "start"
+        });
+      }, 50);
+    }
+  }, [expanded]);
   const ck = getColorKey(card);
   const hasDFC = ((_card$card_faces4 = card.card_faces) === null || _card$card_faces4 === void 0 ? void 0 : _card$card_faces4.length) >= 2 && ((_card$card_faces$2 = card.card_faces[1]) === null || _card$card_faces$2 === void 0 ? void 0 : _card$card_faces$2.image_uris);
   const img = hasDFC ? (_card$card_faces$face3 = card.card_faces[face]) === null || _card$card_faces$face3 === void 0 || (_card$card_faces$face3 = _card$card_faces$face3.image_uris) === null || _card$card_faces$face3 === void 0 ? void 0 : _card$card_faces$face3.normal : getImageUrl(card);
   const q = calcQuadrant(grade);
   return React.createElement("div", {
+    ref: cardRef,
     className: `mc mobile-only c${ck}`
   }, React.createElement("div", {
     style: {
@@ -2341,15 +2408,55 @@ function MobileCardItem(_ref25) {
         flexShrink: 0
       }
     }, r.symbol, " ", r.detail))))) : null;
+  })(), (() => {
+    const showCtx = grade.context != null || addingContext;
+    const ctx = grade.context ?? {};
+    const updateCtx = (field, val) => onUpdate("context", {
+      early: "",
+      ahead: "",
+      parity: "",
+      behind: "",
+      ...ctx,
+      [field]: val
+    });
+    return showCtx ? React.createElement("div", {
+      className: "mc-field"
+    }, React.createElement("div", {
+      className: "lb-context-header",
+      style: {
+        marginBottom: 6
+      }
+    }, React.createElement("span", null, "Game State Context"), React.createElement("button", {
+      className: "lb-context-remove",
+      onClick: () => {
+        onUpdate("context", null);
+        setAddingContext(false);
+      }
+    }, "Remove")), [["early", "Early"], ["ahead", "Ahead"], ["parity", "Parity"], ["behind", "Behind"]].map(_ref28 => {
+      let _ref29 = _slicedToArray(_ref28, 2),
+        key = _ref29[0],
+        label = _ref29[1];
+      return React.createElement("div", {
+        key: key,
+        className: "lb-context-row"
+      }, React.createElement("span", null, label), React.createElement(GradeSelect, {
+        cls: "mc-sel",
+        value: ctx[key] ?? "",
+        onChange: e => updateCtx(key, e.target.value)
+      }));
+    })) : React.createElement("button", {
+      className: "lb-context-add",
+      onClick: () => setAddingContext(true)
+    }, "+ Add context ratings");
   })(), React.createElement("div", {
     className: "mc-field"
   }, React.createElement("label", null, "Notes"), React.createElement("textarea", {
     className: "mc-note",
-    placeholder: "Notes\u2026",
+    placeholder: "Capture reasoning behind grades, format-specific observations, or anything that doesn't fit the structured fields.",
     rows: "2",
     value: localNotes,
     onChange: e => setLocalNotes(e.target.value),
-    onBlur: () => updateGrade(card.id, "notes", localNotes)
+    onBlur: () => updateGrade(card.id, "notes", localNotes || null)
   })), React.createElement("div", {
     className: "mc-field"
   }, React.createElement("label", null, "Tags"), React.createElement("div", {
@@ -2363,29 +2470,29 @@ function MobileCardItem(_ref25) {
     }
   }, tag.label))))))))));
 }
-function ImportPanel(_ref26) {
-  let selectedSet = _ref26.selectedSet,
-    fmt17l = _ref26.fmt17l,
-    setFmt17l = _ref26.setFmt17l,
-    onGradesUpdate = _ref26.onGradesUpdate,
-    mobile = _ref26.mobile;
+function ImportPanel(_ref30) {
+  let selectedSet = _ref30.selectedSet,
+    fmt17l = _ref30.fmt17l,
+    setFmt17l = _ref30.setFmt17l,
+    onGradesUpdate = _ref30.onGradesUpdate,
+    mobile = _ref30.mobile;
   const _useGrades5 = useGrades(),
     cards = _useGrades5.cards,
     grades = _useGrades5.grades,
     meta = _useGrades5.importMeta,
     setMeta = _useGrades5.setImportMeta;
-  const _useState21 = useState(""),
-    _useState22 = _slicedToArray(_useState21, 2),
-    msg = _useState22[0],
-    setMsg = _useState22[1];
-  const _useState23 = useState("17lands"),
-    _useState24 = _slicedToArray(_useState23, 2),
-    source = _useState24[0],
-    setSource = _useState24[1];
-  const _useState25 = useState("auto"),
+  const _useState25 = useState(""),
     _useState26 = _slicedToArray(_useState25, 2),
-    target = _useState26[0],
-    setTarget = _useState26[1];
+    msg = _useState26[0],
+    setMsg = _useState26[1];
+  const _useState27 = useState("17lands"),
+    _useState28 = _slicedToArray(_useState27, 2),
+    source = _useState28[0],
+    setSource = _useState28[1];
+  const _useState29 = useState("auto"),
+    _useState30 = _slicedToArray(_useState29, 2),
+    target = _useState30[0],
+    setTarget = _useState30[1];
   const resolvedTarget = target === "auto" ? source === "17lands" ? "performance" : "expert" : target;
   const importCSV = text => {
     const lines = text.trim().split("\n").filter(l => l.trim());
@@ -2466,10 +2573,10 @@ function ImportPanel(_ref26) {
   };
   const flush = which => {
     const next = {};
-    for (const _ref27 of Object.entries(grades)) {
-      var _ref28 = _slicedToArray(_ref27, 2);
-      const id = _ref28[0];
-      const g = _ref28[1];
+    for (const _ref31 of Object.entries(grades)) {
+      var _ref32 = _slicedToArray(_ref31, 2);
+      const id = _ref32[0];
+      const g = _ref32[1];
       const updated = {
         ...g
       };
@@ -2494,10 +2601,10 @@ function ImportPanel(_ref26) {
   };
   const srcButtons = React.createElement("div", {
     className: "l17-fmt"
-  }, [["17lands", "17Lands"], ["aetherhub", "AetherHub"], ["manual", "Manual"]].map(_ref29 => {
-    let _ref30 = _slicedToArray(_ref29, 2),
-      val = _ref30[0],
-      lbl = _ref30[1];
+  }, [["17lands", "17Lands"], ["aetherhub", "AetherHub"], ["manual", "Manual"]].map(_ref33 => {
+    let _ref34 = _slicedToArray(_ref33, 2),
+      val = _ref34[0],
+      lbl = _ref34[1];
     return React.createElement("button", {
       key: val,
       className: source === val ? "active" : "",
@@ -2506,10 +2613,10 @@ function ImportPanel(_ref26) {
   }));
   const fmt17lButtons = source === "17lands" && React.createElement("div", {
     className: "l17-fmt"
-  }, [["PremierDraft", "Premier"], ["QuickDraft", "Quick"], ["TradDraft", "Trad"]].map(_ref31 => {
-    let _ref32 = _slicedToArray(_ref31, 2),
-      val = _ref32[0],
-      lbl = _ref32[1];
+  }, [["PremierDraft", "Premier"], ["QuickDraft", "Quick"], ["TradDraft", "Trad"]].map(_ref35 => {
+    let _ref36 = _slicedToArray(_ref35, 2),
+      val = _ref36[0],
+      lbl = _ref36[1];
     return React.createElement("button", {
       key: val,
       className: fmt17l === val ? "active" : "",
@@ -2518,10 +2625,10 @@ function ImportPanel(_ref26) {
   }));
   const targetButtons = React.createElement("div", {
     className: "l17-fmt"
-  }, [["auto", "Auto"], ["expert", "Expert"], ["performance", "Perf"]].map(_ref33 => {
-    let _ref34 = _slicedToArray(_ref33, 2),
-      val = _ref34[0],
-      lbl = _ref34[1];
+  }, [["auto", "Auto"], ["expert", "Expert"], ["performance", "Perf"]].map(_ref37 => {
+    let _ref38 = _slicedToArray(_ref37, 2),
+      val = _ref38[0],
+      lbl = _ref38[1];
     return React.createElement("button", {
       key: val,
       className: target === val ? "active" : "",
@@ -2728,23 +2835,23 @@ function filterReducer(state, action) {
       return state;
   }
 }
-function MobileDrawer(_ref35) {
-  let open = _ref35.open,
-    onClose = _ref35.onClose,
-    filters = _ref35.filters,
-    dispatch = _ref35.dispatch,
-    hasFilters = _ref35.hasFilters,
-    clearFilters = _ref35.clearFilters,
-    toggleFilterTag = _ref35.toggleFilterTag,
-    selectedSet = _ref35.selectedSet,
-    fmt17l = _ref35.fmt17l,
-    setFmt17l = _ref35.setFmt17l,
-    handleGradesUpdate = _ref35.handleGradesUpdate,
-    exportBackup = _ref35.exportBackup,
-    importBackup = _ref35.importBackup,
-    exportCSV = _ref35.exportCSV,
-    user = _ref35.user,
-    syncStatus = _ref35.syncStatus;
+function MobileDrawer(_ref39) {
+  let open = _ref39.open,
+    onClose = _ref39.onClose,
+    filters = _ref39.filters,
+    dispatch = _ref39.dispatch,
+    hasFilters = _ref39.hasFilters,
+    clearFilters = _ref39.clearFilters,
+    toggleFilterTag = _ref39.toggleFilterTag,
+    selectedSet = _ref39.selectedSet,
+    fmt17l = _ref39.fmt17l,
+    setFmt17l = _ref39.setFmt17l,
+    handleGradesUpdate = _ref39.handleGradesUpdate,
+    exportBackup = _ref39.exportBackup,
+    importBackup = _ref39.importBackup,
+    exportCSV = _ref39.exportCSV,
+    user = _ref39.user,
+    syncStatus = _ref39.syncStatus;
   return React.createElement("div", {
     className: "filters-mobile mobile-only",
     style: {
@@ -2798,10 +2905,10 @@ function MobileDrawer(_ref35) {
     className: "fm-row"
   }, React.createElement("span", {
     className: "fl"
-  }, "Rarity:"), [["all", "All"], ["common", "C"], ["uncommon", "U"], ["rare", "R"], ["mythic", "M"]].map(_ref36 => {
-    let _ref37 = _slicedToArray(_ref36, 2),
-      full = _ref37[0],
-      abbr = _ref37[1];
+  }, "Rarity:"), [["all", "All"], ["common", "C"], ["uncommon", "U"], ["rare", "R"], ["mythic", "M"]].map(_ref40 => {
+    let _ref41 = _slicedToArray(_ref40, 2),
+      full = _ref41[0],
+      abbr = _ref41[1];
     return React.createElement("button", {
       key: full,
       className: `fb${filters.rarity === full ? " active" : ""}`,
@@ -2931,17 +3038,17 @@ function MobileDrawer(_ref35) {
     }
   }, syncStatus === "syncing" ? "↑" : "✓")));
 }
-function FilterBar(_ref38) {
-  let filters = _ref38.filters,
-    dispatch = _ref38.dispatch,
-    hasExpertData = _ref38.hasExpertData,
-    hasPerformanceData = _ref38.hasPerformanceData,
-    sortedCount = _ref38.sortedCount,
-    hasFilters = _ref38.hasFilters,
-    showTagFilter = _ref38.showTagFilter,
-    setShowTagFilter = _ref38.setShowTagFilter,
-    toggleFilterTag = _ref38.toggleFilterTag,
-    clearFilters = _ref38.clearFilters;
+function FilterBar(_ref42) {
+  let filters = _ref42.filters,
+    dispatch = _ref42.dispatch,
+    hasExpertData = _ref42.hasExpertData,
+    hasPerformanceData = _ref42.hasPerformanceData,
+    sortedCount = _ref42.sortedCount,
+    hasFilters = _ref42.hasFilters,
+    showTagFilter = _ref42.showTagFilter,
+    setShowTagFilter = _ref42.setShowTagFilter,
+    toggleFilterTag = _ref42.toggleFilterTag,
+    clearFilters = _ref42.clearFilters;
   return React.createElement("div", {
     className: "filters-desktop desktop-only"
   }, React.createElement("span", {
@@ -3029,55 +3136,55 @@ const GradesContext = React.createContext(null);
 function useGrades() {
   return React.useContext(GradesContext);
 }
-function GradingView(_ref39) {
-  let showAnalytics = _ref39.showAnalytics,
-    showMobF = _ref39.showMobF,
-    onCloseMobF = _ref39.onCloseMobF,
-    selectedSet = _ref39.selectedSet,
-    user = _ref39.user,
-    syncStatus = _ref39.syncStatus,
-    fmt17l = _ref39.fmt17l,
-    setFmt17l = _ref39.setFmt17l,
-    handleGradesUpdate = _ref39.handleGradesUpdate,
-    exportBackup = _ref39.exportBackup,
-    importBackup = _ref39.importBackup,
-    exportCSV = _ref39.exportCSV,
-    loading = _ref39.loading,
-    loadMsg = _ref39.loadMsg,
-    error = _ref39.error,
-    filters = _ref39.filters,
-    dispatch = _ref39.dispatch,
-    handleSort = _ref39.handleSort,
-    clearFilters = _ref39.clearFilters,
-    toggleFilterTag = _ref39.toggleFilterTag,
-    hasFilters = _ref39.hasFilters;
+function GradingView(_ref43) {
+  let showAnalytics = _ref43.showAnalytics,
+    showMobF = _ref43.showMobF,
+    onCloseMobF = _ref43.onCloseMobF,
+    selectedSet = _ref43.selectedSet,
+    user = _ref43.user,
+    syncStatus = _ref43.syncStatus,
+    fmt17l = _ref43.fmt17l,
+    setFmt17l = _ref43.setFmt17l,
+    handleGradesUpdate = _ref43.handleGradesUpdate,
+    exportBackup = _ref43.exportBackup,
+    importBackup = _ref43.importBackup,
+    exportCSV = _ref43.exportCSV,
+    loading = _ref43.loading,
+    loadMsg = _ref43.loadMsg,
+    error = _ref43.error,
+    filters = _ref43.filters,
+    dispatch = _ref43.dispatch,
+    handleSort = _ref43.handleSort,
+    clearFilters = _ref43.clearFilters,
+    toggleFilterTag = _ref43.toggleFilterTag,
+    hasFilters = _ref43.hasFilters;
   const isMobile = useIsMobile();
   const _useGrades6 = useGrades(),
     cards = _useGrades6.cards,
     grades = _useGrades6.grades;
-  const _useState27 = useState(false),
-    _useState28 = _slicedToArray(_useState27, 2),
-    showTagFilter = _useState28[0],
-    setShowTagFilter = _useState28[1];
-  const _useState29 = useState(null),
-    _useState30 = _slicedToArray(_useState29, 2),
-    lightboxIndex = _useState30[0],
-    setLightboxIndex = _useState30[1];
-  const _useState31 = useState(null),
+  const _useState31 = useState(false),
     _useState32 = _slicedToArray(_useState31, 2),
-    hovered = _useState32[0],
-    setHovered = _useState32[1];
-  const _useState33 = useState({
+    showTagFilter = _useState32[0],
+    setShowTagFilter = _useState32[1];
+  const _useState33 = useState(null),
+    _useState34 = _slicedToArray(_useState33, 2),
+    lightboxIndex = _useState34[0],
+    setLightboxIndex = _useState34[1];
+  const _useState35 = useState(null),
+    _useState36 = _slicedToArray(_useState35, 2),
+    hovered = _useState36[0],
+    setHovered = _useState36[1];
+  const _useState37 = useState({
       x: 0,
       y: 0
     }),
-    _useState34 = _slicedToArray(_useState33, 2),
-    hoverPos = _useState34[0],
-    setHoverPos = _useState34[1];
-  const _useState35 = useState(null),
-    _useState36 = _slicedToArray(_useState35, 2),
-    expandedCardId = _useState36[0],
-    setExpandedCardId = _useState36[1];
+    _useState38 = _slicedToArray(_useState37, 2),
+    hoverPos = _useState38[0],
+    setHoverPos = _useState38[1];
+  const _useState39 = useState(null),
+    _useState40 = _slicedToArray(_useState39, 2),
+    expandedCardId = _useState40[0],
+    setExpandedCardId = _useState40[1];
   const activeSort = isMobile ? filters.mobileSort : filters.sortCol;
   const gradableCards = useMemo(() => cards.filter(c => !isBasicLand(c)), [cards]);
   const gradedCount = gradableCards.filter(c => {
@@ -3226,30 +3333,30 @@ function GradingView(_ref39) {
     }
   }));
 }
-function DraftLab(_ref40) {
-  let user = _ref40.user;
+function DraftLab(_ref44) {
+  let user = _ref44.user;
   const isMobile = useIsMobile();
   const didFirstSync = useRef(false);
-  const _useState37 = useState(() => localStorage.getItem("draft-lab-theme") || "auto"),
-    _useState38 = _slicedToArray(_useState37, 2),
-    theme = _useState38[0],
-    setTheme = _useState38[1];
-  const _useState39 = useState(false),
-    _useState40 = _slicedToArray(_useState39, 2),
-    showAnalytics = _useState40[0],
-    setShowAnalytics = _useState40[1];
-  const _useState41 = useState(false),
+  const _useState41 = useState(() => localStorage.getItem("draft-lab-theme") || "auto"),
     _useState42 = _slicedToArray(_useState41, 2),
-    showImport = _useState42[0],
-    setShowImport = _useState42[1];
+    theme = _useState42[0],
+    setTheme = _useState42[1];
   const _useState43 = useState(false),
     _useState44 = _slicedToArray(_useState43, 2),
-    showExport = _useState44[0],
-    setShowExport = _useState44[1];
-  const _useState45 = useState("PremierDraft"),
+    showAnalytics = _useState44[0],
+    setShowAnalytics = _useState44[1];
+  const _useState45 = useState(false),
     _useState46 = _slicedToArray(_useState45, 2),
-    fmt17l = _useState46[0],
-    setFmt17l = _useState46[1];
+    showImport = _useState46[0],
+    setShowImport = _useState46[1];
+  const _useState47 = useState(false),
+    _useState48 = _slicedToArray(_useState47, 2),
+    showExport = _useState48[0],
+    setShowExport = _useState48[1];
+  const _useState49 = useState("PremierDraft"),
+    _useState50 = _slicedToArray(_useState49, 2),
+    fmt17l = _useState50[0],
+    setFmt17l = _useState50[1];
   const importRef = useRef(null);
   const exportRef = useRef(null);
   useEffect(() => {
@@ -3268,66 +3375,66 @@ function DraftLab(_ref40) {
     document.addEventListener("mousedown", h);
     return () => document.removeEventListener("mousedown", h);
   }, [showExport]);
-  const _useState47 = useState(null),
-    _useState48 = _slicedToArray(_useState47, 2),
-    importMeta = _useState48[0],
-    setImportMeta = _useState48[1];
-  const _useState49 = useState([]),
-    _useState50 = _slicedToArray(_useState49, 2),
-    sets = _useState50[0],
-    setSets = _useState50[1];
   const _useState51 = useState(null),
     _useState52 = _slicedToArray(_useState51, 2),
-    selectedSet = _useState52[0],
-    setSelectedSet = _useState52[1];
+    importMeta = _useState52[0],
+    setImportMeta = _useState52[1];
   const _useState53 = useState([]),
     _useState54 = _slicedToArray(_useState53, 2),
-    cards = _useState54[0],
-    setCards = _useState54[1];
-  const _useState55 = useState({}),
+    sets = _useState54[0],
+    setSets = _useState54[1];
+  const _useState55 = useState(null),
     _useState56 = _slicedToArray(_useState55, 2),
-    grades = _useState56[0],
-    setGrades = _useState56[1];
-  const _useState57 = useState(false),
+    selectedSet = _useState56[0],
+    setSelectedSet = _useState56[1];
+  const _useState57 = useState([]),
     _useState58 = _slicedToArray(_useState57, 2),
-    loading = _useState58[0],
-    setLoading = _useState58[1];
-  const _useState59 = useState(""),
+    cards = _useState58[0],
+    setCards = _useState58[1];
+  const _useState59 = useState({}),
     _useState60 = _slicedToArray(_useState59, 2),
-    loadMsg = _useState60[0],
-    setLoadMsg = _useState60[1];
-  const _useState61 = useState(null),
+    grades = _useState60[0],
+    setGrades = _useState60[1];
+  const _useState61 = useState(false),
     _useState62 = _slicedToArray(_useState61, 2),
-    error = _useState62[0],
-    setError = _useState62[1];
+    loading = _useState62[0],
+    setLoading = _useState62[1];
+  const _useState63 = useState(""),
+    _useState64 = _slicedToArray(_useState63, 2),
+    loadMsg = _useState64[0],
+    setLoadMsg = _useState64[1];
+  const _useState65 = useState(null),
+    _useState66 = _slicedToArray(_useState65, 2),
+    error = _useState66[0],
+    setError = _useState66[1];
   const _useReducer = useReducer(filterReducer, filterInitialState),
     _useReducer2 = _slicedToArray(_useReducer, 2),
     filters = _useReducer2[0],
     dispatchFilter = _useReducer2[1];
-  const _useState63 = useState(false),
-    _useState64 = _slicedToArray(_useState63, 2),
-    showMobF = _useState64[0],
-    setShowMobF = _useState64[1];
-  const _useState65 = useState(false),
-    _useState66 = _slicedToArray(_useState65, 2),
-    showGuide = _useState66[0],
-    setShowGuide = _useState66[1];
-  const _useState67 = useState(""),
+  const _useState67 = useState(false),
     _useState68 = _slicedToArray(_useState67, 2),
-    syncStatus = _useState68[0],
-    setSyncStatus = _useState68[1];
+    showMobF = _useState68[0],
+    setShowMobF = _useState68[1];
   const _useState69 = useState(false),
     _useState70 = _slicedToArray(_useState69, 2),
-    showLegal = _useState70[0],
-    setShowLegal = _useState70[1];
+    showGuide = _useState70[0],
+    setShowGuide = _useState70[1];
   const _useState71 = useState(""),
     _useState72 = _slicedToArray(_useState71, 2),
-    setSearch = _useState72[0],
-    setSetSearch = _useState72[1];
+    syncStatus = _useState72[0],
+    setSyncStatus = _useState72[1];
   const _useState73 = useState(false),
     _useState74 = _slicedToArray(_useState73, 2),
-    showSetDD = _useState74[0],
-    setShowSetDD = _useState74[1];
+    showLegal = _useState74[0],
+    setShowLegal = _useState74[1];
+  const _useState75 = useState(""),
+    _useState76 = _slicedToArray(_useState75, 2),
+    setSearch = _useState76[0],
+    setSetSearch = _useState76[1];
+  const _useState77 = useState(false),
+    _useState78 = _slicedToArray(_useState77, 2),
+    showSetDD = _useState78[0],
+    setShowSetDD = _useState78[1];
   useEffect(() => {
     if (theme === "auto") document.documentElement.removeAttribute("data-theme");else document.documentElement.setAttribute("data-theme", theme);
   }, [theme]);
@@ -3542,10 +3649,10 @@ function DraftLab(_ref40) {
         const data = parsed.data ?? parsed;
         let count = 0;
         const restoredGrades = {};
-        for (const _ref41 of Object.entries(data)) {
-          var _ref42 = _slicedToArray(_ref41, 2);
-          const key = _ref42[0];
-          const value = _ref42[1];
+        for (const _ref45 of Object.entries(data)) {
+          var _ref46 = _slicedToArray(_ref45, 2);
+          const key = _ref46[0];
+          const value = _ref46[1];
           if ((key.startsWith("draft-grades-") || key.startsWith("draft-import-meta-") || key === "draft-lab-theme") && typeof value === "string") {
             localStorage.setItem(key, value);
             count++;
@@ -3834,21 +3941,21 @@ function DraftLab(_ref40) {
     className: "guide-h1"
   }, "Grade Reference"), React.createElement("div", {
     className: "guide-sub"
-  }, "Half-grade anchors for Limited evaluation"), GRADE_TIERS.map(_ref43 => {
-    let tier = _ref43.tier,
-      rows = _ref43.rows;
+  }, "Half-grade anchors for Limited evaluation"), GRADE_TIERS.map(_ref47 => {
+    let tier = _ref47.tier,
+      rows = _ref47.rows;
     return React.createElement("div", {
       key: tier,
       className: "guide-tier"
     }, React.createElement("div", {
       className: "guide-tier-hdr"
-    }, tier), rows.map(_ref44 => {
-      let _ref45 = _slicedToArray(_ref44, 5),
-        grade = _ref45[0],
-        bg = _ref45[1],
-        fg = _ref45[2],
-        pick = _ref45[3],
-        desc = _ref45[4];
+    }, tier), rows.map(_ref48 => {
+      let _ref49 = _slicedToArray(_ref48, 5),
+        grade = _ref49[0],
+        bg = _ref49[1],
+        fg = _ref49[2],
+        pick = _ref49[3],
+        desc = _ref49[4];
       return React.createElement("div", {
         key: grade,
         className: "guide-row"
@@ -3920,17 +4027,17 @@ function DraftLab(_ref40) {
     }
   }, "View on GitHub \u2192"))))));
 }
-function LoginScreen(_ref46) {
-  let onSignIn = _ref46.onSignIn,
-    loading = _ref46.loading;
-  const _useState75 = useState(() => {
+function LoginScreen(_ref50) {
+  let onSignIn = _ref50.onSignIn,
+    loading = _ref50.loading;
+  const _useState79 = useState(() => {
       const saved = localStorage.getItem("draft-lab-theme");
       if (saved && saved !== "auto") return saved;
       return window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
     }),
-    _useState76 = _slicedToArray(_useState75, 2),
-    theme = _useState76[0],
-    setTheme = _useState76[1];
+    _useState80 = _slicedToArray(_useState79, 2),
+    theme = _useState80[0],
+    setTheme = _useState80[1];
   useEffect(() => {
     document.documentElement.setAttribute("data-theme", theme);
     localStorage.setItem("draft-lab-theme", theme);
@@ -3992,25 +4099,25 @@ function LoginScreen(_ref46) {
   })), "Sign in with Google"))));
 }
 function AuthGate() {
-  const _useState77 = useState(null),
-    _useState78 = _slicedToArray(_useState77, 2),
-    user = _useState78[0],
-    setUser = _useState78[1];
-  const _useState79 = useState(true),
-    _useState80 = _slicedToArray(_useState79, 2),
-    authLoading = _useState80[0],
-    setAuthLoading = _useState80[1];
-  const _useState81 = useState(false),
+  const _useState81 = useState(null),
     _useState82 = _slicedToArray(_useState81, 2),
-    signing = _useState82[0],
-    setSigning = _useState82[1];
+    user = _useState82[0],
+    setUser = _useState82[1];
+  const _useState83 = useState(true),
+    _useState84 = _slicedToArray(_useState83, 2),
+    authLoading = _useState84[0],
+    setAuthLoading = _useState84[1];
+  const _useState85 = useState(false),
+    _useState86 = _slicedToArray(_useState85, 2),
+    signing = _useState86[0],
+    setSigning = _useState86[1];
   useEffect(() => {
     if (!SUPABASE_CONFIGURED) {
       setAuthLoading(false);
       return;
     }
-    sb.auth.getSession().then(_ref47 => {
-      let session = _ref47.data.session;
+    sb.auth.getSession().then(_ref51 => {
+      let session = _ref51.data.session;
       setUser((session === null || session === void 0 ? void 0 : session.user) ?? null);
       setAuthLoading(false);
     }).catch(() => setAuthLoading(false));
