@@ -329,6 +329,10 @@
     .analytics-panel { flex-shrink:0; width:260px; display:flex; flex-direction:column; gap:14px; }
     @media (orientation:portrait) and (max-width:767px) { .analytics-chart-wrap { min-height:220px; } }
     @media (orientation:landscape) and (max-width:900px) { .analytics-chart-wrap { min-height:180px; } }
+    @media (orientation:landscape) and (max-width:900px) {
+      header.analytics-open { padding:4px 12px; }
+      header.analytics-open .hdr-left { display:none; }
+    }
     .analytics-stat-block { background:var(--s2); border:1px solid var(--b1); padding:12px 14px; }
     .analytics-stat-label { font-size:9px; color:var(--dimmer); text-transform:uppercase; letter-spacing:.12em; margin-bottom:6px; }
     .analytics-stat-row { display:flex; justify-content:space-between; font-size:11px; margin-bottom:3px; }
@@ -2933,7 +2937,7 @@ function DraftLab(_ref31) {
       setShowTagFilter(false);
     }
   }, React.createElement("header", {
-    className: "hdr",
+    className: `hdr${showAnalytics ? " analytics-open" : ""}`,
     onClick: e => e.stopPropagation()
   }, React.createElement("div", {
     className: "hdr-left"

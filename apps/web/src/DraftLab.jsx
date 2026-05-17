@@ -1476,7 +1476,7 @@ function DraftLab({ user }) {
     <div className="app" onClick={() => { setShowSetDD(false); setShowImport(false); setShowExport(false); setShowTagFilter(false); }}>
 
       {/* ── Header ── */}
-      <header className="hdr" onClick={e => e.stopPropagation()}>
+      <header className={`hdr${showAnalytics ? " analytics-open" : ""}`} onClick={e => e.stopPropagation()}>
         <div className="hdr-left">
           <div className="logo-inline">
             <a href="https://github.com/jason-norris/draft-lab" target="_blank" rel="noopener noreferrer"
