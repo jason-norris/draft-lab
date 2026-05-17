@@ -1,6 +1,6 @@
 # Draft Lab — Feature Roadmap
 
-> Living document. Updated May 2026. Current version: **v3.0**  
+> Living document. Updated May 2026. Current version: **v3.0** (Phase 4.5 complete)  
 > Development target: local HTML → GitHub Pages + Supabase stack.  
 > Edit `apps/web/src/DraftLab.jsx`, run `node compile.js` from `apps/web/`, commit both files.
 
@@ -165,34 +165,32 @@
 
 ---
 
-## Phase 4.5 — God Component Refactor 🔜 NEXT
+## Phase 4.5 — God Component Refactor ✅ COMPLETE
 
 **Goal:** Structural refactor of `DraftLab.jsx` before Phase 5 adds draft simulator state. No user-facing changes.
 
-**Spec:** See [`docs/refactor-god-component.md`](docs/refactor-god-component.md) for the full step-by-step migration order. Compile and test after every step — never leave the file in a broken intermediate state.
+- [x] Extract pure utility functions above `DraftLab` (`applyFilters`, `applySort`, `renderMana`, `debounce`)
+- [x] Introduce `GradesContext` + `useGrades()` hook for shared grade state without prop drilling
+- [x] Extract `AnalyticsView` sub-component (reads context, no write path, local state only)
+- [x] Extract `FilterBar` sub-component + introduce `filterReducer` for consolidated filter state
+- [x] Extract `ImportPanel` sub-component
+- [x] Extract `MobileDrawer` sub-component
+- [x] Extract `CardLightbox` sub-component
+- [x] Extract `GradeTable` and `GradeRow` sub-components
+- [x] Extract `GradingView` as top-level assembly component
+- [x] `useMemo` for sorted/filtered card list in `GradingView`
+- [x] Notes: blur-to-save pattern (onChange → local state, onBlur → updateGrade + persist)
+- [x] Mobile card list: accordion — one card open at a time
 
-- [ ] Extract pure utility functions above `DraftLab` (`applyFilters`, `applySort`, `computeQuadrant`, `renderMana`, `debounce`)
-- [ ] Introduce `GradesContext` + `useGrades()` hook for shared grade state without prop drilling
-- [ ] Extract `AnalyticsView` sub-component (reads context, no write path, local state only)
-- [ ] Extract `FilterBar` sub-component + introduce `filterReducer` for consolidated filter state
-- [ ] Extract `ImportPanel` sub-component
-- [ ] Extract `MobileDrawer` sub-component
-- [ ] Extract `CardLightbox` sub-component
-- [ ] Extract `GradeTable` and `GradeRow` sub-components
-- [ ] Extract `GradingView` as top-level assembly component
-- [ ] Add `useMemo` for sorted/filtered card list in `GradingView`
-- [ ] Debounce Supabase sync on notes input (~450ms)
-- [ ] Add `DraftView` and `DraftReviewView` stubs to view router (empty shells, ready for Phase 5)
-
-**Must complete before Phase 5.1. All existing features must work identically after refactor.**
+**Notes vs spec:** `DraftView`/`DraftReviewView` stubs deferred to Phase 5.2. Filter state (`filters`/`dispatchFilter`) remains in `DraftLab` due to `loadSet` coupling; full migration deferred.
 
 ---
 
-## Phase 5 — Draft Simulator + Pick Review 🔜
+## Phase 5 — Draft Simulator + Pick Review 🔜 NEXT
 
 **Goal:** A full 8-player draft simulator with bot opponents, pick-by-pick signal review, and deck construction feedback. Built on top of the existing grading infrastructure — My Grade, Expert, and Performance ratings are visible on every card during the draft. Proving ground set: **KHM**.
 
-**Prerequisites:** Phase 4.5 complete.
+**Prerequisites:** Phase 4.5 complete ✅
 
 > **AI Architecture:** See [`docs/phase-7-draft-ai.md`](docs/phase-7-draft-ai.md) for the four-layer bot system (card value function, Bayesian belief state, mistake injection, optional LLM) and the signal accuracy training loop. Note: that document references "Phase 7" — this is now Phase 5. Architecture is unchanged.
 >
