@@ -1,5 +1,5 @@
 // Globals provided by template.html: SUPABASE_CONFIGURED, ALLOWED_EMAIL, sb, syncGrades, fetchGrades
-const { useState, useEffect, useCallback, useRef, useMemo } = React;
+const { useState, useEffect, useCallback, useRef, useMemo, useReducer } = React;
 const VERSION = "v3.0";
 
 // ── Constants ────────────────────────────────────────────────────────────────
@@ -402,7 +402,8 @@ function TagFilterPanel({ filterTags, onToggle, onClear }) {
 }
 
 // ── CardLightbox ──────────────────────────────────────────────────────────────
-function CardLightbox({ sorted, lightboxIndex, grades, onUpdate, onClose, onNav }) {
+function CardLightbox({ sorted, lightboxIndex, onClose, onNav }) {
+  const { grades, updateGrade: onUpdate } = useGrades();
   const card  = sorted[lightboxIndex];
   const g     = grades[card.id] ?? {};
   const q     = calcQuadrant(g);
@@ -499,8 +500,9 @@ function CardLightbox({ sorted, lightboxIndex, grades, onUpdate, onClose, onNav 
 
           <Field label="Notes">
             <textarea className="mc-note" style={{ minHeight:72 }} placeholder="Notes…"
-              value={g.notes || ""}
-              onChange={e => onUpdate(card.id, "notes", e.target.value)} />
+              key={card.id}
+              defaultValue={g.notes ?? ""}
+              onBlur={e => onUpdate(card.id, "notes", e.target.value)} />
           </Field>
 
           <Field label="Tags">
@@ -553,7 +555,9 @@ const SCATTER_MODES = [
   { id:"expVsPerf", label:"Expert vs Perf",xKey:"perf",  yKey:"exp",   xLabel:"Performance", yLabel:"Expert" },
 ];
 
-function AnalyticsView({ cards, grades, isMobile, onCardClick }) {
+function AnalyticsView({ onCardClick }) {
+  const { cards, grades } = useGrades();
+  const isMobile = useIsMobile();
   const [activeTab, setActiveTab]       = useState("distribution");
   const [scatterMode, setScatterMode]   = useState("meVsPerf");
   const [previewCard, setPreviewCard]   = useState(null);
@@ -882,11 +886,107 @@ function GradeSelect({ cls, value, onChange }) {
   );
 }
 
+// ── GradeRow ──────────────────────────────────────────────────────────────────
+function GradeRow({ card, onOpenLightbox, onHoverEnter, onHoverMove, onHoverLeave }) {
+  const { grades, updateGrade, importMeta } = useGrades();
+  const g  = grades[card.id] ?? {};
+  const ck = getColorKey(card);
+  const q  = calcQuadrant(g);
+  const [localNotes, setLocalNotes] = useState(g.notes ?? "");
+  useEffect(() => { setLocalNotes(g.notes ?? ""); }, [g.notes]);
+  return (
+    <tr className={`c${ck}`}>
+      <td
+        onMouseEnter={e => onHoverEnter(card, { x: e.clientX, y: e.clientY })}
+        onMouseMove={e  => onHoverMove({ x: e.clientX, y: e.clientY })}
+        onMouseLeave={onHoverLeave}
+        onClick={onOpenLightbox}
+        style={{ cursor:"pointer" }}>
+        <div className="card-name">
+          {card.name}
+          {q && <QuadrantBadge g={g} />}
+        </div>
+      </td>
+      <td><span className="mana">{card.mana_cost ? renderMana(card.mana_cost) : "—"}</span></td>
+      <td><span className="typ">{card.type_line?.split("—")[0]?.trim()}</span></td>
+      <td>
+        <span className="rar-dot" style={{ background: RARITY_COLORS[card.rarity], marginRight:5 }} />
+        <span style={{ fontSize:10, color:"var(--dim)" }}>{card.rarity.charAt(0).toUpperCase()}</span>
+      </td>
+      <td><span className="ctag" data-c={ck}>{MTG_LABELS[ck]}</span></td>
+      <td>
+        <GradeSelect cls="gsel" value={g.myGrade || ""}
+          onChange={e => updateGrade(card.id, "myGrade", e.target.value)} />
+      </td>
+      <td>
+        <RatingInput value={g.expert_rating} source={g.expert_source}
+          sourceMeta={importMeta?.expert}
+          onChange={v => updateGrade(card.id, "expert_rating", v)} />
+      </td>
+      <td>
+        <RatingInput value={g.performance_rating} source={g.performance_source}
+          sourceMeta={importMeta?.performance}
+          onChange={v => updateGrade(card.id, "performance_rating", v)} />
+      </td>
+      <td><ThreeWayDelta g={g} /></td>
+      <td>
+        <GradeSelect cls="gsel" value={g.sunsetGrade || ""}
+          onChange={e => updateGrade(card.id, "sunsetGrade", e.target.value)} />
+      </td>
+      <td>
+        <input type="text" className="note-in" placeholder="Notes…"
+          value={localNotes}
+          onChange={e => setLocalNotes(e.target.value)}
+          onBlur={() => updateGrade(card.id, "notes", localNotes)} />
+        <TagCell tags={g.tags ?? []} onToggle={id => {
+          const cur = g.tags ?? [];
+          updateGrade(card.id, "tags", cur.includes(id) ? cur.filter(t => t !== id) : [...cur, id]);
+        }} />
+      </td>
+    </tr>
+  );
+}
+
+// ── GradeTable ────────────────────────────────────────────────────────────────
+function GradeTable({ sorted, filters, onSort, onOpenLightbox, onHoverEnter, onHoverMove, onHoverLeave }) {
+  return (
+    <div className="tbl-wrap desktop-only">
+      <table>
+        <thead>
+          <tr>
+            {[
+              ["name","Card"],["cmc","Cost"],[null,"Type"],["rarity","Rar"],["color","Color"],
+              ["myGrade","My Grade"],["expert","Expert"],["performance","Perf"],
+              [null,"Δ"],[null,"Sunset"],[null,"Notes"]
+            ].map(([col, lbl]) => (
+              <th key={lbl} className={col && filters.sortCol === col ? "sorted" : ""}
+                onClick={() => col && onSort(col)} style={!col ? { cursor:"default" } : {}}>
+                {lbl}{col && filters.sortCol === col ? (filters.sortDir === "asc" ? " ▲" : " ▼") : ""}
+              </th>
+            ))}
+          </tr>
+        </thead>
+        <tbody>
+          {sorted.map((card, idx) => (
+            <GradeRow key={card.id} card={card}
+              onOpenLightbox={() => onOpenLightbox(idx)}
+              onHoverEnter={onHoverEnter} onHoverMove={onHoverMove} onHoverLeave={onHoverLeave} />
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
 // ── MobileCardItem ────────────────────────────────────────────────────────────
-function MobileCardItem({ card, grade, onUpdate }) {
-  const [expanded, setExpanded] = useState(false);
-  const [bigImg, setBigImg]     = useState(false);
-  const [face, setFace]         = useState(0);
+function MobileCardItem({ card, expanded, onToggleExpand }) {
+  const { grades, updateGrade } = useGrades();
+  const grade    = grades[card.id] ?? {};
+  const onUpdate = (field, value) => updateGrade(card.id, field, value);
+  const [bigImg, setBigImg]       = useState(false);
+  const [face, setFace]           = useState(0);
+  const [localNotes, setLocalNotes] = useState(grade.notes ?? "");
+  useEffect(() => { setLocalNotes(grade.notes ?? ""); }, [grade.notes]);
   const ck     = getColorKey(card);
   const hasDFC = card.card_faces?.length >= 2 && card.card_faces[1]?.image_uris;
   const img    = hasDFC ? card.card_faces[face]?.image_uris?.normal : getImageUrl(card);
@@ -897,7 +997,7 @@ function MobileCardItem({ card, grade, onUpdate }) {
       <div style={{ display:"flex" }}>
         <div className="mc-stripe" />
         <div className="mc-body">
-          <div className="mc-top" onClick={() => { setExpanded(v => !v); setBigImg(false); setFace(0); }}>
+          <div className="mc-top" onClick={() => { onToggleExpand(); setBigImg(false); setFace(0); }}>
             <div className="mc-info">
               <div className="mc-name">
                 {card.name}
@@ -983,8 +1083,9 @@ function MobileCardItem({ card, grade, onUpdate }) {
                       <div className="mc-field">
                         <label>Notes</label>
                         <textarea className="mc-note" placeholder="Notes…" rows="2"
-                          value={grade.notes || ""}
-                          onChange={e => onUpdate("notes", e.target.value)} />
+                          value={localNotes}
+                          onChange={e => setLocalNotes(e.target.value)}
+                          onBlur={() => updateGrade(card.id, "notes", localNotes)} />
                       </div>
                       <div className="mc-field">
                         <label>Tags</label>
@@ -1012,7 +1113,8 @@ function MobileCardItem({ card, grade, onUpdate }) {
 }
 
 // ── ImportPanel ───────────────────────────────────────────────────────────────
-function ImportPanel({ cards, grades, selectedSet, fmt17l, setFmt17l, meta, setMeta, onGradesUpdate, mobile }) {
+function ImportPanel({ selectedSet, fmt17l, setFmt17l, onGradesUpdate, mobile }) {
+  const { cards, grades, importMeta: meta, setImportMeta: setMeta } = useGrades();
   const [msg, setMsg]         = useState("");
   const [source, setSource]   = useState("17lands");
   const [target, setTarget]   = useState("auto"); // auto | expert | performance
@@ -1141,6 +1243,369 @@ function ImportPanel({ cards, grades, selectedSet, fmt17l, setFmt17l, meta, setM
   );
 }
 
+// ── Pure utilities (no state dependencies) ────────────────────────────────────
+
+function debounce(fn, ms) {
+  let timer;
+  return function(...args) {
+    clearTimeout(timer);
+    timer = setTimeout(() => fn.apply(this, args), ms);
+  };
+}
+
+function applyFilters(card, grade, filters) {
+  const ck = getColorKey(card);
+  if (filters.color    !== "all" && ck !== filters.color) return false;
+  if (filters.rarity   !== "all" && card.rarity !== filters.rarity) return false;
+  if (filters.search   && !card.name.toLowerCase().includes(filters.search.toLowerCase())) return false;
+  if (filters.graded   === "graded"   && !grade.myGrade) return false;
+  if (filters.graded   === "ungraded" &&  grade.myGrade) return false;
+  if (filters.quadrant !== "all") {
+    const q = calcQuadrant(grade);
+    const label = q?.label ?? "none";
+    if (filters.quadrant === "none" ? label !== "none" : label !== filters.quadrant) return false;
+  }
+  if (filters.tags?.length > 0) {
+    const cardTags = grade.tags ?? [];
+    if (!filters.tags.some(t => cardTags.includes(t))) return false;
+  }
+  return true;
+}
+
+function applySort(a, b, grades, col, dir) {
+  const ga = grades[a.id] ?? {}, gb = grades[b.id] ?? {};
+  let av, bv;
+  switch (col) {
+    case "color":       av = COLOR_ORDER[getColorKey(a)] * 100 + (a.cmc ?? 0); bv = COLOR_ORDER[getColorKey(b)] * 100 + (b.cmc ?? 0); break;
+    case "name":        av = a.name;                               bv = b.name; break;
+    case "cmc":         av = a.cmc ?? 0;                           bv = b.cmc ?? 0; break;
+    case "rarity":      av = RARITIES.indexOf(a.rarity);           bv = RARITIES.indexOf(b.rarity); break;
+    case "myGrade":     av = GRADES.indexOf(ga.myGrade || "");     bv = GRADES.indexOf(gb.myGrade || ""); break;
+    case "expert":      av = ga.expert_rating ?? 99;               bv = gb.expert_rating ?? 99; break;
+    case "performance": av = ga.performance_rating ?? 99;          bv = gb.performance_rating ?? 99; break;
+    default: return 0;
+  }
+  if (av < bv) return dir === "asc" ? -1 :  1;
+  if (av > bv) return dir === "asc" ?  1 : -1;
+  return 0;
+}
+
+// ── Filter reducer ────────────────────────────────────────────────────────────
+const filterInitialState = {
+  color: "all", rarity: "all", search: "", graded: "all",
+  quadrant: "all", tags: [], sortCol: "color", sortDir: "asc", mobileSort: "color",
+};
+
+function filterReducer(state, action) {
+  switch (action.type) {
+    case "SET_COLOR":       return { ...state, color:      action.value };
+    case "SET_RARITY":      return { ...state, rarity:     action.value };
+    case "SET_SEARCH":      return { ...state, search:     action.value };
+    case "SET_GRADED":      return { ...state, graded:     action.value };
+    case "SET_QUADRANT":    return { ...state, quadrant:   action.value };
+    case "SET_TAGS":        return { ...state, tags:       action.value };
+    case "SET_SORT":        return { ...state, sortCol: action.col, sortDir: action.dir };
+    case "SET_MOBILE_SORT": return { ...state, mobileSort: action.value };
+    case "RESET":           return { ...state, color:"all", rarity:"all", search:"", graded:"all", quadrant:"all", tags:[] };
+    case "RESTORE":         return { ...filterInitialState, ...action.value };
+    default: return state;
+  }
+}
+
+// ── MobileDrawer ──────────────────────────────────────────────────────────────
+function MobileDrawer({ open, onClose, filters, dispatch, hasFilters, clearFilters, toggleFilterTag,
+                        selectedSet, fmt17l, setFmt17l, handleGradesUpdate,
+                        exportBackup, importBackup, exportCSV, user, syncStatus }) {
+  return (
+    <div className="filters-mobile mobile-only" style={{ maxHeight: open ? "70vh" : "0" }}>
+      {open && (
+        <div className="fm-inner">
+          <div className="fm-row">
+            <input className="fm-srch" placeholder="Search cards…"
+              value={filters.search} onChange={e => dispatch({ type:"SET_SEARCH", value:e.target.value })} />
+            <select className="fm-sort" value={filters.mobileSort} onChange={e => dispatch({ type:"SET_MOBILE_SORT", value:e.target.value })}>
+              <option value="color">Color → CMC</option>
+              <option value="name">Name A–Z</option>
+              <option value="cmc">Mana Cost</option>
+              <option value="rarity">Rarity</option>
+              <option value="myGrade">My Grade</option>
+              <option value="expert">Expert</option>
+              <option value="performance">Performance</option>
+            </select>
+          </div>
+          <div className="fm-row">
+            <span className="fl">Color:</span>
+            {["all","W","U","B","R","G","M","C","L"].map(c => (
+              <button key={c} className={`fb${filters.color === c ? " active" : ""}`} onClick={() => dispatch({ type:"SET_COLOR", value:c })}>
+                {c === "all" ? "All" : c}
+              </button>
+            ))}
+          </div>
+          <div className="fm-row">
+            <span className="fl">Rarity:</span>
+            {[["all","All"],["common","C"],["uncommon","U"],["rare","R"],["mythic","M"]].map(([full, abbr]) => (
+              <button key={full}
+                className={`fb${filters.rarity === full ? " active" : ""}`}
+                style={filters.rarity === full && full !== "all" ? { color: RARITY_COLORS[full], borderColor: RARITY_COLORS[full]+"88" } : {}}
+                onClick={() => dispatch({ type:"SET_RARITY", value:full })}>{abbr}</button>
+            ))}
+          </div>
+          <div className="fm-row">
+            <span className="fl">Show:</span>
+            {["all","graded","ungraded"].map(g => (
+              <button key={g} className={`fb${filters.graded === g ? " active" : ""}`} onClick={() => dispatch({ type:"SET_GRADED", value:g })}>
+                {g.charAt(0).toUpperCase() + g.slice(1)}
+              </button>
+            ))}
+          </div>
+          <div className="fm-row">
+            <span className="fl">Quad:</span>
+            {["all","FORMAT","MISS","SPOT","VAR","none"].map(q => (
+              <button key={q} className={`fb${filters.quadrant === q ? " active" : ""}`} onClick={() => dispatch({ type:"SET_QUADRANT", value:q })}>
+                {q === "all" ? "All" : q}
+              </button>
+            ))}
+          </div>
+          <div className="fm-row" style={{ flexDirection:"column", alignItems:"flex-start", gap:6 }}>
+            <span className="fl">Tags:</span>
+            <div className="tag-chips">
+              {TAGS.map(tag => (
+                <button key={tag.id} className={`tag-chip${filters.tags.includes(tag.id) ? " active" : ""}`}
+                  onClick={() => toggleFilterTag(tag.id)}>{tag.label}</button>
+              ))}
+            </div>
+          </div>
+          {hasFilters && <div className="fm-row"><button className="btn" style={{ padding:"3px 10px" }} onClick={clearFilters}>Clear Filters</button></div>}
+          {selectedSet && (
+            <div style={{ borderTop:"1px solid var(--b1)", paddingTop:10 }}>
+              <ImportPanel selectedSet={selectedSet} fmt17l={fmt17l} setFmt17l={setFmt17l}
+                onGradesUpdate={handleGradesUpdate} mobile={true} />
+            </div>
+          )}
+          <div style={{ borderTop:"1px solid var(--b1)", paddingTop:10, display:"flex", gap:8 }}>
+            <button className="l17-fetch" style={{ flex:1 }} onClick={exportBackup}>Export Backup</button>
+            <label className="l17-fetch" style={{ flex:1, textAlign:"center", cursor:"pointer" }}>
+              Import Backup
+              <input type="file" accept=".json" style={{ display:"none" }}
+                onChange={e => { importBackup(e.target.files[0]); e.target.value = ""; onClose(); }} />
+            </label>
+          </div>
+        </div>
+      )}
+      {open && (
+        <div className="fm-footer">
+          {selectedSet && (
+            <button className="l17-fetch" style={{ flex:1 }}
+              onClick={() => { exportCSV(); onClose(); }}>
+              ↓ Export CSV
+            </button>
+          )}
+          {user && (
+            <button className="l17-fetch" style={{ flex:1, borderColor:"var(--dimmer)", color:"#5a5a7a" }}
+              onClick={() => { sb.auth.signOut(); onClose(); }}>
+              Sign Out
+            </button>
+          )}
+          {user && syncStatus && (
+            <span className="sync-dot" style={{ alignSelf:"center", flexShrink:0 }}>
+              {syncStatus === "syncing" ? "↑" : "✓"}
+            </span>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ── FilterBar ─────────────────────────────────────────────────────────────────
+function FilterBar({ filters, dispatch, hasExpertData, hasPerformanceData, sortedCount, hasFilters, showTagFilter, setShowTagFilter, toggleFilterTag, clearFilters }) {
+  return (
+    <div className="filters-desktop desktop-only">
+      <span className="fl">Color</span>
+      {["all","W","U","B","R","G","M","C","L"].map(c => (
+        <button key={c} className={`fb${filters.color === c ? " active" : ""}`} onClick={() => dispatch({ type:"SET_COLOR", value:c })}>
+          {c === "all" ? "All" : MTG_LABELS[c]}
+        </button>
+      ))}
+      <div className="divv" />
+      <span className="fl">Rarity</span>
+      {["all", ...RARITIES].map(r => (
+        <button key={r}
+          className={`fb${filters.rarity === r ? " active" : ""}`}
+          style={filters.rarity === r && r !== "all" ? { color: RARITY_COLORS[r], borderColor: RARITY_COLORS[r]+"88" } : {}}
+          onClick={() => dispatch({ type:"SET_RARITY", value:r })}>
+          {r === "all" ? "All" : r.charAt(0).toUpperCase() + r.slice(1)}
+        </button>
+      ))}
+      <div className="divv" />
+      <span className="fl">Show</span>
+      {["all","graded","ungraded"].map(g => (
+        <button key={g} className={`fb${filters.graded === g ? " active" : ""}`} onClick={() => dispatch({ type:"SET_GRADED", value:g })}>
+          {g.charAt(0).toUpperCase() + g.slice(1)}
+        </button>
+      ))}
+      {(hasExpertData || hasPerformanceData) && <>
+        <div className="divv" />
+        <span className="fl">Quad</span>
+        {["all","FORMAT","MISS","SPOT","VAR"].map(q => (
+          <button key={q} className={`fb${filters.quadrant === q ? " active" : ""}`} onClick={() => dispatch({ type:"SET_QUADRANT", value:q })}>
+            {q === "all" ? "All" : q}
+          </button>
+        ))}
+      </>}
+      <div className="divv" />
+      <div className="tag-filter-wrap" onClick={e => e.stopPropagation()}>
+        <button className={`fb${filters.tags.length > 0 ? " active" : ""}`}
+          onClick={() => setShowTagFilter(v => !v)}>
+          Tags{filters.tags.length > 0 ? ` (${filters.tags.length})` : ""}
+        </button>
+        {showTagFilter && (
+          <TagFilterPanel filterTags={filters.tags} onToggle={toggleFilterTag} onClear={() => dispatch({ type:"SET_TAGS", value:[] })} />
+        )}
+      </div>
+      <div className="divv" />
+      <input className="srch" placeholder="Search cards…"
+        value={filters.search} onChange={e => dispatch({ type:"SET_SEARCH", value:e.target.value })} />
+      {hasFilters && <button className="btn" onClick={clearFilters}>Clear</button>}
+      <span className="fl" style={{ marginLeft:"auto" }}>{sortedCount} shown</span>
+    </div>
+  );
+}
+
+// ── GradesContext ─────────────────────────────────────────────────────────────
+const GradesContext = React.createContext(null);
+function useGrades() { return React.useContext(GradesContext); }
+
+// ── GradingView ───────────────────────────────────────────────────────────────
+function GradingView({
+  showAnalytics, showMobF, onCloseMobF,
+  selectedSet, user, syncStatus,
+  fmt17l, setFmt17l, handleGradesUpdate,
+  exportBackup, importBackup, exportCSV,
+  loading, loadMsg, error,
+  filters, dispatch, handleSort, clearFilters, toggleFilterTag, hasFilters,
+}) {
+  const isMobile = useIsMobile();
+  const { cards, grades } = useGrades();
+
+  const [showTagFilter, setShowTagFilter]   = useState(false);
+  const [lightboxIndex, setLightboxIndex]   = useState(null);
+  const [hovered, setHovered]               = useState(null);
+  const [hoverPos, setHoverPos]             = useState({ x:0, y:0 });
+  const [expandedCardId, setExpandedCardId] = useState(null);
+
+  const activeSort        = isMobile ? filters.mobileSort : filters.sortCol;
+  const gradableCards     = useMemo(() => cards.filter(c => !isBasicLand(c)), [cards]);
+  const gradedCount       = gradableCards.filter(c => grades[c.id]?.myGrade).length;
+  const gradeCounts       = {};
+  for (const g of Object.values(grades)) { if (g.myGrade) gradeCounts[g.myGrade] = (gradeCounts[g.myGrade] ?? 0) + 1; }
+  const pct               = gradableCards.length ? Math.round(gradedCount / gradableCards.length * 100) : 0;
+  const analyticsUnlocked = pct >= 50 && (cards.some(c => grades[c.id]?.expert_rating != null) || cards.some(c => grades[c.id]?.performance_rating != null));
+  const filtered          = useMemo(() => cards.filter(c => applyFilters(c, grades[c.id] ?? {}, filters)), [cards, grades, filters]);
+  const sorted            = useMemo(() => [...filtered].sort((a, b) => applySort(a, b, grades, activeSort, isMobile ? "asc" : filters.sortDir)), [filtered, grades, activeSort, filters.sortDir, isMobile]);
+  const hasExpertData     = cards.some(c => grades[c.id]?.expert_rating != null);
+  const hasPerformanceData= cards.some(c => grades[c.id]?.performance_rating != null);
+
+  return (
+    <>
+      <MobileDrawer
+        open={showMobF} onClose={onCloseMobF}
+        filters={filters} dispatch={dispatch}
+        hasFilters={hasFilters} clearFilters={clearFilters} toggleFilterTag={toggleFilterTag}
+        selectedSet={selectedSet} fmt17l={fmt17l} setFmt17l={setFmt17l}
+        handleGradesUpdate={handleGradesUpdate}
+        exportBackup={exportBackup} importBackup={importBackup} exportCSV={exportCSV}
+        user={user} syncStatus={syncStatus}
+      />
+
+      {cards.length > 0 && (
+        <>
+          <div className="stats">
+            <span className="stat"><span className="stat-v">{cards.length}</span> cards</span>
+            <span className="stat"><span className="stat-v">{gradedCount}</span> graded</span>
+            <span className="stat"><span className="stat-v">{pct}%</span></span>
+            <span className="stat" style={{ color:"var(--b2)" }}>|</span>
+            {GRADES.filter(g => g).map(g => gradeCounts[g]
+              ? <span key={g} className="gp" style={{ background: GRADE_COLOR[g]+"22", color: GRADE_COLOR[g], border:`1px solid ${GRADE_COLOR[g]}55` }}>
+                  {g} <span style={{ opacity:.75 }}>{gradeCounts[g]}</span>
+                </span>
+              : null
+            )}
+          </div>
+          <div className="prog-bar"><div className="prog-fill" style={{ width:`${pct}%` }} /></div>
+        </>
+      )}
+
+      {!showAnalytics && cards.length > 0 && (
+        <FilterBar
+          filters={filters} dispatch={dispatch}
+          hasExpertData={hasExpertData} hasPerformanceData={hasPerformanceData}
+          sortedCount={sorted.length} hasFilters={hasFilters}
+          showTagFilter={showTagFilter} setShowTagFilter={setShowTagFilter}
+          toggleFilterTag={toggleFilterTag} clearFilters={clearFilters}
+        />
+      )}
+
+      {showAnalytics && analyticsUnlocked && (
+        <AnalyticsView
+          onCardClick={card => {
+            const idx = sorted.indexOf(card);
+            if (idx !== -1) setLightboxIndex(idx);
+          }}
+        />
+      )}
+
+      {!showAnalytics && (loading || error || cards.length === 0) && (
+        <div className="center">
+          {loading
+            ? <><div className="spin" /><span>{loadMsg}</span></>
+            : error
+              ? <span style={{ color:"#e05030" }}>{error}</span>
+              : <><div className="empty-title">Draft Lab</div><div className="empty-sub">Choose a set above to start evaluating cards</div></>
+          }
+        </div>
+      )}
+
+      {!showAnalytics && !loading && !error && cards.length > 0 && (
+        <GradeTable
+          sorted={sorted} filters={filters} onSort={handleSort}
+          onOpenLightbox={idx => setLightboxIndex(idx)}
+          onHoverEnter={(card, pos) => { setHovered(card); setHoverPos(pos); }}
+          onHoverMove={pos => setHoverPos(pos)}
+          onHoverLeave={() => setHovered(null)}
+        />
+      )}
+
+      {!showAnalytics && !loading && !error && cards.length > 0 && (
+        <div className="card-list mobile-only">
+          {sorted.map(card => (
+            <MobileCardItem key={card.id} card={card}
+              expanded={expandedCardId === card.id}
+              onToggleExpand={() => setExpandedCardId(v => v === card.id ? null : card.id)} />
+          ))}
+        </div>
+      )}
+
+      {hovered && getImageUrl(hovered) && !isMobile && lightboxIndex === null && (
+        <div className="preview" style={{ left: hoverPos.x + 16, top: Math.min(hoverPos.y - 60, window.innerHeight - 300) }}>
+          <img src={getImageUrl(hovered)} alt={hovered.name} />
+        </div>
+      )}
+
+      {lightboxIndex !== null && sorted[lightboxIndex] && (
+        <CardLightbox
+          sorted={sorted} lightboxIndex={lightboxIndex}
+          onClose={() => setLightboxIndex(null)}
+          onNav={delta => {
+            const next = lightboxIndex + delta;
+            if (next >= 0 && next < sorted.length) setLightboxIndex(next);
+          }}
+        />
+      )}
+    </>
+  );
+}
+
 // ── DraftLab ──────────────────────────────────────────────────────────────────
 function DraftLab({ user }) {
   const isMobile = useIsMobile();
@@ -1174,23 +1639,11 @@ function DraftLab({ user }) {
   const [loading, setLoading]       = useState(false);
   const [loadMsg, setLoadMsg]       = useState("");
   const [error, setError]           = useState(null);
-  const [sortCol, setSortCol]       = useState("color");
-  const [sortDir, setSortDir]       = useState("asc");
-  const [mobileSort, setMobileSort] = useState("color");
-  const [filterColor, setFilterColor]     = useState("all");
-  const [filterRarity, setFilterRarity]   = useState("all");
-  const [filterSearch, setFilterSearch]   = useState("");
-  const [filterGraded, setFilterGraded]   = useState("all");
-  const [filterQuadrant, setFilterQuadrant] = useState("all");
-  const [filterTags, setFilterTags]         = useState([]);
-  const [showTagFilter, setShowTagFilter]   = useState(false);
+  const [filters, dispatchFilter] = useReducer(filterReducer, filterInitialState);
   const [showMobF, setShowMobF]     = useState(false);
-  const [lightboxIndex, setLightboxIndex] = useState(null);
   const [showGuide, setShowGuide]   = useState(false);
   const [syncStatus, setSyncStatus] = useState("");
   const [showLegal, setShowLegal]   = useState(false);
-  const [hovered, setHovered]       = useState(null);
-  const [hoverPos, setHoverPos]     = useState({ x:0, y:0 });
   const [setSearch, setSetSearch]   = useState("");
   const [showSetDD, setShowSetDD]   = useState(false);
 
@@ -1258,10 +1711,11 @@ function DraftLab({ user }) {
   useEffect(() => {
     if (!selectedSet) return;
     store.set(`draft-lab-session-${selectedSet.code}`, JSON.stringify({
-      sortCol, sortDir, mobileSort,
-      filterColor, filterRarity, filterGraded, filterQuadrant
+      sortCol: filters.sortCol, sortDir: filters.sortDir, mobileSort: filters.mobileSort,
+      filterColor: filters.color, filterRarity: filters.rarity,
+      filterGraded: filters.graded, filterQuadrant: filters.quadrant,
     }));
-  }, [selectedSet?.code, sortCol, sortDir, mobileSort, filterColor, filterRarity, filterGraded, filterQuadrant]);
+  }, [selectedSet?.code, filters]);
 
   // ── Helpers ──
   const toggleTheme = () => {
@@ -1299,7 +1753,6 @@ function DraftLab({ user }) {
 
   const loadSet = async set => {
     store.set("draft-lab-last-set", set.code);
-    setLightboxIndex(null);
     setShowAnalytics(false);
     setSelectedSet(set);
     setCards([]);
@@ -1307,15 +1760,16 @@ function DraftLab({ user }) {
     setError(null);
     const saved = store.get(`draft-lab-session-${set.code}`);
     const sess  = saved ? JSON.parse(saved.value) : null;
-    setFilterColor(sess?.filterColor ?? "all");
-    setFilterRarity(sess?.filterRarity ?? "all");
-    setFilterSearch("");
-    setFilterGraded(sess?.filterGraded ?? "all");
-    setFilterQuadrant(sess?.filterQuadrant ?? "all");
-    setFilterTags([]);
-    setSortCol(sess?.sortCol ?? "color");
-    setSortDir(sess?.sortDir ?? "asc");
-    setMobileSort(sess?.mobileSort ?? "color");
+    dispatchFilter({ type: "RESTORE", value: {
+      color:     sess?.filterColor    ?? "all",
+      rarity:    sess?.filterRarity   ?? "all",
+      graded:    sess?.filterGraded   ?? "all",
+      quadrant:  sess?.filterQuadrant ?? "all",
+      sortCol:   sess?.sortCol        ?? "color",
+      sortDir:   sess?.sortDir        ?? "asc",
+      mobileSort: sess?.mobileSort    ?? "color",
+      search: "", tags: [],
+    }});
     loadGrades(set.code);
     let url = `https://api.scryfall.com/cards/search?q=set:${set.code}+game:paper&order=color&unique=cards`, all = [];
     try {
@@ -1336,22 +1790,26 @@ function DraftLab({ user }) {
     }
   };
 
-  const updateGrade = (cardId, field, value) => {
-    setGrades(prev => {
+  const updateGrade = useCallback((cardId, field, value) => {
+setGrades(prev => {
       const next = { ...prev, [cardId]: { ...(prev[cardId] ?? {}), [field]: value } };
       if (selectedSet) persistGrades(next, selectedSet.code);
       return next;
     });
-  };
+  }, [selectedSet, persistGrades]);
+
+  const gradesContextValue = useMemo(() => ({
+    grades, updateGrade, cards, importMeta, setImportMeta,
+  }), [grades, updateGrade, cards, importMeta]);
 
   const handleSort = col => {
-    if (sortCol === col) setSortDir(d => d === "asc" ? "desc" : "asc");
-    else { setSortCol(col); setSortDir("asc"); }
+    if (filters.sortCol === col) dispatchFilter({ type:"SET_SORT", col, dir: filters.sortDir === "asc" ? "desc" : "asc" });
+    else dispatchFilter({ type:"SET_SORT", col, dir:"asc" });
   };
 
   const exportCSV = () => {
     const hdr  = ["Name","Color","Mana Cost","Type","Rarity","My Grade","Expert","Expert Source","Performance","Perf Source","Sunset","Quadrant","Tags","Notes"];
-    const rows = sorted.map(c => {
+    const rows = _csvSorted.map(c => {
       const g = grades[c.id] ?? {};
       const q = calcQuadrant(g);
       return [
@@ -1363,7 +1821,7 @@ function DraftLab({ user }) {
         `"${(g.notes ?? "").replace(/"/g, '""')}"`,
       ].join(",");
     });
-    const blob = new Blob([[hdr.join(","), ...rows].join("\n")], { type:"text/csv" });
+    const blob = new Blob(["﻿" + [hdr.join(","), ...rows].join("\n")], { type:"text/csv;charset=utf-8;" });
     Object.assign(document.createElement("a"), { href: URL.createObjectURL(blob), download: `${selectedSet?.code ?? "mtg"}-grades.csv` }).click();
   };
 
@@ -1417,63 +1875,23 @@ function DraftLab({ user }) {
   };
 
   // ── Derived ──
-  const activeSort   = isMobile ? mobileSort : sortCol;
   const filteredSets = sets.filter(s => s.name.toLowerCase().includes(setSearch.toLowerCase()) || s.code.toLowerCase().includes(setSearch.toLowerCase()));
-  const clearFilters = () => { setFilterColor("all"); setFilterRarity("all"); setFilterSearch(""); setFilterGraded("all"); setFilterQuadrant("all"); setFilterTags([]); };
-  const toggleFilterTag = id => setFilterTags(prev => prev.includes(id) ? prev.filter(t => t !== id) : [...prev, id]);
-  const hasFilters   = filterColor !== "all" || filterRarity !== "all" || filterSearch || filterGraded !== "all" || filterQuadrant !== "all" || filterTags.length > 0;
-  const gradableCards = useMemo(() => cards.filter(c => !isBasicLand(c)), [cards]);
-  const gradedCount   = gradableCards.filter(c => grades[c.id]?.myGrade).length;
-  const gradeCounts   = {};
-  for (const g of Object.values(grades)) { if (g.myGrade) gradeCounts[g.myGrade] = (gradeCounts[g.myGrade] ?? 0) + 1; }
-  const pct = gradableCards.length ? Math.round(gradedCount / gradableCards.length * 100) : 0;
-  const analyticsUnlocked = pct >= 50 && (cards.some(c => grades[c.id]?.expert_rating != null) || cards.some(c => grades[c.id]?.performance_rating != null));
+  const clearFilters    = () => dispatchFilter({ type:"RESET" });
+  const toggleFilterTag = id => dispatchFilter({ type:"SET_TAGS", value: filters.tags.includes(id) ? filters.tags.filter(t => t !== id) : [...filters.tags, id] });
+  const hasFilters      = filters.color !== "all" || filters.rarity !== "all" || filters.search || filters.graded !== "all" || filters.quadrant !== "all" || filters.tags.length > 0;
 
-  const filtered = useMemo(() => cards.filter(c => {
-    const ck = getColorKey(c);
-    const g  = grades[c.id] ?? {};
-    if (filterColor    !== "all" && ck !== filterColor) return false;
-    if (filterRarity   !== "all" && c.rarity !== filterRarity) return false;
-    if (filterSearch && !c.name.toLowerCase().includes(filterSearch.toLowerCase())) return false;
-    if (filterGraded   === "graded"   && !g.myGrade) return false;
-    if (filterGraded   === "ungraded" &&  g.myGrade) return false;
-    if (filterQuadrant !== "all") {
-      const q = calcQuadrant(g);
-      const label = q?.label ?? "none";
-      if (filterQuadrant === "none" ? label !== "none" : label !== filterQuadrant) return false;
-    }
-    if (filterTags.length > 0) {
-      const cardTags = g.tags ?? [];
-      if (!filterTags.some(t => cardTags.includes(t))) return false;
-    }
-    return true;
-  }), [cards, grades, filterColor, filterRarity, filterSearch, filterGraded, filterQuadrant, filterTags]);
-
-  const sorted = useMemo(() => [...filtered].sort((a, b) => {
-    const ga = grades[a.id] ?? {}, gb = grades[b.id] ?? {};
-    let av, bv;
-    switch (activeSort) {
-      case "color":       av = COLOR_ORDER[getColorKey(a)] * 100 + (a.cmc ?? 0); bv = COLOR_ORDER[getColorKey(b)] * 100 + (b.cmc ?? 0); break;
-      case "name":        av = a.name; bv = b.name; break;
-      case "cmc":         av = a.cmc ?? 0; bv = b.cmc ?? 0; break;
-      case "rarity":      av = RARITIES.indexOf(a.rarity); bv = RARITIES.indexOf(b.rarity); break;
-      case "myGrade":     av = GRADES.indexOf(ga.myGrade || ""); bv = GRADES.indexOf(gb.myGrade || ""); break;
-      case "expert":      av = ga.expert_rating ?? 99; bv = gb.expert_rating ?? 99; break;
-      case "performance": av = ga.performance_rating ?? 99; bv = gb.performance_rating ?? 99; break;
-      default: return 0;
-    }
-    const dir = isMobile ? "asc" : sortDir;
-    if (av < bv) return dir === "asc" ? -1 :  1;
-    if (av > bv) return dir === "asc" ?  1 : -1;
-    return 0;
-  }), [filtered, grades, activeSort, sortDir, isMobile]);
-
-  const hasExpertData      = cards.some(c => grades[c.id]?.expert_rating != null);
-  const hasPerformanceData = cards.some(c => grades[c.id]?.performance_rating != null);
+  // Minimal computations kept in DraftLab for header 💡 button and exportCSV
+  const _gradableCards    = useMemo(() => cards.filter(c => !isBasicLand(c)), [cards]);
+  const _gradedCount      = _gradableCards.filter(c => grades[c.id]?.myGrade).length;
+  const _pct              = _gradableCards.length ? Math.round(_gradedCount / _gradableCards.length * 100) : 0;
+  const analyticsUnlocked = _pct >= 50 && (cards.some(c => grades[c.id]?.expert_rating != null) || cards.some(c => grades[c.id]?.performance_rating != null));
+  const _csvFiltered      = useMemo(() => cards.filter(c => applyFilters(c, grades[c.id] ?? {}, filters)), [cards, grades, filters]);
+  const _csvSorted        = useMemo(() => [..._csvFiltered].sort((a, b) => applySort(a, b, grades, filters.sortCol, filters.sortDir)), [_csvFiltered, grades, filters.sortCol, filters.sortDir]);
 
   // ── Render ──
   return (
-    <div className="app" onClick={() => { setShowSetDD(false); setShowImport(false); setShowExport(false); setShowTagFilter(false); }}>
+    <GradesContext.Provider value={gradesContextValue}>
+    <div className="app" onClick={() => { setShowSetDD(false); setShowImport(false); setShowExport(false); }}>
 
       {/* ── Header ── */}
       <header className={`hdr${showAnalytics ? " analytics-open" : ""}`} onClick={e => e.stopPropagation()}>
@@ -1530,9 +1948,7 @@ function DraftLab({ user }) {
               {showImport && (
                 <div className="l17-panel" style={{ width:300 }}>
                   <ImportPanel
-                    cards={cards} grades={grades} selectedSet={selectedSet}
-                    fmt17l={fmt17l} setFmt17l={setFmt17l}
-                    meta={importMeta} setMeta={setImportMeta}
+                    selectedSet={selectedSet} fmt17l={fmt17l} setFmt17l={setFmt17l}
                     onGradesUpdate={handleGradesUpdate} mobile={false} />
                 </div>
               )}
@@ -1589,317 +2005,17 @@ function DraftLab({ user }) {
         </div>
       </header>
 
-      {/* ── Mobile filter drawer ── */}
-      <div className="filters-mobile mobile-only" style={{ maxHeight: showMobF ? "70vh" : "0" }}>
-        {showMobF && (
-          <div className="fm-inner">
-            <div className="fm-row">
-              <input className="fm-srch" placeholder="Search cards…"
-                value={filterSearch} onChange={e => setFilterSearch(e.target.value)} />
-              <select className="fm-sort" value={mobileSort} onChange={e => setMobileSort(e.target.value)}>
-                <option value="color">Color → CMC</option>
-                <option value="name">Name A–Z</option>
-                <option value="cmc">Mana Cost</option>
-                <option value="rarity">Rarity</option>
-                <option value="myGrade">My Grade</option>
-                <option value="expert">Expert</option>
-                <option value="performance">Performance</option>
-              </select>
-            </div>
-            <div className="fm-row">
-              <span className="fl">Color:</span>
-              {["all","W","U","B","R","G","M","C","L"].map(c => (
-                <button key={c} className={`fb${filterColor === c ? " active" : ""}`} onClick={() => setFilterColor(c)}>
-                  {c === "all" ? "All" : c}
-                </button>
-              ))}
-            </div>
-            <div className="fm-row">
-              <span className="fl">Rarity:</span>
-              {[["all","All"],["common","C"],["uncommon","U"],["rare","R"],["mythic","M"]].map(([full, abbr]) => (
-                <button key={full}
-                  className={`fb${filterRarity === full ? " active" : ""}`}
-                  style={filterRarity === full && full !== "all" ? { color: RARITY_COLORS[full], borderColor: RARITY_COLORS[full]+"88" } : {}}
-                  onClick={() => setFilterRarity(full)}>{abbr}</button>
-              ))}
-            </div>
-            <div className="fm-row">
-              <span className="fl">Show:</span>
-              {["all","graded","ungraded"].map(g => (
-                <button key={g} className={`fb${filterGraded === g ? " active" : ""}`} onClick={() => setFilterGraded(g)}>
-                  {g.charAt(0).toUpperCase() + g.slice(1)}
-                </button>
-              ))}
-            </div>
-            <div className="fm-row">
-              <span className="fl">Quad:</span>
-              {["all","FORMAT","MISS","SPOT","VAR","none"].map(q => (
-                <button key={q} className={`fb${filterQuadrant === q ? " active" : ""}`} onClick={() => setFilterQuadrant(q)}>
-                  {q === "all" ? "All" : q}
-                </button>
-              ))}
-            </div>
-            <div className="fm-row" style={{ flexDirection:"column", alignItems:"flex-start", gap:6 }}>
-              <span className="fl">Tags:</span>
-              <div className="tag-chips">
-                {TAGS.map(tag => (
-                  <button key={tag.id} className={`tag-chip${filterTags.includes(tag.id) ? " active" : ""}`}
-                    onClick={() => toggleFilterTag(tag.id)}>{tag.label}</button>
-                ))}
-              </div>
-            </div>
-            {hasFilters && <div className="fm-row"><button className="btn" style={{ padding:"3px 10px" }} onClick={clearFilters}>Clear Filters</button></div>}
-            {selectedSet && (
-              <div style={{ borderTop:"1px solid var(--b1)", paddingTop:10 }}>
-                <ImportPanel
-                  cards={cards} grades={grades} selectedSet={selectedSet}
-                  fmt17l={fmt17l} setFmt17l={setFmt17l}
-                  meta={importMeta} setMeta={setImportMeta}
-                  onGradesUpdate={handleGradesUpdate} mobile={true} />
-              </div>
-            )}
-            <div style={{ borderTop:"1px solid var(--b1)", paddingTop:10, display:"flex", gap:8 }}>
-              <button className="l17-fetch" style={{ flex:1 }} onClick={exportBackup}>Export Backup</button>
-              <label className="l17-fetch" style={{ flex:1, textAlign:"center", cursor:"pointer" }}>
-                Import Backup
-                <input type="file" accept=".json" style={{ display:"none" }}
-                  onChange={e => { importBackup(e.target.files[0]); e.target.value = ""; setShowMobF(false); }} />
-              </label>
-            </div>
-          </div>
-        )}
-        {/* ── Pinned footer — always visible, never scrolled away ── */}
-        {showMobF && (
-          <div className="fm-footer">
-            {selectedSet && (
-              <button className="l17-fetch" style={{ flex:1 }}
-                onClick={() => { exportCSV(); setShowMobF(false); }}>
-                ↓ Export CSV
-              </button>
-            )}
-            {user && (
-              <button className="l17-fetch" style={{ flex:1, borderColor:"var(--dimmer)", color:"#5a5a7a" }}
-                onClick={() => { sb.auth.signOut(); setShowMobF(false); }}>
-                Sign Out
-              </button>
-            )}
-            {user && syncStatus && (
-              <span className="sync-dot" style={{ alignSelf:"center", flexShrink:0 }}>
-                {syncStatus === "syncing" ? "↑" : "✓"}
-              </span>
-            )}
-          </div>
-        )}
-      </div>
-
-      {/* ── Stats bar ── */}
-      {cards.length > 0 && (
-        <>
-          <div className="stats">
-            <span className="stat"><span className="stat-v">{cards.length}</span> cards</span>
-            <span className="stat"><span className="stat-v">{gradedCount}</span> graded</span>
-            <span className="stat"><span className="stat-v">{pct}%</span></span>
-            <span className="stat" style={{ color:"var(--b2)" }}>|</span>
-            {GRADES.filter(g => g).map(g => gradeCounts[g]
-              ? <span key={g} className="gp" style={{ background: GRADE_COLOR[g]+"22", color: GRADE_COLOR[g], border:`1px solid ${GRADE_COLOR[g]}55` }}>
-                  {g} <span style={{ opacity:.75 }}>{gradeCounts[g]}</span>
-                </span>
-              : null
-            )}
-          </div>
-          <div className="prog-bar"><div className="prog-fill" style={{ width:`${pct}%` }} /></div>
-        </>
-      )}
-
-      {/* ── Desktop filters ── */}
-      {!showAnalytics && cards.length > 0 && (
-        <div className="filters-desktop desktop-only">
-          <span className="fl">Color</span>
-          {["all","W","U","B","R","G","M","C","L"].map(c => (
-            <button key={c} className={`fb${filterColor === c ? " active" : ""}`} onClick={() => setFilterColor(c)}>
-              {c === "all" ? "All" : MTG_LABELS[c]}
-            </button>
-          ))}
-          <div className="divv" />
-          <span className="fl">Rarity</span>
-          {["all", ...RARITIES].map(r => (
-            <button key={r}
-              className={`fb${filterRarity === r ? " active" : ""}`}
-              style={filterRarity === r && r !== "all" ? { color: RARITY_COLORS[r], borderColor: RARITY_COLORS[r]+"88" } : {}}
-              onClick={() => setFilterRarity(r)}>
-              {r === "all" ? "All" : r.charAt(0).toUpperCase() + r.slice(1)}
-            </button>
-          ))}
-          <div className="divv" />
-          <span className="fl">Show</span>
-          {["all","graded","ungraded"].map(g => (
-            <button key={g} className={`fb${filterGraded === g ? " active" : ""}`} onClick={() => setFilterGraded(g)}>
-              {g.charAt(0).toUpperCase() + g.slice(1)}
-            </button>
-          ))}
-          {(hasExpertData || hasPerformanceData) && <>
-            <div className="divv" />
-            <span className="fl">Quad</span>
-            {["all","FORMAT","MISS","SPOT","VAR"].map(q => (
-              <button key={q} className={`fb${filterQuadrant === q ? " active" : ""}`} onClick={() => setFilterQuadrant(q)}>
-                {q === "all" ? "All" : q}
-              </button>
-            ))}
-          </>}
-          <div className="divv" />
-          <div className="tag-filter-wrap" onClick={e => e.stopPropagation()}>
-            <button className={`fb${filterTags.length > 0 ? " active" : ""}`}
-              onClick={() => setShowTagFilter(v => !v)}>
-              Tags{filterTags.length > 0 ? ` (${filterTags.length})` : ""}
-            </button>
-            {showTagFilter && (
-              <TagFilterPanel filterTags={filterTags} onToggle={toggleFilterTag} onClear={() => setFilterTags([])} />
-            )}
-          </div>
-          <div className="divv" />
-          <input className="srch" placeholder="Search cards…"
-            value={filterSearch} onChange={e => setFilterSearch(e.target.value)} />
-          {hasFilters && <button className="btn" onClick={clearFilters}>Clear</button>}
-          <span className="fl" style={{ marginLeft:"auto" }}>{sorted.length} shown</span>
-        </div>
-      )}
-
-      {/* ── Analytics view (replaces card table when active) ── */}
-      {showAnalytics && analyticsUnlocked && (
-        <AnalyticsView
-          cards={cards}
-          grades={grades}
-          isMobile={isMobile}
-          onCardClick={card => {
-            const idx = sorted.indexOf(card);
-            if (idx !== -1) setLightboxIndex(idx);
-            // Analytics stays open — lightbox overlays it
-          }}
-        />
-      )}
-
-      {/* ── Card view — hidden when analytics is active ── */}
-      {!showAnalytics && (loading || error || cards.length === 0) && (
-        <div className="center">
-          {loading
-            ? <><div className="spin" /><span>{loadMsg}</span></>
-            : error
-              ? <span style={{ color:"#e05030" }}>{error}</span>
-              : <><div className="empty-title">Draft Lab</div><div className="empty-sub">Choose a set above to start evaluating cards</div></>
-          }
-        </div>
-      )}
-
-      {/* ── Desktop table ── */}
-      {!showAnalytics && !loading && !error && cards.length > 0 && (
-        <div className="tbl-wrap desktop-only">
-          <table>
-            <thead>
-              <tr>
-                {[
-                  ["name","Card"],["cmc","Cost"],[null,"Type"],["rarity","Rar"],["color","Color"],
-                  ["myGrade","My Grade"],["expert","Expert"],["performance","Perf"],
-                  [null,"Δ"],[null,"Sunset"],[null,"Notes"]
-                ].map(([col, lbl]) => (
-                  <th key={lbl} className={col && sortCol === col ? "sorted" : ""}
-                    onClick={() => col && handleSort(col)} style={!col ? { cursor:"default" } : {}}>
-                    {lbl}{col && sortCol === col ? (sortDir === "asc" ? " ▲" : " ▼") : ""}
-                  </th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {sorted.map(card => {
-                const g  = grades[card.id] ?? {};
-                const ck = getColorKey(card);
-                const q  = calcQuadrant(g);
-                return (
-                  <tr key={card.id} className={`c${ck}`}>
-                    <td
-                      onMouseEnter={e => { setHovered(card); setHoverPos({ x: e.clientX, y: e.clientY }); }}
-                      onMouseMove={e  =>   setHoverPos({ x: e.clientX, y: e.clientY })}
-                      onMouseLeave={()  =>  setHovered(null)}
-                      onClick={() => setLightboxIndex(sorted.indexOf(card))}
-                      style={{ cursor:"pointer" }}>
-                      <div className="card-name">
-                        {card.name}
-                        {q && <QuadrantBadge g={g} />}
-                      </div>
-                    </td>
-                    <td><span className="mana">{card.mana_cost ? renderMana(card.mana_cost) : "—"}</span></td>
-                    <td><span className="typ">{card.type_line?.split("—")[0]?.trim()}</span></td>
-                    <td>
-                      <span className="rar-dot" style={{ background: RARITY_COLORS[card.rarity], marginRight:5 }} />
-                      <span style={{ fontSize:10, color:"var(--dim)" }}>{card.rarity.charAt(0).toUpperCase()}</span>
-                    </td>
-                    <td><span className="ctag" data-c={ck}>{MTG_LABELS[ck]}</span></td>
-                    <td>
-                      <GradeSelect cls="gsel" value={g.myGrade || ""}
-                        onChange={e => updateGrade(card.id, "myGrade", e.target.value)} />
-                    </td>
-                    <td>
-                      <RatingInput value={g.expert_rating} source={g.expert_source}
-                        sourceMeta={importMeta?.expert}
-                        onChange={v => updateGrade(card.id, "expert_rating", v)} />
-                    </td>
-                    <td>
-                      <RatingInput value={g.performance_rating} source={g.performance_source}
-                        sourceMeta={importMeta?.performance}
-                        onChange={v => updateGrade(card.id, "performance_rating", v)} />
-                    </td>
-                    <td><ThreeWayDelta g={g} /></td>
-                    <td>
-                      <GradeSelect cls="gsel" value={g.sunsetGrade || ""}
-                        onChange={e => updateGrade(card.id, "sunsetGrade", e.target.value)} />
-                    </td>
-                    <td>
-                      <input type="text" className="note-in" placeholder="Notes…"
-                        value={g.notes ?? ""}
-                        onChange={e => updateGrade(card.id, "notes", e.target.value)} />
-                      <TagCell tags={g.tags ?? []} onToggle={id => {
-                        const cur = g.tags ?? [];
-                        updateGrade(card.id, "tags", cur.includes(id) ? cur.filter(t => t !== id) : [...cur, id]);
-                      }} />
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
-        </div>
-      )}
-
-      {/* ── Mobile card list ── */}
-      {!showAnalytics && !loading && !error && cards.length > 0 && (
-        <div className="card-list mobile-only">
-          {sorted.map(card => (
-            <MobileCardItem key={card.id} card={card} grade={grades[card.id] ?? {}}
-              onUpdate={(field, value) => updateGrade(card.id, field, value)} />
-          ))}
-        </div>
-      )}
-
-      {/* ── Hover preview (hidden when lightbox open) ── */}
-      {hovered && getImageUrl(hovered) && !isMobile && lightboxIndex === null && (
-        <div className="preview" style={{ left: hoverPos.x + 16, top: Math.min(hoverPos.y - 60, window.innerHeight - 300) }}>
-          <img src={getImageUrl(hovered)} alt={hovered.name} />
-        </div>
-      )}
-
-      {/* ── Card lightbox ── */}
-      {lightboxIndex !== null && sorted[lightboxIndex] && (
-        <CardLightbox
-          sorted={sorted}
-          lightboxIndex={lightboxIndex}
-          grades={grades}
-          onUpdate={updateGrade}
-          onClose={() => setLightboxIndex(null)}
-          onNav={delta => {
-            const next = lightboxIndex + delta;
-            if (next >= 0 && next < sorted.length) setLightboxIndex(next);
-          }}
-        />
-      )}
+      {/* ── Grading view ── */}
+      <GradingView
+        key={selectedSet?.code}
+        showAnalytics={showAnalytics} showMobF={showMobF} onCloseMobF={() => setShowMobF(false)}
+        selectedSet={selectedSet} user={user} syncStatus={syncStatus}
+        fmt17l={fmt17l} setFmt17l={setFmt17l} handleGradesUpdate={handleGradesUpdate}
+        exportBackup={exportBackup} importBackup={importBackup} exportCSV={exportCSV}
+        loading={loading} loadMsg={loadMsg} error={error}
+        filters={filters} dispatch={dispatchFilter} handleSort={handleSort}
+        clearFilters={clearFilters} toggleFilterTag={toggleFilterTag} hasFilters={hasFilters}
+      />
 
       {/* ── Grade guide modal ── */}
       {showGuide && (
@@ -1961,6 +2077,7 @@ function DraftLab({ user }) {
         </div>
       )}
     </div>
+    </GradesContext.Provider>
   );
 }
 

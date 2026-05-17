@@ -448,7 +448,8 @@ const _React = React,
   useEffect = _React.useEffect,
   useCallback = _React.useCallback,
   useRef = _React.useRef,
-  useMemo = _React.useMemo;
+  useMemo = _React.useMemo,
+  useReducer = _React.useReducer;
 const VERSION = "v3.0";
 const MTG_LABELS = {
   W: "White",
@@ -1134,10 +1135,11 @@ function CardLightbox(_ref10) {
   var _card$card_faces3, _card$card_faces$, _card$card_faces$face, _card$card_faces$face2, _card$type_line3;
   let sorted = _ref10.sorted,
     lightboxIndex = _ref10.lightboxIndex,
-    grades = _ref10.grades,
-    onUpdate = _ref10.onUpdate,
     onClose = _ref10.onClose,
     onNav = _ref10.onNav;
+  const _useGrades = useGrades(),
+    grades = _useGrades.grades,
+    onUpdate = _useGrades.updateGrade;
   const card = sorted[lightboxIndex];
   const g = grades[card.id] ?? {};
   const q = calcQuadrant(g);
@@ -1278,8 +1280,9 @@ function CardLightbox(_ref10) {
       minHeight: 72
     },
     placeholder: "Notes\u2026",
-    value: g.notes || "",
-    onChange: e => onUpdate(card.id, "notes", e.target.value)
+    key: card.id,
+    defaultValue: g.notes ?? "",
+    onBlur: e => onUpdate(card.id, "notes", e.target.value)
   })), React.createElement(Field, {
     label: "Tags"
   }, React.createElement("div", {
@@ -1346,10 +1349,11 @@ const SCATTER_MODES = [{
   yLabel: "Expert"
 }];
 function AnalyticsView(_ref12) {
-  let cards = _ref12.cards,
-    grades = _ref12.grades,
-    isMobile = _ref12.isMobile,
-    onCardClick = _ref12.onCardClick;
+  let onCardClick = _ref12.onCardClick;
+  const _useGrades2 = useGrades(),
+    cards = _useGrades2.cards,
+    grades = _useGrades2.grades;
+  const isMobile = useIsMobile();
   const _useState9 = useState("distribution"),
     _useState0 = _slicedToArray(_useState9, 2),
     activeTab = _useState0[0],
@@ -2030,15 +2034,141 @@ function GradeSelect(_ref20) {
     }
   }, g || "—")));
 }
-function MobileCardItem(_ref21) {
-  var _card$card_faces4, _card$card_faces$2, _card$card_faces$face3, _card$type_line4;
+function GradeRow(_ref21) {
+  var _card$type_line4;
   let card = _ref21.card,
-    grade = _ref21.grade,
-    onUpdate = _ref21.onUpdate;
-  const _useState13 = useState(false),
+    onOpenLightbox = _ref21.onOpenLightbox,
+    onHoverEnter = _ref21.onHoverEnter,
+    onHoverMove = _ref21.onHoverMove,
+    onHoverLeave = _ref21.onHoverLeave;
+  const _useGrades3 = useGrades(),
+    grades = _useGrades3.grades,
+    updateGrade = _useGrades3.updateGrade,
+    importMeta = _useGrades3.importMeta;
+  const g = grades[card.id] ?? {};
+  const ck = getColorKey(card);
+  const q = calcQuadrant(g);
+  const _useState13 = useState(g.notes ?? ""),
     _useState14 = _slicedToArray(_useState13, 2),
-    expanded = _useState14[0],
-    setExpanded = _useState14[1];
+    localNotes = _useState14[0],
+    setLocalNotes = _useState14[1];
+  useEffect(() => {
+    setLocalNotes(g.notes ?? "");
+  }, [g.notes]);
+  return React.createElement("tr", {
+    className: `c${ck}`
+  }, React.createElement("td", {
+    onMouseEnter: e => onHoverEnter(card, {
+      x: e.clientX,
+      y: e.clientY
+    }),
+    onMouseMove: e => onHoverMove({
+      x: e.clientX,
+      y: e.clientY
+    }),
+    onMouseLeave: onHoverLeave,
+    onClick: onOpenLightbox,
+    style: {
+      cursor: "pointer"
+    }
+  }, React.createElement("div", {
+    className: "card-name"
+  }, card.name, q && React.createElement(QuadrantBadge, {
+    g: g
+  }))), React.createElement("td", null, React.createElement("span", {
+    className: "mana"
+  }, card.mana_cost ? renderMana(card.mana_cost) : "—")), React.createElement("td", null, React.createElement("span", {
+    className: "typ"
+  }, (_card$type_line4 = card.type_line) === null || _card$type_line4 === void 0 || (_card$type_line4 = _card$type_line4.split("—")[0]) === null || _card$type_line4 === void 0 ? void 0 : _card$type_line4.trim())), React.createElement("td", null, React.createElement("span", {
+    className: "rar-dot",
+    style: {
+      background: RARITY_COLORS[card.rarity],
+      marginRight: 5
+    }
+  }), React.createElement("span", {
+    style: {
+      fontSize: 10,
+      color: "var(--dim)"
+    }
+  }, card.rarity.charAt(0).toUpperCase())), React.createElement("td", null, React.createElement("span", {
+    className: "ctag",
+    "data-c": ck
+  }, MTG_LABELS[ck])), React.createElement("td", null, React.createElement(GradeSelect, {
+    cls: "gsel",
+    value: g.myGrade || "",
+    onChange: e => updateGrade(card.id, "myGrade", e.target.value)
+  })), React.createElement("td", null, React.createElement(RatingInput, {
+    value: g.expert_rating,
+    source: g.expert_source,
+    sourceMeta: importMeta === null || importMeta === void 0 ? void 0 : importMeta.expert,
+    onChange: v => updateGrade(card.id, "expert_rating", v)
+  })), React.createElement("td", null, React.createElement(RatingInput, {
+    value: g.performance_rating,
+    source: g.performance_source,
+    sourceMeta: importMeta === null || importMeta === void 0 ? void 0 : importMeta.performance,
+    onChange: v => updateGrade(card.id, "performance_rating", v)
+  })), React.createElement("td", null, React.createElement(ThreeWayDelta, {
+    g: g
+  })), React.createElement("td", null, React.createElement(GradeSelect, {
+    cls: "gsel",
+    value: g.sunsetGrade || "",
+    onChange: e => updateGrade(card.id, "sunsetGrade", e.target.value)
+  })), React.createElement("td", null, React.createElement("input", {
+    type: "text",
+    className: "note-in",
+    placeholder: "Notes\u2026",
+    value: localNotes,
+    onChange: e => setLocalNotes(e.target.value),
+    onBlur: () => updateGrade(card.id, "notes", localNotes)
+  }), React.createElement(TagCell, {
+    tags: g.tags ?? [],
+    onToggle: id => {
+      const cur = g.tags ?? [];
+      updateGrade(card.id, "tags", cur.includes(id) ? cur.filter(t => t !== id) : [...cur, id]);
+    }
+  })));
+}
+function GradeTable(_ref22) {
+  let sorted = _ref22.sorted,
+    filters = _ref22.filters,
+    onSort = _ref22.onSort,
+    onOpenLightbox = _ref22.onOpenLightbox,
+    onHoverEnter = _ref22.onHoverEnter,
+    onHoverMove = _ref22.onHoverMove,
+    onHoverLeave = _ref22.onHoverLeave;
+  return React.createElement("div", {
+    className: "tbl-wrap desktop-only"
+  }, React.createElement("table", null, React.createElement("thead", null, React.createElement("tr", null, [["name", "Card"], ["cmc", "Cost"], [null, "Type"], ["rarity", "Rar"], ["color", "Color"], ["myGrade", "My Grade"], ["expert", "Expert"], ["performance", "Perf"], [null, "Δ"], [null, "Sunset"], [null, "Notes"]].map(_ref23 => {
+    let _ref24 = _slicedToArray(_ref23, 2),
+      col = _ref24[0],
+      lbl = _ref24[1];
+    return React.createElement("th", {
+      key: lbl,
+      className: col && filters.sortCol === col ? "sorted" : "",
+      onClick: () => col && onSort(col),
+      style: !col ? {
+        cursor: "default"
+      } : {}
+    }, lbl, col && filters.sortCol === col ? filters.sortDir === "asc" ? " ▲" : " ▼" : "");
+  }))), React.createElement("tbody", null, sorted.map((card, idx) => React.createElement(GradeRow, {
+    key: card.id,
+    card: card,
+    onOpenLightbox: () => onOpenLightbox(idx),
+    onHoverEnter: onHoverEnter,
+    onHoverMove: onHoverMove,
+    onHoverLeave: onHoverLeave
+  })))));
+}
+function MobileCardItem(_ref25) {
+  var _card$card_faces4, _card$card_faces$2, _card$card_faces$face3, _card$type_line5;
+  let card = _ref25.card,
+    expanded = _ref25.expanded,
+    onToggleExpand = _ref25.onToggleExpand;
+  const _useGrades4 = useGrades(),
+    grades = _useGrades4.grades,
+    updateGrade = _useGrades4.updateGrade;
+  const grade = grades[card.id] ?? {};
+  const onUpdate = (field, value) => updateGrade(card.id, field, value);
   const _useState15 = useState(false),
     _useState16 = _slicedToArray(_useState15, 2),
     bigImg = _useState16[0],
@@ -2047,6 +2177,13 @@ function MobileCardItem(_ref21) {
     _useState18 = _slicedToArray(_useState17, 2),
     face = _useState18[0],
     setFace = _useState18[1];
+  const _useState19 = useState(grade.notes ?? ""),
+    _useState20 = _slicedToArray(_useState19, 2),
+    localNotes = _useState20[0],
+    setLocalNotes = _useState20[1];
+  useEffect(() => {
+    setLocalNotes(grade.notes ?? "");
+  }, [grade.notes]);
   const ck = getColorKey(card);
   const hasDFC = ((_card$card_faces4 = card.card_faces) === null || _card$card_faces4 === void 0 ? void 0 : _card$card_faces4.length) >= 2 && ((_card$card_faces$2 = card.card_faces[1]) === null || _card$card_faces$2 === void 0 ? void 0 : _card$card_faces$2.image_uris);
   const img = hasDFC ? (_card$card_faces$face3 = card.card_faces[face]) === null || _card$card_faces$face3 === void 0 || (_card$card_faces$face3 = _card$card_faces$face3.image_uris) === null || _card$card_faces$face3 === void 0 ? void 0 : _card$card_faces$face3.normal : getImageUrl(card);
@@ -2064,7 +2201,7 @@ function MobileCardItem(_ref21) {
   }, React.createElement("div", {
     className: "mc-top",
     onClick: () => {
-      setExpanded(v => !v);
+      onToggleExpand();
       setBigImg(false);
       setFace(0);
     }
@@ -2079,7 +2216,7 @@ function MobileCardItem(_ref21) {
     }
   })), React.createElement("div", {
     className: "mc-meta"
-  }, (_card$type_line4 = card.type_line) === null || _card$type_line4 === void 0 || (_card$type_line4 = _card$type_line4.split("—")[0]) === null || _card$type_line4 === void 0 ? void 0 : _card$type_line4.trim(), " · ", React.createElement("span", {
+  }, (_card$type_line5 = card.type_line) === null || _card$type_line5 === void 0 || (_card$type_line5 = _card$type_line5.split("—")[0]) === null || _card$type_line5 === void 0 ? void 0 : _card$type_line5.trim(), " · ", React.createElement("span", {
     style: {
       color: RARITY_COLORS[card.rarity],
       fontWeight: 600
@@ -2210,8 +2347,9 @@ function MobileCardItem(_ref21) {
     className: "mc-note",
     placeholder: "Notes\u2026",
     rows: "2",
-    value: grade.notes || "",
-    onChange: e => onUpdate("notes", e.target.value)
+    value: localNotes,
+    onChange: e => setLocalNotes(e.target.value),
+    onBlur: () => updateGrade(card.id, "notes", localNotes)
   })), React.createElement("div", {
     className: "mc-field"
   }, React.createElement("label", null, "Tags"), React.createElement("div", {
@@ -2225,28 +2363,29 @@ function MobileCardItem(_ref21) {
     }
   }, tag.label))))))))));
 }
-function ImportPanel(_ref22) {
-  let cards = _ref22.cards,
-    grades = _ref22.grades,
-    selectedSet = _ref22.selectedSet,
-    fmt17l = _ref22.fmt17l,
-    setFmt17l = _ref22.setFmt17l,
-    meta = _ref22.meta,
-    setMeta = _ref22.setMeta,
-    onGradesUpdate = _ref22.onGradesUpdate,
-    mobile = _ref22.mobile;
-  const _useState19 = useState(""),
-    _useState20 = _slicedToArray(_useState19, 2),
-    msg = _useState20[0],
-    setMsg = _useState20[1];
-  const _useState21 = useState("17lands"),
+function ImportPanel(_ref26) {
+  let selectedSet = _ref26.selectedSet,
+    fmt17l = _ref26.fmt17l,
+    setFmt17l = _ref26.setFmt17l,
+    onGradesUpdate = _ref26.onGradesUpdate,
+    mobile = _ref26.mobile;
+  const _useGrades5 = useGrades(),
+    cards = _useGrades5.cards,
+    grades = _useGrades5.grades,
+    meta = _useGrades5.importMeta,
+    setMeta = _useGrades5.setImportMeta;
+  const _useState21 = useState(""),
     _useState22 = _slicedToArray(_useState21, 2),
-    source = _useState22[0],
-    setSource = _useState22[1];
-  const _useState23 = useState("auto"),
+    msg = _useState22[0],
+    setMsg = _useState22[1];
+  const _useState23 = useState("17lands"),
     _useState24 = _slicedToArray(_useState23, 2),
-    target = _useState24[0],
-    setTarget = _useState24[1];
+    source = _useState24[0],
+    setSource = _useState24[1];
+  const _useState25 = useState("auto"),
+    _useState26 = _slicedToArray(_useState25, 2),
+    target = _useState26[0],
+    setTarget = _useState26[1];
   const resolvedTarget = target === "auto" ? source === "17lands" ? "performance" : "expert" : target;
   const importCSV = text => {
     const lines = text.trim().split("\n").filter(l => l.trim());
@@ -2327,10 +2466,10 @@ function ImportPanel(_ref22) {
   };
   const flush = which => {
     const next = {};
-    for (const _ref23 of Object.entries(grades)) {
-      var _ref24 = _slicedToArray(_ref23, 2);
-      const id = _ref24[0];
-      const g = _ref24[1];
+    for (const _ref27 of Object.entries(grades)) {
+      var _ref28 = _slicedToArray(_ref27, 2);
+      const id = _ref28[0];
+      const g = _ref28[1];
       const updated = {
         ...g
       };
@@ -2355,10 +2494,10 @@ function ImportPanel(_ref22) {
   };
   const srcButtons = React.createElement("div", {
     className: "l17-fmt"
-  }, [["17lands", "17Lands"], ["aetherhub", "AetherHub"], ["manual", "Manual"]].map(_ref25 => {
-    let _ref26 = _slicedToArray(_ref25, 2),
-      val = _ref26[0],
-      lbl = _ref26[1];
+  }, [["17lands", "17Lands"], ["aetherhub", "AetherHub"], ["manual", "Manual"]].map(_ref29 => {
+    let _ref30 = _slicedToArray(_ref29, 2),
+      val = _ref30[0],
+      lbl = _ref30[1];
     return React.createElement("button", {
       key: val,
       className: source === val ? "active" : "",
@@ -2367,10 +2506,10 @@ function ImportPanel(_ref22) {
   }));
   const fmt17lButtons = source === "17lands" && React.createElement("div", {
     className: "l17-fmt"
-  }, [["PremierDraft", "Premier"], ["QuickDraft", "Quick"], ["TradDraft", "Trad"]].map(_ref27 => {
-    let _ref28 = _slicedToArray(_ref27, 2),
-      val = _ref28[0],
-      lbl = _ref28[1];
+  }, [["PremierDraft", "Premier"], ["QuickDraft", "Quick"], ["TradDraft", "Trad"]].map(_ref31 => {
+    let _ref32 = _slicedToArray(_ref31, 2),
+      val = _ref32[0],
+      lbl = _ref32[1];
     return React.createElement("button", {
       key: val,
       className: fmt17l === val ? "active" : "",
@@ -2379,10 +2518,10 @@ function ImportPanel(_ref22) {
   }));
   const targetButtons = React.createElement("div", {
     className: "l17-fmt"
-  }, [["auto", "Auto"], ["expert", "Expert"], ["performance", "Perf"]].map(_ref29 => {
-    let _ref30 = _slicedToArray(_ref29, 2),
-      val = _ref30[0],
-      lbl = _ref30[1];
+  }, [["auto", "Auto"], ["expert", "Expert"], ["performance", "Perf"]].map(_ref33 => {
+    let _ref34 = _slicedToArray(_ref33, 2),
+      val = _ref34[0],
+      lbl = _ref34[1];
     return React.createElement("button", {
       key: val,
       className: target === val ? "active" : "",
@@ -2447,30 +2586,670 @@ function ImportPanel(_ref22) {
     }
   }, metaRow("expert", "Expert"), metaRow("performance", "Perf")));
 }
-function DraftLab(_ref31) {
-  let user = _ref31.user;
+function debounce(fn, ms) {
+  let timer;
+  return function () {
+    for (var _len = arguments.length, args = new Array(_len), _key = 0; _key < _len; _key++) {
+      args[_key] = arguments[_key];
+    }
+    clearTimeout(timer);
+    timer = setTimeout(() => fn.apply(this, args), ms);
+  };
+}
+function applyFilters(card, grade, filters) {
+  var _filters$tags;
+  const ck = getColorKey(card);
+  if (filters.color !== "all" && ck !== filters.color) return false;
+  if (filters.rarity !== "all" && card.rarity !== filters.rarity) return false;
+  if (filters.search && !card.name.toLowerCase().includes(filters.search.toLowerCase())) return false;
+  if (filters.graded === "graded" && !grade.myGrade) return false;
+  if (filters.graded === "ungraded" && grade.myGrade) return false;
+  if (filters.quadrant !== "all") {
+    const q = calcQuadrant(grade);
+    const label = (q === null || q === void 0 ? void 0 : q.label) ?? "none";
+    if (filters.quadrant === "none" ? label !== "none" : label !== filters.quadrant) return false;
+  }
+  if (((_filters$tags = filters.tags) === null || _filters$tags === void 0 ? void 0 : _filters$tags.length) > 0) {
+    const cardTags = grade.tags ?? [];
+    if (!filters.tags.some(t => cardTags.includes(t))) return false;
+  }
+  return true;
+}
+function applySort(a, b, grades, col, dir) {
+  const ga = grades[a.id] ?? {},
+    gb = grades[b.id] ?? {};
+  let av, bv;
+  switch (col) {
+    case "color":
+      av = COLOR_ORDER[getColorKey(a)] * 100 + (a.cmc ?? 0);
+      bv = COLOR_ORDER[getColorKey(b)] * 100 + (b.cmc ?? 0);
+      break;
+    case "name":
+      av = a.name;
+      bv = b.name;
+      break;
+    case "cmc":
+      av = a.cmc ?? 0;
+      bv = b.cmc ?? 0;
+      break;
+    case "rarity":
+      av = RARITIES.indexOf(a.rarity);
+      bv = RARITIES.indexOf(b.rarity);
+      break;
+    case "myGrade":
+      av = GRADES.indexOf(ga.myGrade || "");
+      bv = GRADES.indexOf(gb.myGrade || "");
+      break;
+    case "expert":
+      av = ga.expert_rating ?? 99;
+      bv = gb.expert_rating ?? 99;
+      break;
+    case "performance":
+      av = ga.performance_rating ?? 99;
+      bv = gb.performance_rating ?? 99;
+      break;
+    default:
+      return 0;
+  }
+  if (av < bv) return dir === "asc" ? -1 : 1;
+  if (av > bv) return dir === "asc" ? 1 : -1;
+  return 0;
+}
+const filterInitialState = {
+  color: "all",
+  rarity: "all",
+  search: "",
+  graded: "all",
+  quadrant: "all",
+  tags: [],
+  sortCol: "color",
+  sortDir: "asc",
+  mobileSort: "color"
+};
+function filterReducer(state, action) {
+  switch (action.type) {
+    case "SET_COLOR":
+      return {
+        ...state,
+        color: action.value
+      };
+    case "SET_RARITY":
+      return {
+        ...state,
+        rarity: action.value
+      };
+    case "SET_SEARCH":
+      return {
+        ...state,
+        search: action.value
+      };
+    case "SET_GRADED":
+      return {
+        ...state,
+        graded: action.value
+      };
+    case "SET_QUADRANT":
+      return {
+        ...state,
+        quadrant: action.value
+      };
+    case "SET_TAGS":
+      return {
+        ...state,
+        tags: action.value
+      };
+    case "SET_SORT":
+      return {
+        ...state,
+        sortCol: action.col,
+        sortDir: action.dir
+      };
+    case "SET_MOBILE_SORT":
+      return {
+        ...state,
+        mobileSort: action.value
+      };
+    case "RESET":
+      return {
+        ...state,
+        color: "all",
+        rarity: "all",
+        search: "",
+        graded: "all",
+        quadrant: "all",
+        tags: []
+      };
+    case "RESTORE":
+      return {
+        ...filterInitialState,
+        ...action.value
+      };
+    default:
+      return state;
+  }
+}
+function MobileDrawer(_ref35) {
+  let open = _ref35.open,
+    onClose = _ref35.onClose,
+    filters = _ref35.filters,
+    dispatch = _ref35.dispatch,
+    hasFilters = _ref35.hasFilters,
+    clearFilters = _ref35.clearFilters,
+    toggleFilterTag = _ref35.toggleFilterTag,
+    selectedSet = _ref35.selectedSet,
+    fmt17l = _ref35.fmt17l,
+    setFmt17l = _ref35.setFmt17l,
+    handleGradesUpdate = _ref35.handleGradesUpdate,
+    exportBackup = _ref35.exportBackup,
+    importBackup = _ref35.importBackup,
+    exportCSV = _ref35.exportCSV,
+    user = _ref35.user,
+    syncStatus = _ref35.syncStatus;
+  return React.createElement("div", {
+    className: "filters-mobile mobile-only",
+    style: {
+      maxHeight: open ? "70vh" : "0"
+    }
+  }, open && React.createElement("div", {
+    className: "fm-inner"
+  }, React.createElement("div", {
+    className: "fm-row"
+  }, React.createElement("input", {
+    className: "fm-srch",
+    placeholder: "Search cards\u2026",
+    value: filters.search,
+    onChange: e => dispatch({
+      type: "SET_SEARCH",
+      value: e.target.value
+    })
+  }), React.createElement("select", {
+    className: "fm-sort",
+    value: filters.mobileSort,
+    onChange: e => dispatch({
+      type: "SET_MOBILE_SORT",
+      value: e.target.value
+    })
+  }, React.createElement("option", {
+    value: "color"
+  }, "Color \u2192 CMC"), React.createElement("option", {
+    value: "name"
+  }, "Name A\u2013Z"), React.createElement("option", {
+    value: "cmc"
+  }, "Mana Cost"), React.createElement("option", {
+    value: "rarity"
+  }, "Rarity"), React.createElement("option", {
+    value: "myGrade"
+  }, "My Grade"), React.createElement("option", {
+    value: "expert"
+  }, "Expert"), React.createElement("option", {
+    value: "performance"
+  }, "Performance"))), React.createElement("div", {
+    className: "fm-row"
+  }, React.createElement("span", {
+    className: "fl"
+  }, "Color:"), ["all", "W", "U", "B", "R", "G", "M", "C", "L"].map(c => React.createElement("button", {
+    key: c,
+    className: `fb${filters.color === c ? " active" : ""}`,
+    onClick: () => dispatch({
+      type: "SET_COLOR",
+      value: c
+    })
+  }, c === "all" ? "All" : c))), React.createElement("div", {
+    className: "fm-row"
+  }, React.createElement("span", {
+    className: "fl"
+  }, "Rarity:"), [["all", "All"], ["common", "C"], ["uncommon", "U"], ["rare", "R"], ["mythic", "M"]].map(_ref36 => {
+    let _ref37 = _slicedToArray(_ref36, 2),
+      full = _ref37[0],
+      abbr = _ref37[1];
+    return React.createElement("button", {
+      key: full,
+      className: `fb${filters.rarity === full ? " active" : ""}`,
+      style: filters.rarity === full && full !== "all" ? {
+        color: RARITY_COLORS[full],
+        borderColor: RARITY_COLORS[full] + "88"
+      } : {},
+      onClick: () => dispatch({
+        type: "SET_RARITY",
+        value: full
+      })
+    }, abbr);
+  })), React.createElement("div", {
+    className: "fm-row"
+  }, React.createElement("span", {
+    className: "fl"
+  }, "Show:"), ["all", "graded", "ungraded"].map(g => React.createElement("button", {
+    key: g,
+    className: `fb${filters.graded === g ? " active" : ""}`,
+    onClick: () => dispatch({
+      type: "SET_GRADED",
+      value: g
+    })
+  }, g.charAt(0).toUpperCase() + g.slice(1)))), React.createElement("div", {
+    className: "fm-row"
+  }, React.createElement("span", {
+    className: "fl"
+  }, "Quad:"), ["all", "FORMAT", "MISS", "SPOT", "VAR", "none"].map(q => React.createElement("button", {
+    key: q,
+    className: `fb${filters.quadrant === q ? " active" : ""}`,
+    onClick: () => dispatch({
+      type: "SET_QUADRANT",
+      value: q
+    })
+  }, q === "all" ? "All" : q))), React.createElement("div", {
+    className: "fm-row",
+    style: {
+      flexDirection: "column",
+      alignItems: "flex-start",
+      gap: 6
+    }
+  }, React.createElement("span", {
+    className: "fl"
+  }, "Tags:"), React.createElement("div", {
+    className: "tag-chips"
+  }, TAGS.map(tag => React.createElement("button", {
+    key: tag.id,
+    className: `tag-chip${filters.tags.includes(tag.id) ? " active" : ""}`,
+    onClick: () => toggleFilterTag(tag.id)
+  }, tag.label)))), hasFilters && React.createElement("div", {
+    className: "fm-row"
+  }, React.createElement("button", {
+    className: "btn",
+    style: {
+      padding: "3px 10px"
+    },
+    onClick: clearFilters
+  }, "Clear Filters")), selectedSet && React.createElement("div", {
+    style: {
+      borderTop: "1px solid var(--b1)",
+      paddingTop: 10
+    }
+  }, React.createElement(ImportPanel, {
+    selectedSet: selectedSet,
+    fmt17l: fmt17l,
+    setFmt17l: setFmt17l,
+    onGradesUpdate: handleGradesUpdate,
+    mobile: true
+  })), React.createElement("div", {
+    style: {
+      borderTop: "1px solid var(--b1)",
+      paddingTop: 10,
+      display: "flex",
+      gap: 8
+    }
+  }, React.createElement("button", {
+    className: "l17-fetch",
+    style: {
+      flex: 1
+    },
+    onClick: exportBackup
+  }, "Export Backup"), React.createElement("label", {
+    className: "l17-fetch",
+    style: {
+      flex: 1,
+      textAlign: "center",
+      cursor: "pointer"
+    }
+  }, "Import Backup", React.createElement("input", {
+    type: "file",
+    accept: ".json",
+    style: {
+      display: "none"
+    },
+    onChange: e => {
+      importBackup(e.target.files[0]);
+      e.target.value = "";
+      onClose();
+    }
+  })))), open && React.createElement("div", {
+    className: "fm-footer"
+  }, selectedSet && React.createElement("button", {
+    className: "l17-fetch",
+    style: {
+      flex: 1
+    },
+    onClick: () => {
+      exportCSV();
+      onClose();
+    }
+  }, "\u2193 Export CSV"), user && React.createElement("button", {
+    className: "l17-fetch",
+    style: {
+      flex: 1,
+      borderColor: "var(--dimmer)",
+      color: "#5a5a7a"
+    },
+    onClick: () => {
+      sb.auth.signOut();
+      onClose();
+    }
+  }, "Sign Out"), user && syncStatus && React.createElement("span", {
+    className: "sync-dot",
+    style: {
+      alignSelf: "center",
+      flexShrink: 0
+    }
+  }, syncStatus === "syncing" ? "↑" : "✓")));
+}
+function FilterBar(_ref38) {
+  let filters = _ref38.filters,
+    dispatch = _ref38.dispatch,
+    hasExpertData = _ref38.hasExpertData,
+    hasPerformanceData = _ref38.hasPerformanceData,
+    sortedCount = _ref38.sortedCount,
+    hasFilters = _ref38.hasFilters,
+    showTagFilter = _ref38.showTagFilter,
+    setShowTagFilter = _ref38.setShowTagFilter,
+    toggleFilterTag = _ref38.toggleFilterTag,
+    clearFilters = _ref38.clearFilters;
+  return React.createElement("div", {
+    className: "filters-desktop desktop-only"
+  }, React.createElement("span", {
+    className: "fl"
+  }, "Color"), ["all", "W", "U", "B", "R", "G", "M", "C", "L"].map(c => React.createElement("button", {
+    key: c,
+    className: `fb${filters.color === c ? " active" : ""}`,
+    onClick: () => dispatch({
+      type: "SET_COLOR",
+      value: c
+    })
+  }, c === "all" ? "All" : MTG_LABELS[c])), React.createElement("div", {
+    className: "divv"
+  }), React.createElement("span", {
+    className: "fl"
+  }, "Rarity"), ["all", ...RARITIES].map(r => React.createElement("button", {
+    key: r,
+    className: `fb${filters.rarity === r ? " active" : ""}`,
+    style: filters.rarity === r && r !== "all" ? {
+      color: RARITY_COLORS[r],
+      borderColor: RARITY_COLORS[r] + "88"
+    } : {},
+    onClick: () => dispatch({
+      type: "SET_RARITY",
+      value: r
+    })
+  }, r === "all" ? "All" : r.charAt(0).toUpperCase() + r.slice(1))), React.createElement("div", {
+    className: "divv"
+  }), React.createElement("span", {
+    className: "fl"
+  }, "Show"), ["all", "graded", "ungraded"].map(g => React.createElement("button", {
+    key: g,
+    className: `fb${filters.graded === g ? " active" : ""}`,
+    onClick: () => dispatch({
+      type: "SET_GRADED",
+      value: g
+    })
+  }, g.charAt(0).toUpperCase() + g.slice(1))), (hasExpertData || hasPerformanceData) && React.createElement(React.Fragment, null, React.createElement("div", {
+    className: "divv"
+  }), React.createElement("span", {
+    className: "fl"
+  }, "Quad"), ["all", "FORMAT", "MISS", "SPOT", "VAR"].map(q => React.createElement("button", {
+    key: q,
+    className: `fb${filters.quadrant === q ? " active" : ""}`,
+    onClick: () => dispatch({
+      type: "SET_QUADRANT",
+      value: q
+    })
+  }, q === "all" ? "All" : q))), React.createElement("div", {
+    className: "divv"
+  }), React.createElement("div", {
+    className: "tag-filter-wrap",
+    onClick: e => e.stopPropagation()
+  }, React.createElement("button", {
+    className: `fb${filters.tags.length > 0 ? " active" : ""}`,
+    onClick: () => setShowTagFilter(v => !v)
+  }, "Tags", filters.tags.length > 0 ? ` (${filters.tags.length})` : ""), showTagFilter && React.createElement(TagFilterPanel, {
+    filterTags: filters.tags,
+    onToggle: toggleFilterTag,
+    onClear: () => dispatch({
+      type: "SET_TAGS",
+      value: []
+    })
+  })), React.createElement("div", {
+    className: "divv"
+  }), React.createElement("input", {
+    className: "srch",
+    placeholder: "Search cards\u2026",
+    value: filters.search,
+    onChange: e => dispatch({
+      type: "SET_SEARCH",
+      value: e.target.value
+    })
+  }), hasFilters && React.createElement("button", {
+    className: "btn",
+    onClick: clearFilters
+  }, "Clear"), React.createElement("span", {
+    className: "fl",
+    style: {
+      marginLeft: "auto"
+    }
+  }, sortedCount, " shown"));
+}
+const GradesContext = React.createContext(null);
+function useGrades() {
+  return React.useContext(GradesContext);
+}
+function GradingView(_ref39) {
+  let showAnalytics = _ref39.showAnalytics,
+    showMobF = _ref39.showMobF,
+    onCloseMobF = _ref39.onCloseMobF,
+    selectedSet = _ref39.selectedSet,
+    user = _ref39.user,
+    syncStatus = _ref39.syncStatus,
+    fmt17l = _ref39.fmt17l,
+    setFmt17l = _ref39.setFmt17l,
+    handleGradesUpdate = _ref39.handleGradesUpdate,
+    exportBackup = _ref39.exportBackup,
+    importBackup = _ref39.importBackup,
+    exportCSV = _ref39.exportCSV,
+    loading = _ref39.loading,
+    loadMsg = _ref39.loadMsg,
+    error = _ref39.error,
+    filters = _ref39.filters,
+    dispatch = _ref39.dispatch,
+    handleSort = _ref39.handleSort,
+    clearFilters = _ref39.clearFilters,
+    toggleFilterTag = _ref39.toggleFilterTag,
+    hasFilters = _ref39.hasFilters;
   const isMobile = useIsMobile();
-  const didFirstSync = useRef(false);
-  const _useState25 = useState(() => localStorage.getItem("draft-lab-theme") || "auto"),
-    _useState26 = _slicedToArray(_useState25, 2),
-    theme = _useState26[0],
-    setTheme = _useState26[1];
+  const _useGrades6 = useGrades(),
+    cards = _useGrades6.cards,
+    grades = _useGrades6.grades;
   const _useState27 = useState(false),
     _useState28 = _slicedToArray(_useState27, 2),
-    showAnalytics = _useState28[0],
-    setShowAnalytics = _useState28[1];
-  const _useState29 = useState(false),
+    showTagFilter = _useState28[0],
+    setShowTagFilter = _useState28[1];
+  const _useState29 = useState(null),
     _useState30 = _slicedToArray(_useState29, 2),
-    showImport = _useState30[0],
-    setShowImport = _useState30[1];
-  const _useState31 = useState(false),
+    lightboxIndex = _useState30[0],
+    setLightboxIndex = _useState30[1];
+  const _useState31 = useState(null),
     _useState32 = _slicedToArray(_useState31, 2),
-    showExport = _useState32[0],
-    setShowExport = _useState32[1];
-  const _useState33 = useState("PremierDraft"),
+    hovered = _useState32[0],
+    setHovered = _useState32[1];
+  const _useState33 = useState({
+      x: 0,
+      y: 0
+    }),
     _useState34 = _slicedToArray(_useState33, 2),
-    fmt17l = _useState34[0],
-    setFmt17l = _useState34[1];
+    hoverPos = _useState34[0],
+    setHoverPos = _useState34[1];
+  const _useState35 = useState(null),
+    _useState36 = _slicedToArray(_useState35, 2),
+    expandedCardId = _useState36[0],
+    setExpandedCardId = _useState36[1];
+  const activeSort = isMobile ? filters.mobileSort : filters.sortCol;
+  const gradableCards = useMemo(() => cards.filter(c => !isBasicLand(c)), [cards]);
+  const gradedCount = gradableCards.filter(c => {
+    var _grades$c$id2;
+    return (_grades$c$id2 = grades[c.id]) === null || _grades$c$id2 === void 0 ? void 0 : _grades$c$id2.myGrade;
+  }).length;
+  const gradeCounts = {};
+  for (const g of Object.values(grades)) {
+    if (g.myGrade) gradeCounts[g.myGrade] = (gradeCounts[g.myGrade] ?? 0) + 1;
+  }
+  const pct = gradableCards.length ? Math.round(gradedCount / gradableCards.length * 100) : 0;
+  const analyticsUnlocked = pct >= 50 && (cards.some(c => {
+    var _grades$c$id3;
+    return ((_grades$c$id3 = grades[c.id]) === null || _grades$c$id3 === void 0 ? void 0 : _grades$c$id3.expert_rating) != null;
+  }) || cards.some(c => {
+    var _grades$c$id4;
+    return ((_grades$c$id4 = grades[c.id]) === null || _grades$c$id4 === void 0 ? void 0 : _grades$c$id4.performance_rating) != null;
+  }));
+  const filtered = useMemo(() => cards.filter(c => applyFilters(c, grades[c.id] ?? {}, filters)), [cards, grades, filters]);
+  const sorted = useMemo(() => [...filtered].sort((a, b) => applySort(a, b, grades, activeSort, isMobile ? "asc" : filters.sortDir)), [filtered, grades, activeSort, filters.sortDir, isMobile]);
+  const hasExpertData = cards.some(c => {
+    var _grades$c$id5;
+    return ((_grades$c$id5 = grades[c.id]) === null || _grades$c$id5 === void 0 ? void 0 : _grades$c$id5.expert_rating) != null;
+  });
+  const hasPerformanceData = cards.some(c => {
+    var _grades$c$id6;
+    return ((_grades$c$id6 = grades[c.id]) === null || _grades$c$id6 === void 0 ? void 0 : _grades$c$id6.performance_rating) != null;
+  });
+  return React.createElement(React.Fragment, null, React.createElement(MobileDrawer, {
+    open: showMobF,
+    onClose: onCloseMobF,
+    filters: filters,
+    dispatch: dispatch,
+    hasFilters: hasFilters,
+    clearFilters: clearFilters,
+    toggleFilterTag: toggleFilterTag,
+    selectedSet: selectedSet,
+    fmt17l: fmt17l,
+    setFmt17l: setFmt17l,
+    handleGradesUpdate: handleGradesUpdate,
+    exportBackup: exportBackup,
+    importBackup: importBackup,
+    exportCSV: exportCSV,
+    user: user,
+    syncStatus: syncStatus
+  }), cards.length > 0 && React.createElement(React.Fragment, null, React.createElement("div", {
+    className: "stats"
+  }, React.createElement("span", {
+    className: "stat"
+  }, React.createElement("span", {
+    className: "stat-v"
+  }, cards.length), " cards"), React.createElement("span", {
+    className: "stat"
+  }, React.createElement("span", {
+    className: "stat-v"
+  }, gradedCount), " graded"), React.createElement("span", {
+    className: "stat"
+  }, React.createElement("span", {
+    className: "stat-v"
+  }, pct, "%")), React.createElement("span", {
+    className: "stat",
+    style: {
+      color: "var(--b2)"
+    }
+  }, "|"), GRADES.filter(g => g).map(g => gradeCounts[g] ? React.createElement("span", {
+    key: g,
+    className: "gp",
+    style: {
+      background: GRADE_COLOR[g] + "22",
+      color: GRADE_COLOR[g],
+      border: `1px solid ${GRADE_COLOR[g]}55`
+    }
+  }, g, " ", React.createElement("span", {
+    style: {
+      opacity: .75
+    }
+  }, gradeCounts[g])) : null)), React.createElement("div", {
+    className: "prog-bar"
+  }, React.createElement("div", {
+    className: "prog-fill",
+    style: {
+      width: `${pct}%`
+    }
+  }))), !showAnalytics && cards.length > 0 && React.createElement(FilterBar, {
+    filters: filters,
+    dispatch: dispatch,
+    hasExpertData: hasExpertData,
+    hasPerformanceData: hasPerformanceData,
+    sortedCount: sorted.length,
+    hasFilters: hasFilters,
+    showTagFilter: showTagFilter,
+    setShowTagFilter: setShowTagFilter,
+    toggleFilterTag: toggleFilterTag,
+    clearFilters: clearFilters
+  }), showAnalytics && analyticsUnlocked && React.createElement(AnalyticsView, {
+    onCardClick: card => {
+      const idx = sorted.indexOf(card);
+      if (idx !== -1) setLightboxIndex(idx);
+    }
+  }), !showAnalytics && (loading || error || cards.length === 0) && React.createElement("div", {
+    className: "center"
+  }, loading ? React.createElement(React.Fragment, null, React.createElement("div", {
+    className: "spin"
+  }), React.createElement("span", null, loadMsg)) : error ? React.createElement("span", {
+    style: {
+      color: "#e05030"
+    }
+  }, error) : React.createElement(React.Fragment, null, React.createElement("div", {
+    className: "empty-title"
+  }, "Draft Lab"), React.createElement("div", {
+    className: "empty-sub"
+  }, "Choose a set above to start evaluating cards"))), !showAnalytics && !loading && !error && cards.length > 0 && React.createElement(GradeTable, {
+    sorted: sorted,
+    filters: filters,
+    onSort: handleSort,
+    onOpenLightbox: idx => setLightboxIndex(idx),
+    onHoverEnter: (card, pos) => {
+      setHovered(card);
+      setHoverPos(pos);
+    },
+    onHoverMove: pos => setHoverPos(pos),
+    onHoverLeave: () => setHovered(null)
+  }), !showAnalytics && !loading && !error && cards.length > 0 && React.createElement("div", {
+    className: "card-list mobile-only"
+  }, sorted.map(card => React.createElement(MobileCardItem, {
+    key: card.id,
+    card: card,
+    expanded: expandedCardId === card.id,
+    onToggleExpand: () => setExpandedCardId(v => v === card.id ? null : card.id)
+  }))), hovered && getImageUrl(hovered) && !isMobile && lightboxIndex === null && React.createElement("div", {
+    className: "preview",
+    style: {
+      left: hoverPos.x + 16,
+      top: Math.min(hoverPos.y - 60, window.innerHeight - 300)
+    }
+  }, React.createElement("img", {
+    src: getImageUrl(hovered),
+    alt: hovered.name
+  })), lightboxIndex !== null && sorted[lightboxIndex] && React.createElement(CardLightbox, {
+    sorted: sorted,
+    lightboxIndex: lightboxIndex,
+    onClose: () => setLightboxIndex(null),
+    onNav: delta => {
+      const next = lightboxIndex + delta;
+      if (next >= 0 && next < sorted.length) setLightboxIndex(next);
+    }
+  }));
+}
+function DraftLab(_ref40) {
+  let user = _ref40.user;
+  const isMobile = useIsMobile();
+  const didFirstSync = useRef(false);
+  const _useState37 = useState(() => localStorage.getItem("draft-lab-theme") || "auto"),
+    _useState38 = _slicedToArray(_useState37, 2),
+    theme = _useState38[0],
+    setTheme = _useState38[1];
+  const _useState39 = useState(false),
+    _useState40 = _slicedToArray(_useState39, 2),
+    showAnalytics = _useState40[0],
+    setShowAnalytics = _useState40[1];
+  const _useState41 = useState(false),
+    _useState42 = _slicedToArray(_useState41, 2),
+    showImport = _useState42[0],
+    setShowImport = _useState42[1];
+  const _useState43 = useState(false),
+    _useState44 = _slicedToArray(_useState43, 2),
+    showExport = _useState44[0],
+    setShowExport = _useState44[1];
+  const _useState45 = useState("PremierDraft"),
+    _useState46 = _slicedToArray(_useState45, 2),
+    fmt17l = _useState46[0],
+    setFmt17l = _useState46[1];
   const importRef = useRef(null);
   const exportRef = useRef(null);
   useEffect(() => {
@@ -2489,117 +3268,66 @@ function DraftLab(_ref31) {
     document.addEventListener("mousedown", h);
     return () => document.removeEventListener("mousedown", h);
   }, [showExport]);
-  const _useState35 = useState(null),
-    _useState36 = _slicedToArray(_useState35, 2),
-    importMeta = _useState36[0],
-    setImportMeta = _useState36[1];
-  const _useState37 = useState([]),
-    _useState38 = _slicedToArray(_useState37, 2),
-    sets = _useState38[0],
-    setSets = _useState38[1];
-  const _useState39 = useState(null),
-    _useState40 = _slicedToArray(_useState39, 2),
-    selectedSet = _useState40[0],
-    setSelectedSet = _useState40[1];
-  const _useState41 = useState([]),
-    _useState42 = _slicedToArray(_useState41, 2),
-    cards = _useState42[0],
-    setCards = _useState42[1];
-  const _useState43 = useState({}),
-    _useState44 = _slicedToArray(_useState43, 2),
-    grades = _useState44[0],
-    setGrades = _useState44[1];
-  const _useState45 = useState(false),
-    _useState46 = _slicedToArray(_useState45, 2),
-    loading = _useState46[0],
-    setLoading = _useState46[1];
-  const _useState47 = useState(""),
+  const _useState47 = useState(null),
     _useState48 = _slicedToArray(_useState47, 2),
-    loadMsg = _useState48[0],
-    setLoadMsg = _useState48[1];
-  const _useState49 = useState(null),
+    importMeta = _useState48[0],
+    setImportMeta = _useState48[1];
+  const _useState49 = useState([]),
     _useState50 = _slicedToArray(_useState49, 2),
-    error = _useState50[0],
-    setError = _useState50[1];
-  const _useState51 = useState("color"),
+    sets = _useState50[0],
+    setSets = _useState50[1];
+  const _useState51 = useState(null),
     _useState52 = _slicedToArray(_useState51, 2),
-    sortCol = _useState52[0],
-    setSortCol = _useState52[1];
-  const _useState53 = useState("asc"),
+    selectedSet = _useState52[0],
+    setSelectedSet = _useState52[1];
+  const _useState53 = useState([]),
     _useState54 = _slicedToArray(_useState53, 2),
-    sortDir = _useState54[0],
-    setSortDir = _useState54[1];
-  const _useState55 = useState("color"),
+    cards = _useState54[0],
+    setCards = _useState54[1];
+  const _useState55 = useState({}),
     _useState56 = _slicedToArray(_useState55, 2),
-    mobileSort = _useState56[0],
-    setMobileSort = _useState56[1];
-  const _useState57 = useState("all"),
+    grades = _useState56[0],
+    setGrades = _useState56[1];
+  const _useState57 = useState(false),
     _useState58 = _slicedToArray(_useState57, 2),
-    filterColor = _useState58[0],
-    setFilterColor = _useState58[1];
-  const _useState59 = useState("all"),
+    loading = _useState58[0],
+    setLoading = _useState58[1];
+  const _useState59 = useState(""),
     _useState60 = _slicedToArray(_useState59, 2),
-    filterRarity = _useState60[0],
-    setFilterRarity = _useState60[1];
-  const _useState61 = useState(""),
+    loadMsg = _useState60[0],
+    setLoadMsg = _useState60[1];
+  const _useState61 = useState(null),
     _useState62 = _slicedToArray(_useState61, 2),
-    filterSearch = _useState62[0],
-    setFilterSearch = _useState62[1];
-  const _useState63 = useState("all"),
+    error = _useState62[0],
+    setError = _useState62[1];
+  const _useReducer = useReducer(filterReducer, filterInitialState),
+    _useReducer2 = _slicedToArray(_useReducer, 2),
+    filters = _useReducer2[0],
+    dispatchFilter = _useReducer2[1];
+  const _useState63 = useState(false),
     _useState64 = _slicedToArray(_useState63, 2),
-    filterGraded = _useState64[0],
-    setFilterGraded = _useState64[1];
-  const _useState65 = useState("all"),
+    showMobF = _useState64[0],
+    setShowMobF = _useState64[1];
+  const _useState65 = useState(false),
     _useState66 = _slicedToArray(_useState65, 2),
-    filterQuadrant = _useState66[0],
-    setFilterQuadrant = _useState66[1];
-  const _useState67 = useState([]),
+    showGuide = _useState66[0],
+    setShowGuide = _useState66[1];
+  const _useState67 = useState(""),
     _useState68 = _slicedToArray(_useState67, 2),
-    filterTags = _useState68[0],
-    setFilterTags = _useState68[1];
+    syncStatus = _useState68[0],
+    setSyncStatus = _useState68[1];
   const _useState69 = useState(false),
     _useState70 = _slicedToArray(_useState69, 2),
-    showTagFilter = _useState70[0],
-    setShowTagFilter = _useState70[1];
-  const _useState71 = useState(false),
+    showLegal = _useState70[0],
+    setShowLegal = _useState70[1];
+  const _useState71 = useState(""),
     _useState72 = _slicedToArray(_useState71, 2),
-    showMobF = _useState72[0],
-    setShowMobF = _useState72[1];
-  const _useState73 = useState(null),
+    setSearch = _useState72[0],
+    setSetSearch = _useState72[1];
+  const _useState73 = useState(false),
     _useState74 = _slicedToArray(_useState73, 2),
-    lightboxIndex = _useState74[0],
-    setLightboxIndex = _useState74[1];
-  const _useState75 = useState(false),
-    _useState76 = _slicedToArray(_useState75, 2),
-    showGuide = _useState76[0],
-    setShowGuide = _useState76[1];
-  const _useState77 = useState(""),
-    _useState78 = _slicedToArray(_useState77, 2),
-    syncStatus = _useState78[0],
-    setSyncStatus = _useState78[1];
-  const _useState79 = useState(false),
-    _useState80 = _slicedToArray(_useState79, 2),
-    showLegal = _useState80[0],
-    setShowLegal = _useState80[1];
-  const _useState81 = useState(null),
-    _useState82 = _slicedToArray(_useState81, 2),
-    hovered = _useState82[0],
-    setHovered = _useState82[1];
-  const _useState83 = useState({
-      x: 0,
-      y: 0
-    }),
-    _useState84 = _slicedToArray(_useState83, 2),
-    hoverPos = _useState84[0],
-    setHoverPos = _useState84[1];
-  const _useState85 = useState(""),
-    _useState86 = _slicedToArray(_useState85, 2),
-    setSearch = _useState86[0],
-    setSetSearch = _useState86[1];
-  const _useState87 = useState(false),
-    _useState88 = _slicedToArray(_useState87, 2),
-    showSetDD = _useState88[0],
-    setShowSetDD = _useState88[1];
+    showSetDD = _useState74[0],
+    setShowSetDD = _useState74[1];
   useEffect(() => {
     if (theme === "auto") document.documentElement.removeAttribute("data-theme");else document.documentElement.setAttribute("data-theme", theme);
   }, [theme]);
@@ -2655,15 +3383,15 @@ function DraftLab(_ref31) {
   useEffect(() => {
     if (!selectedSet) return;
     store.set(`draft-lab-session-${selectedSet.code}`, JSON.stringify({
-      sortCol,
-      sortDir,
-      mobileSort,
-      filterColor,
-      filterRarity,
-      filterGraded,
-      filterQuadrant
+      sortCol: filters.sortCol,
+      sortDir: filters.sortDir,
+      mobileSort: filters.mobileSort,
+      filterColor: filters.color,
+      filterRarity: filters.rarity,
+      filterGraded: filters.graded,
+      filterQuadrant: filters.quadrant
     }));
-  }, [selectedSet === null || selectedSet === void 0 ? void 0 : selectedSet.code, sortCol, sortDir, mobileSort, filterColor, filterRarity, filterGraded, filterQuadrant]);
+  }, [selectedSet === null || selectedSet === void 0 ? void 0 : selectedSet.code, filters]);
   const toggleTheme = () => {
     setTheme(prev => {
       const sysDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
@@ -2693,7 +3421,6 @@ function DraftLab(_ref31) {
   }, [selectedSet, persistGrades]);
   const loadSet = async set => {
     store.set("draft-lab-last-set", set.code);
-    setLightboxIndex(null);
     setShowAnalytics(false);
     setSelectedSet(set);
     setCards([]);
@@ -2701,15 +3428,20 @@ function DraftLab(_ref31) {
     setError(null);
     const saved = store.get(`draft-lab-session-${set.code}`);
     const sess = saved ? JSON.parse(saved.value) : null;
-    setFilterColor((sess === null || sess === void 0 ? void 0 : sess.filterColor) ?? "all");
-    setFilterRarity((sess === null || sess === void 0 ? void 0 : sess.filterRarity) ?? "all");
-    setFilterSearch("");
-    setFilterGraded((sess === null || sess === void 0 ? void 0 : sess.filterGraded) ?? "all");
-    setFilterQuadrant((sess === null || sess === void 0 ? void 0 : sess.filterQuadrant) ?? "all");
-    setFilterTags([]);
-    setSortCol((sess === null || sess === void 0 ? void 0 : sess.sortCol) ?? "color");
-    setSortDir((sess === null || sess === void 0 ? void 0 : sess.sortDir) ?? "asc");
-    setMobileSort((sess === null || sess === void 0 ? void 0 : sess.mobileSort) ?? "color");
+    dispatchFilter({
+      type: "RESTORE",
+      value: {
+        color: (sess === null || sess === void 0 ? void 0 : sess.filterColor) ?? "all",
+        rarity: (sess === null || sess === void 0 ? void 0 : sess.filterRarity) ?? "all",
+        graded: (sess === null || sess === void 0 ? void 0 : sess.filterGraded) ?? "all",
+        quadrant: (sess === null || sess === void 0 ? void 0 : sess.filterQuadrant) ?? "all",
+        sortCol: (sess === null || sess === void 0 ? void 0 : sess.sortCol) ?? "color",
+        sortDir: (sess === null || sess === void 0 ? void 0 : sess.sortDir) ?? "asc",
+        mobileSort: (sess === null || sess === void 0 ? void 0 : sess.mobileSort) ?? "color",
+        search: "",
+        tags: []
+      }
+    });
     loadGrades(set.code);
     let url = `https://api.scryfall.com/cards/search?q=set:${set.code}+game:paper&order=color&unique=cards`,
       all = [];
@@ -2731,7 +3463,7 @@ function DraftLab(_ref31) {
       setLoadMsg("");
     }
   };
-  const updateGrade = (cardId, field, value) => {
+  const updateGrade = useCallback((cardId, field, value) => {
     setGrades(prev => {
       const next = {
         ...prev,
@@ -2743,22 +3475,34 @@ function DraftLab(_ref31) {
       if (selectedSet) persistGrades(next, selectedSet.code);
       return next;
     });
-  };
+  }, [selectedSet, persistGrades]);
+  const gradesContextValue = useMemo(() => ({
+    grades,
+    updateGrade,
+    cards,
+    importMeta,
+    setImportMeta
+  }), [grades, updateGrade, cards, importMeta]);
   const handleSort = col => {
-    if (sortCol === col) setSortDir(d => d === "asc" ? "desc" : "asc");else {
-      setSortCol(col);
-      setSortDir("asc");
-    }
+    if (filters.sortCol === col) dispatchFilter({
+      type: "SET_SORT",
+      col,
+      dir: filters.sortDir === "asc" ? "desc" : "asc"
+    });else dispatchFilter({
+      type: "SET_SORT",
+      col,
+      dir: "asc"
+    });
   };
   const exportCSV = () => {
     const hdr = ["Name", "Color", "Mana Cost", "Type", "Rarity", "My Grade", "Expert", "Expert Source", "Performance", "Perf Source", "Sunset", "Quadrant", "Tags", "Notes"];
-    const rows = sorted.map(c => {
+    const rows = _csvSorted.map(c => {
       const g = grades[c.id] ?? {};
       const q = calcQuadrant(g);
       return [`"${c.name}"`, getColorKey(c), `"${c.mana_cost ?? ""}"`, `"${c.type_line ?? ""}"`, c.rarity, g.myGrade ?? "", g.expert_rating ?? "", g.expert_source ?? "", g.performance_rating ?? "", g.performance_source ?? "", g.sunsetGrade ?? "", (q === null || q === void 0 ? void 0 : q.label) ?? "", `"${(g.tags ?? []).join("|")}"`, `"${(g.notes ?? "").replace(/"/g, '""')}"`].join(",");
     });
-    const blob = new Blob([[hdr.join(","), ...rows].join("\n")], {
-      type: "text/csv"
+    const blob = new Blob(["﻿" + [hdr.join(","), ...rows].join("\n")], {
+      type: "text/csv;charset=utf-8;"
     });
     Object.assign(document.createElement("a"), {
       href: URL.createObjectURL(blob),
@@ -2798,10 +3542,10 @@ function DraftLab(_ref31) {
         const data = parsed.data ?? parsed;
         let count = 0;
         const restoredGrades = {};
-        for (const _ref32 of Object.entries(data)) {
-          var _ref33 = _slicedToArray(_ref32, 2);
-          const key = _ref33[0];
-          const value = _ref33[1];
+        for (const _ref41 of Object.entries(data)) {
+          var _ref42 = _slicedToArray(_ref41, 2);
+          const key = _ref42[0];
+          const value = _ref42[1];
           if ((key.startsWith("draft-grades-") || key.startsWith("draft-import-meta-") || key === "draft-lab-theme") && typeof value === "string") {
             localStorage.setItem(key, value);
             count++;
@@ -2832,110 +3576,38 @@ function DraftLab(_ref31) {
     };
     reader.readAsText(file);
   };
-  const activeSort = isMobile ? mobileSort : sortCol;
   const filteredSets = sets.filter(s => s.name.toLowerCase().includes(setSearch.toLowerCase()) || s.code.toLowerCase().includes(setSearch.toLowerCase()));
-  const clearFilters = () => {
-    setFilterColor("all");
-    setFilterRarity("all");
-    setFilterSearch("");
-    setFilterGraded("all");
-    setFilterQuadrant("all");
-    setFilterTags([]);
-  };
-  const toggleFilterTag = id => setFilterTags(prev => prev.includes(id) ? prev.filter(t => t !== id) : [...prev, id]);
-  const hasFilters = filterColor !== "all" || filterRarity !== "all" || filterSearch || filterGraded !== "all" || filterQuadrant !== "all" || filterTags.length > 0;
-  const gradableCards = useMemo(() => cards.filter(c => !isBasicLand(c)), [cards]);
-  const gradedCount = gradableCards.filter(c => {
-    var _grades$c$id2;
-    return (_grades$c$id2 = grades[c.id]) === null || _grades$c$id2 === void 0 ? void 0 : _grades$c$id2.myGrade;
+  const clearFilters = () => dispatchFilter({
+    type: "RESET"
+  });
+  const toggleFilterTag = id => dispatchFilter({
+    type: "SET_TAGS",
+    value: filters.tags.includes(id) ? filters.tags.filter(t => t !== id) : [...filters.tags, id]
+  });
+  const hasFilters = filters.color !== "all" || filters.rarity !== "all" || filters.search || filters.graded !== "all" || filters.quadrant !== "all" || filters.tags.length > 0;
+  const _gradableCards = useMemo(() => cards.filter(c => !isBasicLand(c)), [cards]);
+  const _gradedCount = _gradableCards.filter(c => {
+    var _grades$c$id7;
+    return (_grades$c$id7 = grades[c.id]) === null || _grades$c$id7 === void 0 ? void 0 : _grades$c$id7.myGrade;
   }).length;
-  const gradeCounts = {};
-  for (const g of Object.values(grades)) {
-    if (g.myGrade) gradeCounts[g.myGrade] = (gradeCounts[g.myGrade] ?? 0) + 1;
-  }
-  const pct = gradableCards.length ? Math.round(gradedCount / gradableCards.length * 100) : 0;
-  const analyticsUnlocked = pct >= 50 && (cards.some(c => {
-    var _grades$c$id3;
-    return ((_grades$c$id3 = grades[c.id]) === null || _grades$c$id3 === void 0 ? void 0 : _grades$c$id3.expert_rating) != null;
+  const _pct = _gradableCards.length ? Math.round(_gradedCount / _gradableCards.length * 100) : 0;
+  const analyticsUnlocked = _pct >= 50 && (cards.some(c => {
+    var _grades$c$id8;
+    return ((_grades$c$id8 = grades[c.id]) === null || _grades$c$id8 === void 0 ? void 0 : _grades$c$id8.expert_rating) != null;
   }) || cards.some(c => {
-    var _grades$c$id4;
-    return ((_grades$c$id4 = grades[c.id]) === null || _grades$c$id4 === void 0 ? void 0 : _grades$c$id4.performance_rating) != null;
+    var _grades$c$id9;
+    return ((_grades$c$id9 = grades[c.id]) === null || _grades$c$id9 === void 0 ? void 0 : _grades$c$id9.performance_rating) != null;
   }));
-  const filtered = useMemo(() => cards.filter(c => {
-    const ck = getColorKey(c);
-    const g = grades[c.id] ?? {};
-    if (filterColor !== "all" && ck !== filterColor) return false;
-    if (filterRarity !== "all" && c.rarity !== filterRarity) return false;
-    if (filterSearch && !c.name.toLowerCase().includes(filterSearch.toLowerCase())) return false;
-    if (filterGraded === "graded" && !g.myGrade) return false;
-    if (filterGraded === "ungraded" && g.myGrade) return false;
-    if (filterQuadrant !== "all") {
-      const q = calcQuadrant(g);
-      const label = (q === null || q === void 0 ? void 0 : q.label) ?? "none";
-      if (filterQuadrant === "none" ? label !== "none" : label !== filterQuadrant) return false;
-    }
-    if (filterTags.length > 0) {
-      const cardTags = g.tags ?? [];
-      if (!filterTags.some(t => cardTags.includes(t))) return false;
-    }
-    return true;
-  }), [cards, grades, filterColor, filterRarity, filterSearch, filterGraded, filterQuadrant, filterTags]);
-  const sorted = useMemo(() => [...filtered].sort((a, b) => {
-    const ga = grades[a.id] ?? {},
-      gb = grades[b.id] ?? {};
-    let av, bv;
-    switch (activeSort) {
-      case "color":
-        av = COLOR_ORDER[getColorKey(a)] * 100 + (a.cmc ?? 0);
-        bv = COLOR_ORDER[getColorKey(b)] * 100 + (b.cmc ?? 0);
-        break;
-      case "name":
-        av = a.name;
-        bv = b.name;
-        break;
-      case "cmc":
-        av = a.cmc ?? 0;
-        bv = b.cmc ?? 0;
-        break;
-      case "rarity":
-        av = RARITIES.indexOf(a.rarity);
-        bv = RARITIES.indexOf(b.rarity);
-        break;
-      case "myGrade":
-        av = GRADES.indexOf(ga.myGrade || "");
-        bv = GRADES.indexOf(gb.myGrade || "");
-        break;
-      case "expert":
-        av = ga.expert_rating ?? 99;
-        bv = gb.expert_rating ?? 99;
-        break;
-      case "performance":
-        av = ga.performance_rating ?? 99;
-        bv = gb.performance_rating ?? 99;
-        break;
-      default:
-        return 0;
-    }
-    const dir = isMobile ? "asc" : sortDir;
-    if (av < bv) return dir === "asc" ? -1 : 1;
-    if (av > bv) return dir === "asc" ? 1 : -1;
-    return 0;
-  }), [filtered, grades, activeSort, sortDir, isMobile]);
-  const hasExpertData = cards.some(c => {
-    var _grades$c$id5;
-    return ((_grades$c$id5 = grades[c.id]) === null || _grades$c$id5 === void 0 ? void 0 : _grades$c$id5.expert_rating) != null;
-  });
-  const hasPerformanceData = cards.some(c => {
-    var _grades$c$id6;
-    return ((_grades$c$id6 = grades[c.id]) === null || _grades$c$id6 === void 0 ? void 0 : _grades$c$id6.performance_rating) != null;
-  });
-  return React.createElement("div", {
+  const _csvFiltered = useMemo(() => cards.filter(c => applyFilters(c, grades[c.id] ?? {}, filters)), [cards, grades, filters]);
+  const _csvSorted = useMemo(() => [..._csvFiltered].sort((a, b) => applySort(a, b, grades, filters.sortCol, filters.sortDir)), [_csvFiltered, grades, filters.sortCol, filters.sortDir]);
+  return React.createElement(GradesContext.Provider, {
+    value: gradesContextValue
+  }, React.createElement("div", {
     className: "app",
     onClick: () => {
       setShowSetDD(false);
       setShowImport(false);
       setShowExport(false);
-      setShowTagFilter(false);
     }
   }, React.createElement("header", {
     className: `hdr${showAnalytics ? " analytics-open" : ""}`,
@@ -3034,13 +3706,9 @@ function DraftLab(_ref31) {
       width: 300
     }
   }, React.createElement(ImportPanel, {
-    cards: cards,
-    grades: grades,
     selectedSet: selectedSet,
     fmt17l: fmt17l,
     setFmt17l: setFmt17l,
-    meta: importMeta,
-    setMeta: setImportMeta,
     onGradesUpdate: handleGradesUpdate,
     mobile: false
   }))), React.createElement("div", {
@@ -3131,417 +3799,29 @@ function DraftLab(_ref31) {
     className: "icon-bar-btn faint",
     onClick: () => setShowLegal(true),
     title: "Legal & Attribution"
-  }, "\xA9")))), React.createElement("div", {
-    className: "filters-mobile mobile-only",
-    style: {
-      maxHeight: showMobF ? "70vh" : "0"
-    }
-  }, showMobF && React.createElement("div", {
-    className: "fm-inner"
-  }, React.createElement("div", {
-    className: "fm-row"
-  }, React.createElement("input", {
-    className: "fm-srch",
-    placeholder: "Search cards\u2026",
-    value: filterSearch,
-    onChange: e => setFilterSearch(e.target.value)
-  }), React.createElement("select", {
-    className: "fm-sort",
-    value: mobileSort,
-    onChange: e => setMobileSort(e.target.value)
-  }, React.createElement("option", {
-    value: "color"
-  }, "Color \u2192 CMC"), React.createElement("option", {
-    value: "name"
-  }, "Name A\u2013Z"), React.createElement("option", {
-    value: "cmc"
-  }, "Mana Cost"), React.createElement("option", {
-    value: "rarity"
-  }, "Rarity"), React.createElement("option", {
-    value: "myGrade"
-  }, "My Grade"), React.createElement("option", {
-    value: "expert"
-  }, "Expert"), React.createElement("option", {
-    value: "performance"
-  }, "Performance"))), React.createElement("div", {
-    className: "fm-row"
-  }, React.createElement("span", {
-    className: "fl"
-  }, "Color:"), ["all", "W", "U", "B", "R", "G", "M", "C", "L"].map(c => React.createElement("button", {
-    key: c,
-    className: `fb${filterColor === c ? " active" : ""}`,
-    onClick: () => setFilterColor(c)
-  }, c === "all" ? "All" : c))), React.createElement("div", {
-    className: "fm-row"
-  }, React.createElement("span", {
-    className: "fl"
-  }, "Rarity:"), [["all", "All"], ["common", "C"], ["uncommon", "U"], ["rare", "R"], ["mythic", "M"]].map(_ref34 => {
-    let _ref35 = _slicedToArray(_ref34, 2),
-      full = _ref35[0],
-      abbr = _ref35[1];
-    return React.createElement("button", {
-      key: full,
-      className: `fb${filterRarity === full ? " active" : ""}`,
-      style: filterRarity === full && full !== "all" ? {
-        color: RARITY_COLORS[full],
-        borderColor: RARITY_COLORS[full] + "88"
-      } : {},
-      onClick: () => setFilterRarity(full)
-    }, abbr);
-  })), React.createElement("div", {
-    className: "fm-row"
-  }, React.createElement("span", {
-    className: "fl"
-  }, "Show:"), ["all", "graded", "ungraded"].map(g => React.createElement("button", {
-    key: g,
-    className: `fb${filterGraded === g ? " active" : ""}`,
-    onClick: () => setFilterGraded(g)
-  }, g.charAt(0).toUpperCase() + g.slice(1)))), React.createElement("div", {
-    className: "fm-row"
-  }, React.createElement("span", {
-    className: "fl"
-  }, "Quad:"), ["all", "FORMAT", "MISS", "SPOT", "VAR", "none"].map(q => React.createElement("button", {
-    key: q,
-    className: `fb${filterQuadrant === q ? " active" : ""}`,
-    onClick: () => setFilterQuadrant(q)
-  }, q === "all" ? "All" : q))), React.createElement("div", {
-    className: "fm-row",
-    style: {
-      flexDirection: "column",
-      alignItems: "flex-start",
-      gap: 6
-    }
-  }, React.createElement("span", {
-    className: "fl"
-  }, "Tags:"), React.createElement("div", {
-    className: "tag-chips"
-  }, TAGS.map(tag => React.createElement("button", {
-    key: tag.id,
-    className: `tag-chip${filterTags.includes(tag.id) ? " active" : ""}`,
-    onClick: () => toggleFilterTag(tag.id)
-  }, tag.label)))), hasFilters && React.createElement("div", {
-    className: "fm-row"
-  }, React.createElement("button", {
-    className: "btn",
-    style: {
-      padding: "3px 10px"
-    },
-    onClick: clearFilters
-  }, "Clear Filters")), selectedSet && React.createElement("div", {
-    style: {
-      borderTop: "1px solid var(--b1)",
-      paddingTop: 10
-    }
-  }, React.createElement(ImportPanel, {
-    cards: cards,
-    grades: grades,
+  }, "\xA9")))), React.createElement(GradingView, {
+    key: selectedSet === null || selectedSet === void 0 ? void 0 : selectedSet.code,
+    showAnalytics: showAnalytics,
+    showMobF: showMobF,
+    onCloseMobF: () => setShowMobF(false),
     selectedSet: selectedSet,
+    user: user,
+    syncStatus: syncStatus,
     fmt17l: fmt17l,
     setFmt17l: setFmt17l,
-    meta: importMeta,
-    setMeta: setImportMeta,
-    onGradesUpdate: handleGradesUpdate,
-    mobile: true
-  })), React.createElement("div", {
-    style: {
-      borderTop: "1px solid var(--b1)",
-      paddingTop: 10,
-      display: "flex",
-      gap: 8
-    }
-  }, React.createElement("button", {
-    className: "l17-fetch",
-    style: {
-      flex: 1
-    },
-    onClick: exportBackup
-  }, "Export Backup"), React.createElement("label", {
-    className: "l17-fetch",
-    style: {
-      flex: 1,
-      textAlign: "center",
-      cursor: "pointer"
-    }
-  }, "Import Backup", React.createElement("input", {
-    type: "file",
-    accept: ".json",
-    style: {
-      display: "none"
-    },
-    onChange: e => {
-      importBackup(e.target.files[0]);
-      e.target.value = "";
-      setShowMobF(false);
-    }
-  })))), showMobF && React.createElement("div", {
-    className: "fm-footer"
-  }, selectedSet && React.createElement("button", {
-    className: "l17-fetch",
-    style: {
-      flex: 1
-    },
-    onClick: () => {
-      exportCSV();
-      setShowMobF(false);
-    }
-  }, "\u2193 Export CSV"), user && React.createElement("button", {
-    className: "l17-fetch",
-    style: {
-      flex: 1,
-      borderColor: "var(--dimmer)",
-      color: "#5a5a7a"
-    },
-    onClick: () => {
-      sb.auth.signOut();
-      setShowMobF(false);
-    }
-  }, "Sign Out"), user && syncStatus && React.createElement("span", {
-    className: "sync-dot",
-    style: {
-      alignSelf: "center",
-      flexShrink: 0
-    }
-  }, syncStatus === "syncing" ? "↑" : "✓"))), cards.length > 0 && React.createElement(React.Fragment, null, React.createElement("div", {
-    className: "stats"
-  }, React.createElement("span", {
-    className: "stat"
-  }, React.createElement("span", {
-    className: "stat-v"
-  }, cards.length), " cards"), React.createElement("span", {
-    className: "stat"
-  }, React.createElement("span", {
-    className: "stat-v"
-  }, gradedCount), " graded"), React.createElement("span", {
-    className: "stat"
-  }, React.createElement("span", {
-    className: "stat-v"
-  }, pct, "%")), React.createElement("span", {
-    className: "stat",
-    style: {
-      color: "var(--b2)"
-    }
-  }, "|"), GRADES.filter(g => g).map(g => gradeCounts[g] ? React.createElement("span", {
-    key: g,
-    className: "gp",
-    style: {
-      background: GRADE_COLOR[g] + "22",
-      color: GRADE_COLOR[g],
-      border: `1px solid ${GRADE_COLOR[g]}55`
-    }
-  }, g, " ", React.createElement("span", {
-    style: {
-      opacity: .75
-    }
-  }, gradeCounts[g])) : null)), React.createElement("div", {
-    className: "prog-bar"
-  }, React.createElement("div", {
-    className: "prog-fill",
-    style: {
-      width: `${pct}%`
-    }
-  }))), !showAnalytics && cards.length > 0 && React.createElement("div", {
-    className: "filters-desktop desktop-only"
-  }, React.createElement("span", {
-    className: "fl"
-  }, "Color"), ["all", "W", "U", "B", "R", "G", "M", "C", "L"].map(c => React.createElement("button", {
-    key: c,
-    className: `fb${filterColor === c ? " active" : ""}`,
-    onClick: () => setFilterColor(c)
-  }, c === "all" ? "All" : MTG_LABELS[c])), React.createElement("div", {
-    className: "divv"
-  }), React.createElement("span", {
-    className: "fl"
-  }, "Rarity"), ["all", ...RARITIES].map(r => React.createElement("button", {
-    key: r,
-    className: `fb${filterRarity === r ? " active" : ""}`,
-    style: filterRarity === r && r !== "all" ? {
-      color: RARITY_COLORS[r],
-      borderColor: RARITY_COLORS[r] + "88"
-    } : {},
-    onClick: () => setFilterRarity(r)
-  }, r === "all" ? "All" : r.charAt(0).toUpperCase() + r.slice(1))), React.createElement("div", {
-    className: "divv"
-  }), React.createElement("span", {
-    className: "fl"
-  }, "Show"), ["all", "graded", "ungraded"].map(g => React.createElement("button", {
-    key: g,
-    className: `fb${filterGraded === g ? " active" : ""}`,
-    onClick: () => setFilterGraded(g)
-  }, g.charAt(0).toUpperCase() + g.slice(1))), (hasExpertData || hasPerformanceData) && React.createElement(React.Fragment, null, React.createElement("div", {
-    className: "divv"
-  }), React.createElement("span", {
-    className: "fl"
-  }, "Quad"), ["all", "FORMAT", "MISS", "SPOT", "VAR"].map(q => React.createElement("button", {
-    key: q,
-    className: `fb${filterQuadrant === q ? " active" : ""}`,
-    onClick: () => setFilterQuadrant(q)
-  }, q === "all" ? "All" : q))), React.createElement("div", {
-    className: "divv"
-  }), React.createElement("div", {
-    className: "tag-filter-wrap",
-    onClick: e => e.stopPropagation()
-  }, React.createElement("button", {
-    className: `fb${filterTags.length > 0 ? " active" : ""}`,
-    onClick: () => setShowTagFilter(v => !v)
-  }, "Tags", filterTags.length > 0 ? ` (${filterTags.length})` : ""), showTagFilter && React.createElement(TagFilterPanel, {
-    filterTags: filterTags,
-    onToggle: toggleFilterTag,
-    onClear: () => setFilterTags([])
-  })), React.createElement("div", {
-    className: "divv"
-  }), React.createElement("input", {
-    className: "srch",
-    placeholder: "Search cards\u2026",
-    value: filterSearch,
-    onChange: e => setFilterSearch(e.target.value)
-  }), hasFilters && React.createElement("button", {
-    className: "btn",
-    onClick: clearFilters
-  }, "Clear"), React.createElement("span", {
-    className: "fl",
-    style: {
-      marginLeft: "auto"
-    }
-  }, sorted.length, " shown")), showAnalytics && analyticsUnlocked && React.createElement(AnalyticsView, {
-    cards: cards,
-    grades: grades,
-    isMobile: isMobile,
-    onCardClick: card => {
-      const idx = sorted.indexOf(card);
-      if (idx !== -1) setLightboxIndex(idx);
-    }
-  }), !showAnalytics && (loading || error || cards.length === 0) && React.createElement("div", {
-    className: "center"
-  }, loading ? React.createElement(React.Fragment, null, React.createElement("div", {
-    className: "spin"
-  }), React.createElement("span", null, loadMsg)) : error ? React.createElement("span", {
-    style: {
-      color: "#e05030"
-    }
-  }, error) : React.createElement(React.Fragment, null, React.createElement("div", {
-    className: "empty-title"
-  }, "Draft Lab"), React.createElement("div", {
-    className: "empty-sub"
-  }, "Choose a set above to start evaluating cards"))), !showAnalytics && !loading && !error && cards.length > 0 && React.createElement("div", {
-    className: "tbl-wrap desktop-only"
-  }, React.createElement("table", null, React.createElement("thead", null, React.createElement("tr", null, [["name", "Card"], ["cmc", "Cost"], [null, "Type"], ["rarity", "Rar"], ["color", "Color"], ["myGrade", "My Grade"], ["expert", "Expert"], ["performance", "Perf"], [null, "Δ"], [null, "Sunset"], [null, "Notes"]].map(_ref36 => {
-    let _ref37 = _slicedToArray(_ref36, 2),
-      col = _ref37[0],
-      lbl = _ref37[1];
-    return React.createElement("th", {
-      key: lbl,
-      className: col && sortCol === col ? "sorted" : "",
-      onClick: () => col && handleSort(col),
-      style: !col ? {
-        cursor: "default"
-      } : {}
-    }, lbl, col && sortCol === col ? sortDir === "asc" ? " ▲" : " ▼" : "");
-  }))), React.createElement("tbody", null, sorted.map(card => {
-    var _card$type_line5;
-    const g = grades[card.id] ?? {};
-    const ck = getColorKey(card);
-    const q = calcQuadrant(g);
-    return React.createElement("tr", {
-      key: card.id,
-      className: `c${ck}`
-    }, React.createElement("td", {
-      onMouseEnter: e => {
-        setHovered(card);
-        setHoverPos({
-          x: e.clientX,
-          y: e.clientY
-        });
-      },
-      onMouseMove: e => setHoverPos({
-        x: e.clientX,
-        y: e.clientY
-      }),
-      onMouseLeave: () => setHovered(null),
-      onClick: () => setLightboxIndex(sorted.indexOf(card)),
-      style: {
-        cursor: "pointer"
-      }
-    }, React.createElement("div", {
-      className: "card-name"
-    }, card.name, q && React.createElement(QuadrantBadge, {
-      g: g
-    }))), React.createElement("td", null, React.createElement("span", {
-      className: "mana"
-    }, card.mana_cost ? renderMana(card.mana_cost) : "—")), React.createElement("td", null, React.createElement("span", {
-      className: "typ"
-    }, (_card$type_line5 = card.type_line) === null || _card$type_line5 === void 0 || (_card$type_line5 = _card$type_line5.split("—")[0]) === null || _card$type_line5 === void 0 ? void 0 : _card$type_line5.trim())), React.createElement("td", null, React.createElement("span", {
-      className: "rar-dot",
-      style: {
-        background: RARITY_COLORS[card.rarity],
-        marginRight: 5
-      }
-    }), React.createElement("span", {
-      style: {
-        fontSize: 10,
-        color: "var(--dim)"
-      }
-    }, card.rarity.charAt(0).toUpperCase())), React.createElement("td", null, React.createElement("span", {
-      className: "ctag",
-      "data-c": ck
-    }, MTG_LABELS[ck])), React.createElement("td", null, React.createElement(GradeSelect, {
-      cls: "gsel",
-      value: g.myGrade || "",
-      onChange: e => updateGrade(card.id, "myGrade", e.target.value)
-    })), React.createElement("td", null, React.createElement(RatingInput, {
-      value: g.expert_rating,
-      source: g.expert_source,
-      sourceMeta: importMeta === null || importMeta === void 0 ? void 0 : importMeta.expert,
-      onChange: v => updateGrade(card.id, "expert_rating", v)
-    })), React.createElement("td", null, React.createElement(RatingInput, {
-      value: g.performance_rating,
-      source: g.performance_source,
-      sourceMeta: importMeta === null || importMeta === void 0 ? void 0 : importMeta.performance,
-      onChange: v => updateGrade(card.id, "performance_rating", v)
-    })), React.createElement("td", null, React.createElement(ThreeWayDelta, {
-      g: g
-    })), React.createElement("td", null, React.createElement(GradeSelect, {
-      cls: "gsel",
-      value: g.sunsetGrade || "",
-      onChange: e => updateGrade(card.id, "sunsetGrade", e.target.value)
-    })), React.createElement("td", null, React.createElement("input", {
-      type: "text",
-      className: "note-in",
-      placeholder: "Notes\u2026",
-      value: g.notes ?? "",
-      onChange: e => updateGrade(card.id, "notes", e.target.value)
-    }), React.createElement(TagCell, {
-      tags: g.tags ?? [],
-      onToggle: id => {
-        const cur = g.tags ?? [];
-        updateGrade(card.id, "tags", cur.includes(id) ? cur.filter(t => t !== id) : [...cur, id]);
-      }
-    })));
-  })))), !showAnalytics && !loading && !error && cards.length > 0 && React.createElement("div", {
-    className: "card-list mobile-only"
-  }, sorted.map(card => React.createElement(MobileCardItem, {
-    key: card.id,
-    card: card,
-    grade: grades[card.id] ?? {},
-    onUpdate: (field, value) => updateGrade(card.id, field, value)
-  }))), hovered && getImageUrl(hovered) && !isMobile && lightboxIndex === null && React.createElement("div", {
-    className: "preview",
-    style: {
-      left: hoverPos.x + 16,
-      top: Math.min(hoverPos.y - 60, window.innerHeight - 300)
-    }
-  }, React.createElement("img", {
-    src: getImageUrl(hovered),
-    alt: hovered.name
-  })), lightboxIndex !== null && sorted[lightboxIndex] && React.createElement(CardLightbox, {
-    sorted: sorted,
-    lightboxIndex: lightboxIndex,
-    grades: grades,
-    onUpdate: updateGrade,
-    onClose: () => setLightboxIndex(null),
-    onNav: delta => {
-      const next = lightboxIndex + delta;
-      if (next >= 0 && next < sorted.length) setLightboxIndex(next);
-    }
+    handleGradesUpdate: handleGradesUpdate,
+    exportBackup: exportBackup,
+    importBackup: importBackup,
+    exportCSV: exportCSV,
+    loading: loading,
+    loadMsg: loadMsg,
+    error: error,
+    filters: filters,
+    dispatch: dispatchFilter,
+    handleSort: handleSort,
+    clearFilters: clearFilters,
+    toggleFilterTag: toggleFilterTag,
+    hasFilters: hasFilters
   }), showGuide && React.createElement("div", {
     className: "guide-overlay",
     onClick: e => e.target === e.currentTarget && setShowGuide(false)
@@ -3554,21 +3834,21 @@ function DraftLab(_ref31) {
     className: "guide-h1"
   }, "Grade Reference"), React.createElement("div", {
     className: "guide-sub"
-  }, "Half-grade anchors for Limited evaluation"), GRADE_TIERS.map(_ref38 => {
-    let tier = _ref38.tier,
-      rows = _ref38.rows;
+  }, "Half-grade anchors for Limited evaluation"), GRADE_TIERS.map(_ref43 => {
+    let tier = _ref43.tier,
+      rows = _ref43.rows;
     return React.createElement("div", {
       key: tier,
       className: "guide-tier"
     }, React.createElement("div", {
       className: "guide-tier-hdr"
-    }, tier), rows.map(_ref39 => {
-      let _ref40 = _slicedToArray(_ref39, 5),
-        grade = _ref40[0],
-        bg = _ref40[1],
-        fg = _ref40[2],
-        pick = _ref40[3],
-        desc = _ref40[4];
+    }, tier), rows.map(_ref44 => {
+      let _ref45 = _slicedToArray(_ref44, 5),
+        grade = _ref45[0],
+        bg = _ref45[1],
+        fg = _ref45[2],
+        pick = _ref45[3],
+        desc = _ref45[4];
       return React.createElement("div", {
         key: grade,
         className: "guide-row"
@@ -3638,19 +3918,19 @@ function DraftLab(_ref31) {
       color: "var(--gold2)",
       textDecoration: "none"
     }
-  }, "View on GitHub \u2192")))));
+  }, "View on GitHub \u2192"))))));
 }
-function LoginScreen(_ref41) {
-  let onSignIn = _ref41.onSignIn,
-    loading = _ref41.loading;
-  const _useState89 = useState(() => {
+function LoginScreen(_ref46) {
+  let onSignIn = _ref46.onSignIn,
+    loading = _ref46.loading;
+  const _useState75 = useState(() => {
       const saved = localStorage.getItem("draft-lab-theme");
       if (saved && saved !== "auto") return saved;
       return window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
     }),
-    _useState90 = _slicedToArray(_useState89, 2),
-    theme = _useState90[0],
-    setTheme = _useState90[1];
+    _useState76 = _slicedToArray(_useState75, 2),
+    theme = _useState76[0],
+    setTheme = _useState76[1];
   useEffect(() => {
     document.documentElement.setAttribute("data-theme", theme);
     localStorage.setItem("draft-lab-theme", theme);
@@ -3712,25 +3992,25 @@ function LoginScreen(_ref41) {
   })), "Sign in with Google"))));
 }
 function AuthGate() {
-  const _useState91 = useState(null),
-    _useState92 = _slicedToArray(_useState91, 2),
-    user = _useState92[0],
-    setUser = _useState92[1];
-  const _useState93 = useState(true),
-    _useState94 = _slicedToArray(_useState93, 2),
-    authLoading = _useState94[0],
-    setAuthLoading = _useState94[1];
-  const _useState95 = useState(false),
-    _useState96 = _slicedToArray(_useState95, 2),
-    signing = _useState96[0],
-    setSigning = _useState96[1];
+  const _useState77 = useState(null),
+    _useState78 = _slicedToArray(_useState77, 2),
+    user = _useState78[0],
+    setUser = _useState78[1];
+  const _useState79 = useState(true),
+    _useState80 = _slicedToArray(_useState79, 2),
+    authLoading = _useState80[0],
+    setAuthLoading = _useState80[1];
+  const _useState81 = useState(false),
+    _useState82 = _slicedToArray(_useState81, 2),
+    signing = _useState82[0],
+    setSigning = _useState82[1];
   useEffect(() => {
     if (!SUPABASE_CONFIGURED) {
       setAuthLoading(false);
       return;
     }
-    sb.auth.getSession().then(_ref42 => {
-      let session = _ref42.data.session;
+    sb.auth.getSession().then(_ref47 => {
+      let session = _ref47.data.session;
       setUser((session === null || session === void 0 ? void 0 : session.user) ?? null);
       setAuthLoading(false);
     }).catch(() => setAuthLoading(false));
