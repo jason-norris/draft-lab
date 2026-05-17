@@ -19,6 +19,14 @@ CSS and Supabase config live in `apps/web/template.html`. Edit that for styling 
 
 ---
 
+## Design Documents
+
+See `docs/README.md` for the full index of planning and implementation specs.
+Read the relevant spec before starting any phase. One phase at a time — do not
+proceed past a phase's definition of done without explicit confirmation.
+
+---
+
 ## Git Workflow
 
 ```
