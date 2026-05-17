@@ -48,6 +48,27 @@ const GRADE_TIERS = [
 ];
 
 // ── Tag vocabulary ───────────────────────────────────────────────────────────
+// Tags classify a card's PRIMARY DRAFT ROLE for archetype fingerprinting.
+// Use only the tags that represent the card's primary function — not every possible role.
+// Tags answer "what does this card DO for the archetype?", not "what type is it?"
+// Fewer tags = stronger signal. Over-tagging dilutes archetype analysis.
+//
+// EVALUATION — how this card compares to draft-table expectations:
+//   sleeper      - Underrated; performs better than its draft position suggests
+//   overrated    - Drafted earlier than its actual power level warrants
+//   uncertain    - Grade is provisional; revisit with more data or play experience
+//
+// ROLE — what this card does in the archetype:
+//   removal      - Kills, exiles, or permanently neutralizes an opposing permanent
+//   finisher     - Wins the game if unanswered; typically large or evasive
+//   tempo        - Temporarily disrupts opponent without permanently answering (bounce, tap, flash)
+//   card-draw    - Replaces itself or generates card advantage
+//   enabler      - Makes other cards significantly better (ramp, looters, synergy setup)
+//   build-around - The synergy piece that defines an archetype; weak in isolation
+//
+// CONTEXT — how the card fits a particular deck:
+//   archetype-only - Only playable in a specific shell; actively bad elsewhere
+//   filler         - Below-average playable; in the deck because nothing better exists
 const TAGS = [
   { id:"sleeper",        label:"Sleeper",       group:"eval" },
   { id:"overrated",      label:"Overrated",     group:"eval" },
@@ -76,6 +97,33 @@ const store = {
   get: k => { try { const v = localStorage.getItem(k); return v ? { value: v } : null; } catch { return null; } },
   set: (k, v) => { try { localStorage.setItem(k, v); } catch {} },
 };
+
+// ── Grade object type ────────────────────────────────────────────────────────
+/**
+ * @typedef {Object} GradeContext
+ * Game-state context ratings. Optional — null when not set, never an empty object.
+ * All values use the same letter grade scale as myGrade (A+…F).
+ * NEVER average or composite these values — the profile shape is the analytical signal.
+ * @property {string} early   - Card strength turns 1–3, game state undecided
+ * @property {string} ahead   - Card strength when you have board advantage
+ * @property {string} parity  - Card strength in a roughly even game
+ * @property {string} behind  - Card strength when you're losing / need to catch up
+ */
+
+/**
+ * @typedef {Object} GradeRecord
+ * Stored per card in the `data` JSONB column of `draft_grades` (keyed by Scryfall card ID).
+ * All fields are optional; omitted keys mean "not yet set" for that field.
+ * @property {string}       [myGrade]           - Letter grade (A+/A/A-/B+/B/B-/C+/C/C-/D+/D/F)
+ * @property {string}       [sunsetGrade]        - Revised end-of-season grade (same scale)
+ * @property {number}       [expert_rating]      - Pre-release expert rating 0–5
+ * @property {string}       [expert_source]      - '17lands' | 'aetherhub' | 'manual'
+ * @property {number}       [performance_rating] - 17Lands GIH win rate, normalized 0–5
+ * @property {string}       [performance_source] - '17lands' | 'aetherhub' | 'manual'
+ * @property {GradeContext} [context]            - Game state context ratings; null when not set
+ * @property {string[]}     [tags]               - Tag IDs from the TAGS vocabulary
+ * @property {string}       [notes]              - Reasoning, observations; null when empty
+ */
 
 // ── Data migration ────────────────────────────────────────────────────────────
 // Migrates old lsv/lsvSource fields → expert_rating / performance_rating
