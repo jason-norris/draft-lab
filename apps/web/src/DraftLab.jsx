@@ -521,7 +521,7 @@ function CardLightbox({ sorted, lightboxIndex, grades, onUpdate, onClose, onNav 
 }
 
 // ── Analytics helpers ────────────────────────────────────────────────────────
-const QUAD_COLORS = { CONSENSUS:"#32a050", MISS:"#e05030", SPOT:"#32a050", FORMAT:"#9c5ef5", VAR:"#e6c800" };
+const QUAD_COLORS = { CONSENSUS:"#32a050", MISS:"#e05030", SPOT:"#00acc1", FORMAT:"#9c5ef5", VAR:"#e6c800" };
 
 function gradeToNumeric(grade) { return GRADE_NUMERIC[grade] ?? null; }
 
