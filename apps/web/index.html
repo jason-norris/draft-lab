@@ -1135,10 +1135,11 @@ function CardLightbox(_ref10) {
   var _card$card_faces3, _card$card_faces$, _card$card_faces$face, _card$card_faces$face2, _card$type_line3;
   let sorted = _ref10.sorted,
     lightboxIndex = _ref10.lightboxIndex,
-    grades = _ref10.grades,
-    onUpdate = _ref10.onUpdate,
     onClose = _ref10.onClose,
     onNav = _ref10.onNav;
+  const _useGrades = useGrades(),
+    grades = _useGrades.grades,
+    onUpdate = _useGrades.updateGrade;
   const card = sorted[lightboxIndex];
   const g = grades[card.id] ?? {};
   const q = calcQuadrant(g);
@@ -1348,9 +1349,9 @@ const SCATTER_MODES = [{
 }];
 function AnalyticsView(_ref12) {
   let onCardClick = _ref12.onCardClick;
-  const _useGrades = useGrades(),
-    cards = _useGrades.cards,
-    grades = _useGrades.grades;
+  const _useGrades2 = useGrades(),
+    cards = _useGrades2.cards,
+    grades = _useGrades2.grades;
   const isMobile = useIsMobile();
   const _useState9 = useState("distribution"),
     _useState0 = _slicedToArray(_useState9, 2),
@@ -2233,11 +2234,11 @@ function ImportPanel(_ref22) {
     setFmt17l = _ref22.setFmt17l,
     onGradesUpdate = _ref22.onGradesUpdate,
     mobile = _ref22.mobile;
-  const _useGrades2 = useGrades(),
-    cards = _useGrades2.cards,
-    grades = _useGrades2.grades,
-    meta = _useGrades2.importMeta,
-    setMeta = _useGrades2.setImportMeta;
+  const _useGrades3 = useGrades(),
+    cards = _useGrades3.cards,
+    grades = _useGrades3.grades,
+    meta = _useGrades3.importMeta,
+    setMeta = _useGrades3.setImportMeta;
   const _useState19 = useState(""),
     _useState20 = _slicedToArray(_useState19, 2),
     msg = _useState20[0],
@@ -3696,8 +3697,6 @@ function DraftLab(_ref35) {
   })), lightboxIndex !== null && sorted[lightboxIndex] && React.createElement(CardLightbox, {
     sorted: sorted,
     lightboxIndex: lightboxIndex,
-    grades: grades,
-    onUpdate: updateGrade,
     onClose: () => setLightboxIndex(null),
     onNav: delta => {
       const next = lightboxIndex + delta;

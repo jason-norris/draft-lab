@@ -402,7 +402,8 @@ function TagFilterPanel({ filterTags, onToggle, onClear }) {
 }
 
 // ── CardLightbox ──────────────────────────────────────────────────────────────
-function CardLightbox({ sorted, lightboxIndex, grades, onUpdate, onClose, onNav }) {
+function CardLightbox({ sorted, lightboxIndex, onClose, onNav }) {
+  const { grades, updateGrade: onUpdate } = useGrades();
   const card  = sorted[lightboxIndex];
   const g     = grades[card.id] ?? {};
   const q     = calcQuadrant(g);
@@ -1960,8 +1961,6 @@ setGrades(prev => {
         <CardLightbox
           sorted={sorted}
           lightboxIndex={lightboxIndex}
-          grades={grades}
-          onUpdate={updateGrade}
           onClose={() => setLightboxIndex(null)}
           onNav={delta => {
             const next = lightboxIndex + delta;
