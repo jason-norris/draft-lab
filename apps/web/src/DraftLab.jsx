@@ -1,5 +1,5 @@
 // Globals provided by template.html: SUPABASE_CONFIGURED, ALLOWED_EMAIL, sb, syncGrades, fetchGrades
-const { useState, useEffect, useCallback, useRef, useMemo } = React;
+const { useState, useEffect, useCallback, useRef, useMemo, useReducer } = React;
 const VERSION = "v3.0";
 
 // ── Constants ────────────────────────────────────────────────────────────────
@@ -553,7 +553,9 @@ const SCATTER_MODES = [
   { id:"expVsPerf", label:"Expert vs Perf",xKey:"perf",  yKey:"exp",   xLabel:"Performance", yLabel:"Expert" },
 ];
 
-function AnalyticsView({ cards, grades, isMobile, onCardClick }) {
+function AnalyticsView({ onCardClick }) {
+  const { cards, grades } = useGrades();
+  const isMobile = useIsMobile();
   const [activeTab, setActiveTab]       = useState("distribution");
   const [scatterMode, setScatterMode]   = useState("meVsPerf");
   const [previewCard, setPreviewCard]   = useState(null);
@@ -1188,6 +1190,83 @@ function applySort(a, b, grades, col, dir) {
   return 0;
 }
 
+// ── Filter reducer ────────────────────────────────────────────────────────────
+const filterInitialState = {
+  color: "all", rarity: "all", search: "", graded: "all",
+  quadrant: "all", tags: [], sortCol: "color", sortDir: "asc", mobileSort: "color",
+};
+
+function filterReducer(state, action) {
+  switch (action.type) {
+    case "SET_COLOR":       return { ...state, color:      action.value };
+    case "SET_RARITY":      return { ...state, rarity:     action.value };
+    case "SET_SEARCH":      return { ...state, search:     action.value };
+    case "SET_GRADED":      return { ...state, graded:     action.value };
+    case "SET_QUADRANT":    return { ...state, quadrant:   action.value };
+    case "SET_TAGS":        return { ...state, tags:       action.value };
+    case "SET_SORT":        return { ...state, sortCol: action.col, sortDir: action.dir };
+    case "SET_MOBILE_SORT": return { ...state, mobileSort: action.value };
+    case "RESET":           return { ...state, color:"all", rarity:"all", search:"", graded:"all", quadrant:"all", tags:[] };
+    case "RESTORE":         return { ...filterInitialState, ...action.value };
+    default: return state;
+  }
+}
+
+// ── FilterBar ─────────────────────────────────────────────────────────────────
+function FilterBar({ filters, dispatch, hasExpertData, hasPerformanceData, sortedCount, hasFilters, showTagFilter, setShowTagFilter, toggleFilterTag, clearFilters }) {
+  return (
+    <div className="filters-desktop desktop-only">
+      <span className="fl">Color</span>
+      {["all","W","U","B","R","G","M","C","L"].map(c => (
+        <button key={c} className={`fb${filters.color === c ? " active" : ""}`} onClick={() => dispatch({ type:"SET_COLOR", value:c })}>
+          {c === "all" ? "All" : MTG_LABELS[c]}
+        </button>
+      ))}
+      <div className="divv" />
+      <span className="fl">Rarity</span>
+      {["all", ...RARITIES].map(r => (
+        <button key={r}
+          className={`fb${filters.rarity === r ? " active" : ""}`}
+          style={filters.rarity === r && r !== "all" ? { color: RARITY_COLORS[r], borderColor: RARITY_COLORS[r]+"88" } : {}}
+          onClick={() => dispatch({ type:"SET_RARITY", value:r })}>
+          {r === "all" ? "All" : r.charAt(0).toUpperCase() + r.slice(1)}
+        </button>
+      ))}
+      <div className="divv" />
+      <span className="fl">Show</span>
+      {["all","graded","ungraded"].map(g => (
+        <button key={g} className={`fb${filters.graded === g ? " active" : ""}`} onClick={() => dispatch({ type:"SET_GRADED", value:g })}>
+          {g.charAt(0).toUpperCase() + g.slice(1)}
+        </button>
+      ))}
+      {(hasExpertData || hasPerformanceData) && <>
+        <div className="divv" />
+        <span className="fl">Quad</span>
+        {["all","FORMAT","MISS","SPOT","VAR"].map(q => (
+          <button key={q} className={`fb${filters.quadrant === q ? " active" : ""}`} onClick={() => dispatch({ type:"SET_QUADRANT", value:q })}>
+            {q === "all" ? "All" : q}
+          </button>
+        ))}
+      </>}
+      <div className="divv" />
+      <div className="tag-filter-wrap" onClick={e => e.stopPropagation()}>
+        <button className={`fb${filters.tags.length > 0 ? " active" : ""}`}
+          onClick={() => setShowTagFilter(v => !v)}>
+          Tags{filters.tags.length > 0 ? ` (${filters.tags.length})` : ""}
+        </button>
+        {showTagFilter && (
+          <TagFilterPanel filterTags={filters.tags} onToggle={toggleFilterTag} onClear={() => dispatch({ type:"SET_TAGS", value:[] })} />
+        )}
+      </div>
+      <div className="divv" />
+      <input className="srch" placeholder="Search cards…"
+        value={filters.search} onChange={e => dispatch({ type:"SET_SEARCH", value:e.target.value })} />
+      {hasFilters && <button className="btn" onClick={clearFilters}>Clear</button>}
+      <span className="fl" style={{ marginLeft:"auto" }}>{sortedCount} shown</span>
+    </div>
+  );
+}
+
 // ── GradesContext ─────────────────────────────────────────────────────────────
 const GradesContext = React.createContext(null);
 function useGrades() { return React.useContext(GradesContext); }
@@ -1225,16 +1304,8 @@ function DraftLab({ user }) {
   const [loading, setLoading]       = useState(false);
   const [loadMsg, setLoadMsg]       = useState("");
   const [error, setError]           = useState(null);
-  const [sortCol, setSortCol]       = useState("color");
-  const [sortDir, setSortDir]       = useState("asc");
-  const [mobileSort, setMobileSort] = useState("color");
-  const [filterColor, setFilterColor]     = useState("all");
-  const [filterRarity, setFilterRarity]   = useState("all");
-  const [filterSearch, setFilterSearch]   = useState("");
-  const [filterGraded, setFilterGraded]   = useState("all");
-  const [filterQuadrant, setFilterQuadrant] = useState("all");
-  const [filterTags, setFilterTags]         = useState([]);
-  const [showTagFilter, setShowTagFilter]   = useState(false);
+  const [filters, dispatchFilter] = useReducer(filterReducer, filterInitialState);
+  const [showTagFilter, setShowTagFilter] = useState(false);
   const [showMobF, setShowMobF]     = useState(false);
   const [lightboxIndex, setLightboxIndex] = useState(null);
   const [showGuide, setShowGuide]   = useState(false);
@@ -1309,10 +1380,11 @@ function DraftLab({ user }) {
   useEffect(() => {
     if (!selectedSet) return;
     store.set(`draft-lab-session-${selectedSet.code}`, JSON.stringify({
-      sortCol, sortDir, mobileSort,
-      filterColor, filterRarity, filterGraded, filterQuadrant
+      sortCol: filters.sortCol, sortDir: filters.sortDir, mobileSort: filters.mobileSort,
+      filterColor: filters.color, filterRarity: filters.rarity,
+      filterGraded: filters.graded, filterQuadrant: filters.quadrant,
     }));
-  }, [selectedSet?.code, sortCol, sortDir, mobileSort, filterColor, filterRarity, filterGraded, filterQuadrant]);
+  }, [selectedSet?.code, filters]);
 
   // ── Helpers ──
   const toggleTheme = () => {
@@ -1358,15 +1430,16 @@ function DraftLab({ user }) {
     setError(null);
     const saved = store.get(`draft-lab-session-${set.code}`);
     const sess  = saved ? JSON.parse(saved.value) : null;
-    setFilterColor(sess?.filterColor ?? "all");
-    setFilterRarity(sess?.filterRarity ?? "all");
-    setFilterSearch("");
-    setFilterGraded(sess?.filterGraded ?? "all");
-    setFilterQuadrant(sess?.filterQuadrant ?? "all");
-    setFilterTags([]);
-    setSortCol(sess?.sortCol ?? "color");
-    setSortDir(sess?.sortDir ?? "asc");
-    setMobileSort(sess?.mobileSort ?? "color");
+    dispatchFilter({ type: "RESTORE", value: {
+      color:     sess?.filterColor    ?? "all",
+      rarity:    sess?.filterRarity   ?? "all",
+      graded:    sess?.filterGraded   ?? "all",
+      quadrant:  sess?.filterQuadrant ?? "all",
+      sortCol:   sess?.sortCol        ?? "color",
+      sortDir:   sess?.sortDir        ?? "asc",
+      mobileSort: sess?.mobileSort    ?? "color",
+      search: "", tags: [],
+    }});
     loadGrades(set.code);
     let url = `https://api.scryfall.com/cards/search?q=set:${set.code}+game:paper&order=color&unique=cards`, all = [];
     try {
@@ -1400,8 +1473,8 @@ setGrades(prev => {
   }), [grades, updateGrade, cards, importMeta]);
 
   const handleSort = col => {
-    if (sortCol === col) setSortDir(d => d === "asc" ? "desc" : "asc");
-    else { setSortCol(col); setSortDir("asc"); }
+    if (filters.sortCol === col) dispatchFilter({ type:"SET_SORT", col, dir: filters.sortDir === "asc" ? "desc" : "asc" });
+    else dispatchFilter({ type:"SET_SORT", col, dir:"asc" });
   };
 
   const exportCSV = () => {
@@ -1472,11 +1545,11 @@ setGrades(prev => {
   };
 
   // ── Derived ──
-  const activeSort   = isMobile ? mobileSort : sortCol;
+  const activeSort   = isMobile ? filters.mobileSort : filters.sortCol;
   const filteredSets = sets.filter(s => s.name.toLowerCase().includes(setSearch.toLowerCase()) || s.code.toLowerCase().includes(setSearch.toLowerCase()));
-  const clearFilters = () => { setFilterColor("all"); setFilterRarity("all"); setFilterSearch(""); setFilterGraded("all"); setFilterQuadrant("all"); setFilterTags([]); };
-  const toggleFilterTag = id => setFilterTags(prev => prev.includes(id) ? prev.filter(t => t !== id) : [...prev, id]);
-  const hasFilters   = filterColor !== "all" || filterRarity !== "all" || filterSearch || filterGraded !== "all" || filterQuadrant !== "all" || filterTags.length > 0;
+  const clearFilters = () => dispatchFilter({ type:"RESET" });
+  const toggleFilterTag = id => dispatchFilter({ type:"SET_TAGS", value: filters.tags.includes(id) ? filters.tags.filter(t => t !== id) : [...filters.tags, id] });
+  const hasFilters   = filters.color !== "all" || filters.rarity !== "all" || filters.search || filters.graded !== "all" || filters.quadrant !== "all" || filters.tags.length > 0;
   const gradableCards = useMemo(() => cards.filter(c => !isBasicLand(c)), [cards]);
   const gradedCount   = gradableCards.filter(c => grades[c.id]?.myGrade).length;
   const gradeCounts   = {};
@@ -1485,15 +1558,12 @@ setGrades(prev => {
   const analyticsUnlocked = pct >= 50 && (cards.some(c => grades[c.id]?.expert_rating != null) || cards.some(c => grades[c.id]?.performance_rating != null));
 
   const filtered = useMemo(() => cards.filter(c =>
-    applyFilters(c, grades[c.id] ?? {}, {
-      color: filterColor, rarity: filterRarity, search: filterSearch,
-      graded: filterGraded, quadrant: filterQuadrant, tags: filterTags,
-    })
-  ), [cards, grades, filterColor, filterRarity, filterSearch, filterGraded, filterQuadrant, filterTags]);
+    applyFilters(c, grades[c.id] ?? {}, filters)
+  ), [cards, grades, filters]);
 
   const sorted = useMemo(() => [...filtered].sort((a, b) =>
-    applySort(a, b, grades, activeSort, isMobile ? "asc" : sortDir)
-  ), [filtered, grades, activeSort, sortDir, isMobile]);
+    applySort(a, b, grades, activeSort, isMobile ? "asc" : filters.sortDir)
+  ), [filtered, grades, activeSort, filters.sortDir, isMobile]);
 
   const hasExpertData      = cards.some(c => grades[c.id]?.expert_rating != null);
   const hasPerformanceData = cards.some(c => grades[c.id]?.performance_rating != null);
@@ -1623,8 +1693,8 @@ setGrades(prev => {
           <div className="fm-inner">
             <div className="fm-row">
               <input className="fm-srch" placeholder="Search cards…"
-                value={filterSearch} onChange={e => setFilterSearch(e.target.value)} />
-              <select className="fm-sort" value={mobileSort} onChange={e => setMobileSort(e.target.value)}>
+                value={filters.search} onChange={e => dispatchFilter({ type:"SET_SEARCH", value:e.target.value })} />
+              <select className="fm-sort" value={filters.mobileSort} onChange={e => dispatchFilter({ type:"SET_MOBILE_SORT", value:e.target.value })}>
                 <option value="color">Color → CMC</option>
                 <option value="name">Name A–Z</option>
                 <option value="cmc">Mana Cost</option>
@@ -1637,7 +1707,7 @@ setGrades(prev => {
             <div className="fm-row">
               <span className="fl">Color:</span>
               {["all","W","U","B","R","G","M","C","L"].map(c => (
-                <button key={c} className={`fb${filterColor === c ? " active" : ""}`} onClick={() => setFilterColor(c)}>
+                <button key={c} className={`fb${filters.color === c ? " active" : ""}`} onClick={() => dispatchFilter({ type:"SET_COLOR", value:c })}>
                   {c === "all" ? "All" : c}
                 </button>
               ))}
@@ -1646,15 +1716,15 @@ setGrades(prev => {
               <span className="fl">Rarity:</span>
               {[["all","All"],["common","C"],["uncommon","U"],["rare","R"],["mythic","M"]].map(([full, abbr]) => (
                 <button key={full}
-                  className={`fb${filterRarity === full ? " active" : ""}`}
-                  style={filterRarity === full && full !== "all" ? { color: RARITY_COLORS[full], borderColor: RARITY_COLORS[full]+"88" } : {}}
-                  onClick={() => setFilterRarity(full)}>{abbr}</button>
+                  className={`fb${filters.rarity === full ? " active" : ""}`}
+                  style={filters.rarity === full && full !== "all" ? { color: RARITY_COLORS[full], borderColor: RARITY_COLORS[full]+"88" } : {}}
+                  onClick={() => dispatchFilter({ type:"SET_RARITY", value:full })}>{abbr}</button>
               ))}
             </div>
             <div className="fm-row">
               <span className="fl">Show:</span>
               {["all","graded","ungraded"].map(g => (
-                <button key={g} className={`fb${filterGraded === g ? " active" : ""}`} onClick={() => setFilterGraded(g)}>
+                <button key={g} className={`fb${filters.graded === g ? " active" : ""}`} onClick={() => dispatchFilter({ type:"SET_GRADED", value:g })}>
                   {g.charAt(0).toUpperCase() + g.slice(1)}
                 </button>
               ))}
@@ -1662,7 +1732,7 @@ setGrades(prev => {
             <div className="fm-row">
               <span className="fl">Quad:</span>
               {["all","FORMAT","MISS","SPOT","VAR","none"].map(q => (
-                <button key={q} className={`fb${filterQuadrant === q ? " active" : ""}`} onClick={() => setFilterQuadrant(q)}>
+                <button key={q} className={`fb${filters.quadrant === q ? " active" : ""}`} onClick={() => dispatchFilter({ type:"SET_QUADRANT", value:q })}>
                   {q === "all" ? "All" : q}
                 </button>
               ))}
@@ -1671,7 +1741,7 @@ setGrades(prev => {
               <span className="fl">Tags:</span>
               <div className="tag-chips">
                 {TAGS.map(tag => (
-                  <button key={tag.id} className={`tag-chip${filterTags.includes(tag.id) ? " active" : ""}`}
+                  <button key={tag.id} className={`tag-chip${filters.tags.includes(tag.id) ? " active" : ""}`}
                     onClick={() => toggleFilterTag(tag.id)}>{tag.label}</button>
                 ))}
               </div>
@@ -1741,67 +1811,26 @@ setGrades(prev => {
 
       {/* ── Desktop filters ── */}
       {!showAnalytics && cards.length > 0 && (
-        <div className="filters-desktop desktop-only">
-          <span className="fl">Color</span>
-          {["all","W","U","B","R","G","M","C","L"].map(c => (
-            <button key={c} className={`fb${filterColor === c ? " active" : ""}`} onClick={() => setFilterColor(c)}>
-              {c === "all" ? "All" : MTG_LABELS[c]}
-            </button>
-          ))}
-          <div className="divv" />
-          <span className="fl">Rarity</span>
-          {["all", ...RARITIES].map(r => (
-            <button key={r}
-              className={`fb${filterRarity === r ? " active" : ""}`}
-              style={filterRarity === r && r !== "all" ? { color: RARITY_COLORS[r], borderColor: RARITY_COLORS[r]+"88" } : {}}
-              onClick={() => setFilterRarity(r)}>
-              {r === "all" ? "All" : r.charAt(0).toUpperCase() + r.slice(1)}
-            </button>
-          ))}
-          <div className="divv" />
-          <span className="fl">Show</span>
-          {["all","graded","ungraded"].map(g => (
-            <button key={g} className={`fb${filterGraded === g ? " active" : ""}`} onClick={() => setFilterGraded(g)}>
-              {g.charAt(0).toUpperCase() + g.slice(1)}
-            </button>
-          ))}
-          {(hasExpertData || hasPerformanceData) && <>
-            <div className="divv" />
-            <span className="fl">Quad</span>
-            {["all","FORMAT","MISS","SPOT","VAR"].map(q => (
-              <button key={q} className={`fb${filterQuadrant === q ? " active" : ""}`} onClick={() => setFilterQuadrant(q)}>
-                {q === "all" ? "All" : q}
-              </button>
-            ))}
-          </>}
-          <div className="divv" />
-          <div className="tag-filter-wrap" onClick={e => e.stopPropagation()}>
-            <button className={`fb${filterTags.length > 0 ? " active" : ""}`}
-              onClick={() => setShowTagFilter(v => !v)}>
-              Tags{filterTags.length > 0 ? ` (${filterTags.length})` : ""}
-            </button>
-            {showTagFilter && (
-              <TagFilterPanel filterTags={filterTags} onToggle={toggleFilterTag} onClear={() => setFilterTags([])} />
-            )}
-          </div>
-          <div className="divv" />
-          <input className="srch" placeholder="Search cards…"
-            value={filterSearch} onChange={e => setFilterSearch(e.target.value)} />
-          {hasFilters && <button className="btn" onClick={clearFilters}>Clear</button>}
-          <span className="fl" style={{ marginLeft:"auto" }}>{sorted.length} shown</span>
-        </div>
+        <FilterBar
+          filters={filters}
+          dispatch={dispatchFilter}
+          hasExpertData={hasExpertData}
+          hasPerformanceData={hasPerformanceData}
+          sortedCount={sorted.length}
+          hasFilters={hasFilters}
+          showTagFilter={showTagFilter}
+          setShowTagFilter={setShowTagFilter}
+          toggleFilterTag={toggleFilterTag}
+          clearFilters={clearFilters}
+        />
       )}
 
       {/* ── Analytics view (replaces card table when active) ── */}
       {showAnalytics && analyticsUnlocked && (
         <AnalyticsView
-          cards={cards}
-          grades={grades}
-          isMobile={isMobile}
           onCardClick={card => {
             const idx = sorted.indexOf(card);
             if (idx !== -1) setLightboxIndex(idx);
-            // Analytics stays open — lightbox overlays it
           }}
         />
       )}
@@ -1829,9 +1858,9 @@ setGrades(prev => {
                   ["myGrade","My Grade"],["expert","Expert"],["performance","Perf"],
                   [null,"Δ"],[null,"Sunset"],[null,"Notes"]
                 ].map(([col, lbl]) => (
-                  <th key={lbl} className={col && sortCol === col ? "sorted" : ""}
+                  <th key={lbl} className={col && filters.sortCol === col ? "sorted" : ""}
                     onClick={() => col && handleSort(col)} style={!col ? { cursor:"default" } : {}}>
-                    {lbl}{col && sortCol === col ? (sortDir === "asc" ? " ▲" : " ▼") : ""}
+                    {lbl}{col && filters.sortCol === col ? (filters.sortDir === "asc" ? " ▲" : " ▼") : ""}
                   </th>
                 ))}
               </tr>
