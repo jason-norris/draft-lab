@@ -196,20 +196,18 @@
 >
 > **Planning docs:** [`docs/phase-5-1-data-foundation.md`](docs/phase-5-1-data-foundation.md) · [`docs/phase-5-signal-review.md`](docs/phase-5-signal-review.md) · [`docs/draft-ai-planning-addendum.md`](docs/draft-ai-planning-addendum.md)
 
-### Phase 5.1 — Data Foundation
+### Phase 5.1 — Data Foundation ✅ COMPLETE
 
 **Goal:** Clean, structured card data before the simulator is built. Proving ground set: KHM.
 
-- [ ] Introduce `context` field on grade objects: `{ early, ahead, parity, behind }` — optional per card, never composited or averaged
-- [ ] Grade drawer UI: collapsible context rating section with per-game-state grade selectors
-- [ ] Migrate STX legacy Q-notation notes (`Q: A/A-/B/C`) into `context` objects via one-time script; clean notes field after migration
-- [ ] Formalize tag definitions — document in code near `TAGS` constant
-- [ ] Clarify notes field purpose — update placeholder text to reflect notes as reasoning/nuance only, not structured data
-- [ ] KHM grading continues with new tag and context standards applied going forward
+- [x] Introduce `context` field on grade objects: `{ early, ahead, parity, behind }` — optional per card, never composited or averaged
+- [x] Grade drawer UI: context ratings section in CardLightbox and MobileCardItem (add/edit/remove)
+- [x] Migrate STX legacy Q-notation — 275 cards migrated, script deleted and verified
+- [x] Formalize tag definitions — documented in code near `TAGS` constant
+- [x] Clarify notes field purpose — placeholder text updated in UI
+- [ ] KHM grading continues with new tag and context standards applied going forward (ongoing)
 
-**Must complete before Phase 5.2. All definition-of-done criteria in the spec must be met.**
-
-### Phase 5.2 — Draft Simulator + Pick Review
+### Phase 5.2 — Draft Simulator + Pick Review 🔜 NEXT
 
 **Milestone 1 — Basic draft loop (Layer 1 bots)**
 - [ ] Supabase schema: `draft_sessions`, `draft_picks`, `draft_decks`
